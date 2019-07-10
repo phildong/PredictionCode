@@ -17,6 +17,7 @@ import dimReduction as dr
 ###############################################
 typ = 'AML70' # possible values AML32, AML18, AML70
 condition = 'moving' # Moving, immobilized, chip
+overview = True
 ###############################################    
 # 
 #    load data into dictionary
@@ -25,10 +26,10 @@ condition = 'moving' # Moving, immobilized, chip
 data = {}
 for typ in ['AML32', 'AML70']:
     for condition in ['moving', 'immobilized']:
-        folder = '{}_{}/'.format(typ, condition)
-        dataLog = '{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
-        outLoc = "Analysis/{}_{}_results.hdf5".format(typ, condition)
-        outLocData = "Analysis/{}_{}.hdf5".format(typ, condition)
+        folder = '/Users/leifer/workspace/PredictionCode/{}_{}/'.format(typ, condition)
+        dataLog = '/Users/leifer/workspace/PredictionCode/{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
+        outLoc = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}_results.hdf5".format(typ, condition)
+        outLocData = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}.hdf5".format(typ, condition)
         
         
         # load multiple datasets
