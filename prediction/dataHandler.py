@@ -318,7 +318,8 @@ def preprocessNeuralData(R, G, dataPars):
     
     # smooth with GCamp6 halftime = 1s
     RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])       
-    GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])       
+    GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
+    print("windowGCaMP:", str(dataPars['windowGCamp']))
 #    YR = GS/RS
     
 ##    meansubtract = False#False#True
