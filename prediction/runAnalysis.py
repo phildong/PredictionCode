@@ -77,13 +77,13 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #
     ##############################################
     createIndicesTest = 1#True
-    periodogram = 1
-    half_period = 1
+    periodogram = 0
+    half_period = 0
     hierclust = 0
     bta = 0
     pca = 1#False
-    kato_pca = 1#False
-    half_pca = 1
+    kato_pca = 0#False
+    half_pca = 0
     corr = 1
     predNeur = 0
     predPCA = 0
@@ -95,7 +95,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     if condition != 'immobilized':
         predNeur = 1
         svm = 0
-        lasso = 1
+        lasso = 0
         elasticnet = 1#True
         predPCA = 1
         lagregression = 0
