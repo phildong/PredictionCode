@@ -10,16 +10,20 @@ This is a meta script to run runAnalysis over and over again.
 
 import runAnalysis as analysis
 
+
+
+print("Doing the Moving Worms")
 analysis.actuallyRun('AML32','moving')
 analysis.actuallyRun('AML18','moving')
 analysis.actuallyRun('AML70','moving')
 analysis.actuallyRun('AML175','moving')
 
-
+print("Doing the Immobilized Worms")
 analysis.actuallyRun('AML32','immobilized')
 analysis.actuallyRun('AML18','immobilized')
 analysis.actuallyRun('AML70','immobilized')
 
+print("Doing worms in Chips")
 analysis.actuallyRun('AML32','chip')
 analysis.actuallyRun('Special','transition') #Note these are identicail..
                                             # I copied and pasted the input files..

@@ -182,7 +182,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
         print 'running PCA'
         for kindex, key in enumerate(keyList):
             resultDict[key]['PCA'] = dr.runPCANormal(dataSets[key], pars)
-            resultDict[key]['PCARaw'] = dr.runPCANormal(dataSets[key], pars, useRaw=True)
+     #       resultDict[key]['PCARaw'] = dr.runPCANormal(dataSets[key], pars, useRaw=True)
 
 
             #correlate behavior and PCA

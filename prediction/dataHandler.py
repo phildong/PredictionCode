@@ -389,12 +389,20 @@ def loadData(folder, dataPars, ew=1):
 
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
-    rPhotoCorr=correctPhotobleaching(rRaw,dataPars['volumeAcquisitionRate'])
-    gPhotoCorr = correctPhotobleaching(gRaw, dataPars['volumeAcquisitionRate'])
+
 
     #load neural data
-    R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
-    G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+#    R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+#    G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+
+    R = correctPhotobleaching(rRaw, dataPars['volumeAcquisitionRate'])
+    G = correctPhotobleaching(gRaw, dataPars['volumeAcquisitionRate'])
+
+    if np.any(np.isnan(R)):
+        print("New rPHotoCorr has some NaNs in it ")
+    if np.any(np.isnan(G)):
+        print("New gPHotoCorr has some NaNs in it ")
+
     #
     Ratio = np.array(data['Ratio2'])[:,:len(np.array(data['hasPointsTime']))]
     Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
@@ -591,7 +599,7 @@ def correctPhotobleaching(raw, vps=6):
 
     photoCorr = np.zeros_like(raw)  # initialize photoCorr
 
-    showPlots = True
+    showPlots = False
 
 
     if raw.ndim == 2:
@@ -613,7 +621,7 @@ def correctPhotobleaching(raw, vps=6):
 
             if showPlots:
                 import matplotlib.pyplot as plt
-                plt.plot(xVals, raw[row, :], 'b-', label=['raw, row: '+np.str(row)])
+                plt.plot(xVals, smoothed[row, :], 'b-', label=['raw, row: '+np.str(row)])
                 plt.plot(xVals, photoCorr[row, :], "r-",
                          label=['photoCorr, row: '+np.str(row)])
                 plt.xlabel('Time (s)')
@@ -659,8 +667,12 @@ def fitPhotobleaching(activityTrace, vps):
     num_recordingLengths = 6  # the timescale of exponential decay should not be more than six recording lengths long
     # because otherwise we could have recorded for way longer!!
 
+    #Scale the activity trace to somethign around one.
+    scaleFactor=np.nanmean(activityTrace)
+    activityTrace=activityTrace/scaleFactor
+
     bounds = ([0, 1 / (num_recordingLengths * max(xVals)), 0],  # lower bounds
-              [max(activityTrace[nonNaNs]), 0.5, 2 * np.nanmean(activityTrace)])  # upper bound
+              [max(activityTrace[nonNaNs])*1.5, 0.5, 2 * np.nanmean(activityTrace)])  # upper bound
 
     # as a first guess, a is half the max, b is 1/(half the length of the recording), and c is the average
     popt_guess = [max(activityTrace) / 2, 2 / max(xVals), np.nanmean(activityTrace)]
@@ -680,22 +692,29 @@ def fitPhotobleaching(activityTrace, vps):
         plt.show()
 
     ## Now we want to inspect our fit, find values that are clear outliers, and refit while excluding those
-    residual = xVals - expfunc(xVals, *popt)  # its ok to have nan's here
+    residual = activityTrace - expfunc(xVals, *popt)  # its ok to have nan's here
 
     nSigmas = 3  # we want to exclude points that are three standard deviations away from the fit
 
     # Make a new mask that excludes the outliers
     excOutliers = np.copy(nonNaNs)
-    excOutliers[np.nonzero(np.abs(residual) > (nSigmas * np.nanstd(residual)))] = False
+    excOutliers[(np.abs(residual) > (nSigmas * np.nanstd(residual)))] = False
 
     # Refit excluding the outliers, use the previous fit as initial guess
-    popt, pcov = curve_fit(expfunc, xVals[excOutliers], activityTrace[excOutliers], p0=popt,
-                           bounds=bounds)
+    # note we relax the bounds here a bit
+
+    try:
+        popt, pcov = curve_fit(expfunc, xVals[excOutliers], activityTrace[excOutliers], p0=popt,bounds=bounds)
+    except:
+        popt, pcov = curve_fit(expfunc, xVals[excOutliers], activityTrace[excOutliers], p0=popt)
+
     if showPlots:
         plt.plot(xVals, expfunc(xVals, *popt), 'y-',
                  label='excluding outliers fit a*exp(-b*x)+c: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
         plt.legend()
 
+    #rescale back to full size
+    popt[0]=scaleFactor*popt[0]
     return popt, pcov, xVals
 
 
