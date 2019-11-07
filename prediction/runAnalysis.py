@@ -1,3 +1,4 @@
+from __future__ import division #give me floating point when I divide (standard in python3)
 
 # standard modules
 import numpy as np
@@ -41,6 +42,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
                 'rotate':False, # rotate Eigenworms using previously calculated rotation matrix
                 'windowGCamp': 5,  # gauss window for red and green channel
                 'interpolateNans': 1,#interpolate gaps smaller than this of nan values in calcium data
+                'volumeAcquisitionRate': 6., #rate at which volumes are acquired
                 }
 
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
