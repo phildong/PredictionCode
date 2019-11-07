@@ -38,7 +38,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
     # data parameters
     dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
-                'gaussWindow':100, # sgauss window for angle velocity derivative. must be odd
+                'gaussWindow': 75, # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
                 'rotate':False, # rotate Eigenworms using previously calculated rotation matrix
                 'windowGCamp': 5,  # gauss window for red and green channel
                 'interpolateNans': 1,#interpolate gaps smaller than this of nan values in calcium data
