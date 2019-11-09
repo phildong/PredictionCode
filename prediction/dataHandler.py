@@ -395,13 +395,13 @@ def loadData(folder, dataPars, ew=1):
 #    R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
 #    G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
 
-    R = correctPhotobleaching(rRaw, dataPars['volumeAcquisitionRate'])
-    G = correctPhotobleaching(gRaw, dataPars['volumeAcquisitionRate'])
+    vps=dataPars['volumeAcquisitionRate']
+    R = correctPhotobleaching(rRaw, vps)
+    G = correctPhotobleaching(gRaw, vps)
 
-    if np.any(np.isnan(R)):
-        print("New rPHotoCorr has some NaNs in it ")
-    if np.any(np.isnan(G)):
-        print("New gPHotoCorr has some NaNs in it ")
+    R = nanOutliers(rRaw,np.round(3.3*vps))
+    G = nanOutliers(gRaw,np.round(3.3*vps))
+
 
     #
     Ratio = np.array(data['Ratio2'])[:,:len(np.array(data['hasPointsTime']))]
@@ -640,6 +640,7 @@ def correctPhotobleaching(raw, vps=6):
     return photoCorr
 
 
+
 def fitPhotobleaching(activityTrace, vps):
     """"
     Fit an exponential.
@@ -722,4 +723,18 @@ def expfunc(x, a, b, c):
     # type: (xVals, a, b, c) -> yVals
     return a * np.exp(-b * x) + c
 
+def nanOutliers(trace, windowSize):
+    """
+    Use a Hamdel like filter to find outliers, but instead of replacing them with the median, replace them with the mean.
 
+    This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
+
+    See: https://towardsdatascience.com/outlier-detection-with-hampel-filter-85ddf523c73d
+
+
+    :param trace:
+    :param windowSize:
+    :return:
+    """
+    print("Need to replace outliers with NaNs")
+    return trace
