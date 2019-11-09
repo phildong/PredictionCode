@@ -725,7 +725,7 @@ def expfunc(x, a, b, c):
 
 def nanOutliers(trace, windowSize):
     """
-    Use a Hamdel like filter to find outliers, but instead of replacing them with the median, replace them with the mean.
+    Use a Hamdel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
 
     This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
 
