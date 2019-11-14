@@ -399,8 +399,8 @@ def loadData(folder, dataPars, ew=1):
     R = correctPhotobleaching(rRaw, vps)
     G = correctPhotobleaching(gRaw, vps)
 
-    R = nanOutliers(rRaw,np.round(3.3*vps))
-    G = nanOutliers(gRaw,np.round(3.3*vps))
+    R = nanOutliers_allNeurons(rRaw,np.round(3.3*vps))
+    G = nanOutliers_allNeurons(gRaw,np.round(3.3*vps))
 
 
     #
@@ -723,18 +723,66 @@ def expfunc(x, a, b, c):
     # type: (xVals, a, b, c) -> yVals
     return a * np.exp(-b * x) + c
 
-def nanOutliers(trace, windowSize):
+
+
+
+def nanOutliers_allNeurons(multiNeurons, window_size, n_sigmas=3):
     """
-    Use a Hamdel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
+    Run nanOutliers on many neurons
+    
+    Use a Hampel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
+
+    This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.    
+    :return: 
+    """
+    assert multiNeurons.ndim == 2, '2D input data is expected'
+    assert multiNeurons.shape[1]>multiNeurons.shape[0], 'we expect more time points than neurons'
+
+    new_multiNeurons=np.copy(multiNeurons)
+
+    for i in np.arange(multiNeurons.shape[0]):
+        new_multiNeurons[i,:]=nanOutliers(multiNeurons[i,:],window_size,n_sigmas)[0]
+    return new_multiNeurons
+
+
+
+
+def nanOutliers(input_series, window_size, n_sigmas=3):
+    """
+    Use a Hampel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
 
     This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
 
     See: https://towardsdatascience.com/outlier-detection-with-hampel-filter-85ddf523c73d
 
 
-    :param trace:
+
+
+
+    :param input_series:
     :param windowSize:
+    :param n_sigmas=3:
     :return:
     """
-    print("Need to replace outliers with NaNs")
-    return trace
+    assert input_series.ndim == 1, 'input dimension greater than 1! nanOutliers can only deal with 1D data'
+
+    window_size = np.int(np.round(window_size))
+
+    #The following is identical to here: https://gist.githubusercontent.com/erykml/d15525855f2ef455bd7969240f6f4073/raw/c17741cdef7f69cebd3ddae191ecdd7db95d4051/hampel_filter_forloop.py
+    #Except for using nanmedian instead of median, and replacing with nans instead of with teh median
+    n = len(input_series)
+    new_series = input_series.copy()
+    k = 1.4826  # scale factor for Gaussian distribution
+
+    indices = []
+    thresh=0.0
+
+    # possibly use np.nanmedian
+    for i in range((window_size), (n - window_size)):
+        x0 = np.nanmedian(input_series[(i - window_size):(i + window_size)])
+        S0 = k * np.nanmedian(np.abs(input_series[(i - window_size):(i + window_size)] - x0))
+        if np.any(np.abs(input_series[i] - x0) > n_sigmas * S0):
+            new_series[i] = np.nan #this line is different
+            indices.append(i)
+
+    return new_series, indices
