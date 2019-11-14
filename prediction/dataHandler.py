@@ -399,8 +399,8 @@ def loadData(folder, dataPars, ew=1):
     R = correctPhotobleaching(rRaw, vps)
     G = correctPhotobleaching(gRaw, vps)
 
-    R = nanOutliers_allNeurons(rRaw,np.round(3.3*vps))
-    G = nanOutliers_allNeurons(gRaw,np.round(3.3*vps))
+    R = nanOutliers_allNeurons(R,np.round(3.3*vps))
+    G = nanOutliers_allNeurons(G,np.round(3.3*vps))
 
 
     #
