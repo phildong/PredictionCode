@@ -45,6 +45,16 @@ def actuallyRun(typ='AML32', condition = 'moving'):
                 'volumeAcquisitionRate': 6., #rate at which volumes are acquired
                 }
 
+
+    #original data parameters
+    dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
+            'gaussWindow':100, # gauss window for angle velocity derivative. Acts on full (50Hz) data
+            'rotate':False, # rotate Eigenworms using previously calculated rotation matrix
+            'windowGCamp': 6,  # gauss window for red and green channel
+            'interpolateNans': 6,#interpolate gaps smaller than this of nan values in calcium data
+            }
+
+
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     if save:
@@ -57,7 +67,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
         resultDict[key]['pars'] = dataPars
     # analysis parameters
 
-    pars ={'nCompPCA':20, # no of PCA components
+    pars ={'nCompPCA':10, # no of PCA components
             'PCAtimewarp':False, #timewarp so behaviors are equally represented
             'trainingCut': 0.6, # what fraction of data to use for training
             'trainingType': 'middle', # simple, random or middle.select random or consecutive data for training. Middle is a testset in the middle
@@ -70,6 +80,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             'useClust':False,# use clusters in the fitting procedure.
             'periods': np.arange(0, 300) # relevant periods in seconds for timescale estimate
              }
+
+
 
     behaviors = ['AngleVelocity', 'Eigenworm3']
 
