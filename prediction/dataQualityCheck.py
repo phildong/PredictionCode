@@ -16,17 +16,22 @@ mpl.rcParams['interactive']  = False
 #
 ###############################################
 typ = 'AML32' # possible values AML32, AML18, AML70
-condition = 'immobilized'# # Moving, immobilized, chip
+condition = 'moving'# # Moving, immobilized, chip
 first = True # if true, create new HDF5 file
 ###############################################    
 # 
 #    load data into dictionary
 #
 ##############################################
-folder = '../{}_{}/'.format(typ, condition)
-dataLog = '../{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
-outLoc = "../Analysis/{}_{}_results.hdf5".format(typ, condition)
-outLocData = "../Analysis/{}_{}.hdf5".format(typ, condition)
+#folder = '../{}_{}/'.format(typ, condition)
+#dataLog = '../{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
+#outLoc = "../Analysis/{}_{}_results.hdf5".format(typ, condition)
+#outLocData = "../Analysis/{}_{}.hdf5".format(typ, condition)
+
+folder = '/Users/leifer/workspace/PredictionCode/{}_{}/'.format(typ, condition)
+dataLog = '/Users/leifer/workspace/PredictionCode/{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
+outLoc = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}_results.hdf5".format(typ, condition)
+outLocData = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}.hdf5".format(typ, condition)
 
 # data parameters
 dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
@@ -88,7 +93,7 @@ linreg = False
 periodogram = 0
 nestedvalidation = 0
 lasso = 0
-elasticnet = 0#True
+elasticnet = 1#True
 lagregression = 0
 positionweights = 0#True
 resultsPredictionOverview = 0
