@@ -25,7 +25,7 @@ def getStampString():
 
     return str(timestamp + '\n' + str(hash) + '\n' + giturl + '\n' + gitpath)
 
-def stamp(ax, x,y,notes):
+def stamp(ax, x,y,notes=''):
     """
     :param ax: matplotlib axes h
     :param x: fractional location in the plot
