@@ -392,15 +392,17 @@ def loadData(folder, dataPars, ew=1):
 
 
     #load neural data
-#    R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
-#    G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+    original=True
+    if original:
+        R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+        G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+    else:
+        vps = dataPars['volumeAcquisitionRate']
+        R = correctPhotobleaching(rRaw, vps)
+        G = correctPhotobleaching(gRaw, vps)
 
-    vps=dataPars['volumeAcquisitionRate']
-    R = correctPhotobleaching(rRaw, vps)
-    G = correctPhotobleaching(gRaw, vps)
-
-    R = nanOutliers_allNeurons(R,np.round(3.3*vps))
-    G = nanOutliers_allNeurons(G,np.round(3.3*vps))
+        R = nanOutliers_allNeurons(R,np.round(3.3*vps))
+        G = nanOutliers_allNeurons(G,np.round(3.3*vps))
 
 
     #
