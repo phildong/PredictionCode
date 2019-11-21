@@ -23,11 +23,6 @@ first = True # if true, create new HDF5 file
 #    load data into dictionary
 #
 ##############################################
-#folder = '../{}_{}/'.format(typ, condition)
-#dataLog = '../{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
-#outLoc = "../Analysis/{}_{}_results.hdf5".format(typ, condition)
-#outLocData = "../Analysis/{}_{}.hdf5".format(typ, condition)
-
 folder = '/Users/leifer/workspace/PredictionCode/{}_{}/'.format(typ, condition)
 dataLog = '/Users/leifer/workspace/PredictionCode/{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
 outLoc = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}_results.hdf5".format(typ, condition)
@@ -93,7 +88,7 @@ linreg = False
 periodogram = 0
 nestedvalidation = 0
 lasso = 0
-elasticnet = 1#True
+elasticnet = 0#True
 lagregression = 0
 positionweights = 0#True
 resultsPredictionOverview = 0

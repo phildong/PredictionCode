@@ -218,6 +218,7 @@ moveAxes(ax8, 'scaley', 0.03)
 ax7.text(-140, 0, 'Velocity\n(rad/s)', color = R1, rotation=0, verticalalignment='center', fontsize=12, multialignment='center')
 ax8.text(-160, 0, 'Body \n curvature \n(a.u.)', color = B1, rotation=0, verticalalignment='center', fontsize=12, multialignment='center')
 
+
 # move axis to the right
 ax7.yaxis.tick_right()
 ax8.yaxis.tick_right()
@@ -492,6 +493,11 @@ axVb.set_xticks([-1, x0, x0+1.75,x0+2.5,-1+toffset ,  x0+toffset, x0+1.75+toffse
 axVb.set_xticklabels(['PCA', 'SLM', 'SN','Ctrl','PCA', 'SLM', 'SN', 'Ctrl'], fontsize=12, rotation=45)
 plt.show()
 # get all the weights for the different samples
+
+
+import prediction.provenance as prov
+prov.stamp(axV,.1,.3)
+
 
 #for typ, colors, ax in zip(['AML32', 'AML18'], [colorsExp, colorCtrl], [ax11, ax12]):
 #    for condition in ['moving', 'immobilized']:
