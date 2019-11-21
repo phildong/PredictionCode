@@ -392,7 +392,7 @@ def loadData(folder, dataPars, ew=1):
 
 
     #load neural data
-    original=True
+    original=False
     if original:
         R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
         G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
@@ -786,5 +786,13 @@ def nanOutliers(input_series, window_size, n_sigmas=3):
         if np.any(np.abs(input_series[i] - x0) > n_sigmas * S0):
             new_series[i] = np.nan #this line is different
             indices.append(i)
+
+    Debug = True
+    if Debug:
+        import matplotlib.pyplot as plt
+        plt.plot(input_series,'r')
+        plt.plot(new_series,'ob')
+        plt.show()
+
 
     return new_series, indices
