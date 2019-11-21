@@ -496,7 +496,7 @@ plt.show()
 
 
 import prediction.provenance as prov
-prov.stamp(axV,.1,.3,'branch: minimumLocal')
+prov.stamp(axV,.1,.3)
 
 
 #for typ, colors, ax in zip(['AML32', 'AML18'], [colorsExp, colorCtrl], [ax11, ax12]):

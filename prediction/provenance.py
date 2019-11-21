@@ -19,11 +19,11 @@ def getStampString():
     hash = repo.head.object.hexsha
     gitpath = repoPath = repo._working_tree_dir
     giturl = repo.remotes.origin.url
-
+    gitbranch = repo.active_branch
     from datetime import datetime
     timestamp = datetime.today().strftime('%Y-%m-%d %H:%M')
 
-    return str(timestamp + '\n' + str(hash) + '\n' + giturl + '\n' + gitpath)
+    return str(timestamp + '\n' + str(hash) + '\n' + giturl + '\n' + gitpath + '\nBranch: ' + str(gitbranch))
 
 def stamp(ax, x,y,notes=''):
     """
