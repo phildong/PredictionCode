@@ -400,11 +400,11 @@ def loadData(folder, dataPars, ew=1):
         vps = dataPars['volumeAcquisitionRate']
 
         #remove outliers with a sliding window of 40 volumes (or 6 seconds)
-        R = nanOutliers(rRaw, np.round(2*3.3*vps).astype(int))
-        G = nanOutliers(gRaw, np.round(2*3.3*vps).astype(int))
+        R = nanOutliers(rRaw, np.round(2*3.3*vps).astype(int))[0]
+        G = nanOutliers(gRaw, np.round(2*3.3*vps).astype(int))[0]
 
-        R = correctPhotobleaching(rRaw, vps)
-        G = correctPhotobleaching(gRaw, vps)
+        R = correctPhotobleaching(R, vps)
+        G = correctPhotobleaching(G, vps)
 
 
 
@@ -604,16 +604,21 @@ def correctPhotobleaching(raw, vps=6):
 
     photoCorr = np.zeros_like(raw)  # initialize photoCorr
 
-    showPlots = False
+    debug = False
+
+    performMedfilt  = True
+
 
 
     if raw.ndim == 2:
+        if performMedfilt:
+            # perform median filtering (Nan friendly)
+            from scipy.signal import medfilt
+            smoothed = medfilt(raw, [1, medfilt_window])
+        else:
+            smoothed = raw.copy()
 
-        # perform median filtering (Nan friendly)
-        from scipy.signal import medfilt
-        smoothed = medfilt(raw, [1, medfilt_window])
-
-        N_neurons = smoothed.shape[0]
+        N_neurons = raw.shape[0]
 
         # initialize the exponential fit parameter outputs
         popt = np.zeros([N_neurons, 3])
@@ -624,13 +629,19 @@ def correctPhotobleaching(raw, vps=6):
             popt[row, :], pcov[:, :, row], xVals = fitPhotobleaching(smoothed[row, :], vps)
             photoCorr[row, :] = popt[row, 0] * raw[row, :] / expfunc(xVals, *popt[row, :])
 
+            showPlots = False
+            if debug:
+                if np.random.rand() > 0.85:
+                    showPlots = True
+
             if showPlots:
                 import matplotlib.pyplot as plt
-                plt.plot(xVals, smoothed[row, :], 'b-', label=['raw, row: '+np.str(row)])
+                plt.plot(xVals, raw[row, :], 'b-', label=['raw, row: '+np.str(row)])
                 plt.plot(xVals, photoCorr[row, :], "r-",
                          label=['photoCorr, row: '+np.str(row)])
                 plt.xlabel('Time (s)')
                 plt.ylabel('ActivityTrace')
+                plt.title('correctPhotobleaching()')
                 plt.legend()
                 plt.show()
 
@@ -670,32 +681,36 @@ def fitPhotobleaching(activityTrace, vps):
     from scipy.optimize import curve_fit
 
     # set up some bounds on our exponential fitting parameter, y=a*exp(bx)+c
-    num_recordingLengths = 6  # the timescale of exponential decay should not be more than six recording lengths long
+    num_recordingLengths = 8 # the timescale of exponential decay should not be more than eight recording lengths long
     # because otherwise we could have recorded for way longer!!
 
     #Scale the activity trace to somethign around one.
     scaleFactor=np.nanmean(activityTrace)
     activityTrace=activityTrace/scaleFactor
 
-    bounds = ([0, 1 / (num_recordingLengths * max(xVals)), 0],  # lower bounds
-              [max(activityTrace[nonNaNs])*1.5, 0.5, 2 * np.nanmean(activityTrace)])  # upper bound
+    bounds = ([0, 1 / (num_recordingLengths * np.nanmax(xVals)), 0],  # lower bounds
+              [np.nanmax(activityTrace[nonNaNs])*1.5, 0.5, 2 * np.nanmean(activityTrace)])  # upper bound
 
     # as a first guess, a is half the max, b is 1/(half the length of the recording), and c is the average
-    popt_guess = [max(activityTrace) / 2, 2 / max(xVals), np.nanmean(activityTrace)]
+    popt_guess = [np.nanmax(activityTrace) / 2, 2 / np.nanmax(xVals), np.nanmean(activityTrace)]
 
     popt, pcov = curve_fit(expfunc, xVals[nonNaNs], activityTrace[nonNaNs], p0=popt_guess,
                            bounds=bounds)
 
-    showPlots = False
+    if np.random.rand()>0.9:
+        showPlots = True
+    else:
+        showPlots = False
+
     if showPlots:
         import matplotlib.pyplot as plt
+        plt.cla()
         plt.plot(xVals, activityTrace, 'b-', label='data')
         plt.plot(xVals, expfunc(xVals, *popt), "r-",
                  label='fit a*exp(-b*x)+c: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
         plt.xlabel('Time (s)')
         plt.ylabel('ActivityTrace')
         plt.legend()
-        plt.show()
 
     ## Now we want to inspect our fit, find values that are clear outliers, and refit while excluding those
     residual = activityTrace - expfunc(xVals, *popt)  # its ok to have nan's here
@@ -715,12 +730,16 @@ def fitPhotobleaching(activityTrace, vps):
         popt, pcov = curve_fit(expfunc, xVals[excOutliers], activityTrace[excOutliers], p0=popt)
 
     if showPlots:
+        import matplotlib.pyplot as plt
         plt.plot(xVals, expfunc(xVals, *popt), 'y-',
                  label='excluding outliers fit a*exp(-b*x)+c: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
         plt.legend()
 
-    #rescale back to full size
+    #rescale the amplitude, a, back to full size
     popt[0]=scaleFactor*popt[0]
+
+    #rescale the c parameter
+    popt[2]=scaleFactor*popt[2]
     return popt, pcov, xVals
 
 
@@ -767,7 +786,7 @@ def nanOutliers(data, window_size, n_sigmas=3):
     newData = np.array(data, dtype=float)
     newData[indices] = np.nan
 
-    Debug = True
+    Debug = False
     if Debug:
         chosen = np.squeeze( np.round(np.random.rand(1) * M-1).astype(int))
         import matplotlib.pyplot as plt
