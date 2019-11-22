@@ -398,11 +398,14 @@ def loadData(folder, dataPars, ew=1):
         G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
     else:
         vps = dataPars['volumeAcquisitionRate']
+
+        #remove outliers with a sliding window of 40 volumes (or 6 seconds)
+        R = nanOutliers(rRaw, np.round(2*3.3*vps).astype(int))
+        G = nanOutliers(gRaw, np.round(2*3.3*vps).astype(int))
+
         R = correctPhotobleaching(rRaw, vps)
         G = correctPhotobleaching(gRaw, vps)
 
-        R = nanOutliers_allNeurons(R,np.round(3.3*vps))
-        G = nanOutliers_allNeurons(G,np.round(3.3*vps))
 
 
     #
@@ -728,71 +731,54 @@ def expfunc(x, a, b, c):
 
 
 
-def nanOutliers_allNeurons(multiNeurons, window_size, n_sigmas=3):
+
+from skimage.util import view_as_windows
+
+def nanOutliers(data, window_size, n_sigmas=3):
+    """using a Hampel filter to detect outliers and replace them with nans.
+
+        This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
+
+    The algorithm assumes the underlying series should be Gaussian. This could be changed by changing the k parameter.
+    Data can contain nans, these will be ignored for median calculation.
+    data: (M, N) array of M timeseries with N samples each.
+    windowsize: integer. This is half of the typical implementation.
+    n_sigmas: float or integer
     """
-    Run nanOutliers on many neurons
-    
-    Use a Hampel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
-
-    This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.    
-    :return: 
-    """
-    assert multiNeurons.ndim == 2, '2D input data is expected'
-    assert multiNeurons.shape[1]>multiNeurons.shape[0], 'we expect more time points than neurons'
-
-    new_multiNeurons=np.copy(multiNeurons)
-
-    for i in np.arange(multiNeurons.shape[0]):
-        new_multiNeurons[i,:]=nanOutliers(multiNeurons[i,:],window_size,n_sigmas)[0]
-    return new_multiNeurons
-
-
-
-
-def nanOutliers(input_series, window_size, n_sigmas=3):
-    """
-    Use a Hampel like filter to find outliers, but instead of replacing them with the median, replace them with NaN.
-
-    This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
-
-    See: https://towardsdatascience.com/outlier-detection-with-hampel-filter-85ddf523c73d
-
-
-
-
-
-    :param input_series:
-    :param windowSize:
-    :param n_sigmas=3:
-    :return:
-    """
-    assert input_series.ndim == 1, 'input dimension greater than 1! nanOutliers can only deal with 1D data'
-
-    window_size = np.int(np.round(window_size))
-
-    #The following is identical to here: https://gist.githubusercontent.com/erykml/d15525855f2ef455bd7969240f6f4073/raw/c17741cdef7f69cebd3ddae191ecdd7db95d4051/hampel_filter_forloop.py
-    #Except for using nanmedian instead of median, and replacing with nans instead of with teh median
-    n = len(input_series)
-    new_series = input_series.copy()
-    k = 1.4826  # scale factor for Gaussian distribution
-
-    indices = []
-    thresh=0.0
-
-    # possibly use np.nanmedian
-    for i in range((window_size), (n - window_size)):
-        x0 = np.nanmedian(input_series[(i - window_size):(i + window_size)])
-        S0 = k * np.nanmedian(np.abs(input_series[(i - window_size):(i + window_size)] - x0))
-        if np.any(np.abs(input_series[i] - x0) > n_sigmas * S0):
-            new_series[i] = np.nan #this line is different
-            indices.append(i)
+    # deal with N = 1 timeseries to conform to (M=1,N) shape
+    if len(data.shape)<2:
+        data = np.reshape(data, (1,-1))
+    k = 1.4826 # scale factor for Gaussian distribution
+    M, N = data.shape # store data shape for quick use below
+    # pad array to achieve at least the same size as original
+    paddata = np.pad(data.copy(), pad_width= [(0,0),(window_size//2,window_size//2)], \
+                     constant_values=(np.median(data)), mode = 'constant')
+    # we use strides to create rolling windows. Not nice in memory, but good in performance.
+    # because its meant for images, it creates some empty axes of size 1.
+    tmpdata = view_as_windows(paddata, (1,window_size))
+    # crop data to center
+    tmpdata = tmpdata[:M, :N]
+    x0N = np.nanmedian(tmpdata, axis = (-1, -2))
+    s0N =k * np.nanmedian(np.abs(tmpdata - x0N[:,:,np.newaxis, np.newaxis]), axis = (-1,-2))
+    # hampel condition
+    hampel = (np.abs(data-x0N) - (n_sigmas*s0N))
+    indices = np.where(hampel>0)
+    # cast to float to allow nans in output data
+    newData = np.array(data, dtype=float)
+    newData[indices] = np.nan
 
     Debug = True
     if Debug:
+        chosen = np.squeeze( np.round(np.random.rand(1) * M-1).astype(int))
         import matplotlib.pyplot as plt
-        plt.plot(input_series,'r')
-        plt.plot(new_series,'ob')
+        plt.cla()
+        plt.plot(data[chosen, :],'r')
+        plt.plot(newData[chosen, :],'b')
+        plt.title('nanOutlier(), neuron: ' +str(chosen))
         plt.show()
 
+    return newData, indices
 
-    return new_series, indices
+
+
+
