@@ -390,21 +390,48 @@ def loadData(folder, dataPars, ew=1):
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
 
+    rphotocorr = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    gphotocorr = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
 
     #load neural data
-    original=False
+    debug = True
+    original = False
     if original:
-        R = np.array(data['rPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
-        G = np.array(data['gPhotoCorr'])[:,:len(np.array(data['hasPointsTime']))]
+        R = np.copy(rphotocorr)
+        G = np.copy(gphotocorr)
     else:
+        R = rRaw.copy()
+        G = gRaw.copy()
         vps = dataPars['volumeAcquisitionRate']
 
         #remove outliers with a sliding window of 40 volumes (or 6 seconds)
-        R = nanOutliers(rRaw, np.round(2*3.3*vps).astype(int))[0]
-        G = nanOutliers(gRaw, np.round(2*3.3*vps).astype(int))[0]
+        R = nanOutliers(R, np.round(2*3.3*vps).astype(int))[0]
+        G = nanOutliers(G, np.round(2*3.3*vps).astype(int))[0]
 
         R = correctPhotobleaching(R, vps)
         G = correctPhotobleaching(G, vps)
+
+        if debug:
+
+            nplots=2
+            chosen = np.round(np.random.rand(nplots)*R.shape[0]).astype(int)
+            import matplotlib.pyplot as plt
+            plt.cla()
+            plt.subplot(nplots, 1, 1,)
+            plt.plot(G[chosen[0],:],'g', label='gRaw w/ python photocorrection')
+            plt.plot(gphotocorr[chosen[0],:],'b', label='gPhotoCorr via matlab')
+            plt.title('Comparsion of Green Channel photocorrection methods for neuron ' + str(chosen[0]))
+            plt.legend()
+
+            plt.subplot(nplots,1,2)
+            plt.plot(R[chosen[0], :], 'r', label='rRaw w/ python photocorrection')
+            plt.plot(rphotocorr[chosen[0], :], 'm', label='rPhotoCorr via matlab')
+            plt.title('Comparsion of Red Channel photocorrection methods for neuron ' + str(chosen[0]))
+            plt.legend()
+            plt.show()
+
+
+
 
 
 
@@ -696,8 +723,8 @@ def fitPhotobleaching(activityTrace, vps):
 
     popt, pcov = curve_fit(expfunc, xVals[nonNaNs], activityTrace[nonNaNs], p0=popt_guess,
                            bounds=bounds)
-
-    if np.random.rand()>0.9:
+    debug = False
+    if np.logical_and(np.random.rand() > 0.9, debug):
         showPlots = True
     else:
         showPlots = False
