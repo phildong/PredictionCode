@@ -394,7 +394,7 @@ def loadData(folder, dataPars, ew=1):
     gphotocorr = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
 
     #load neural data
-    debug = True
+    debug = False
     original = False
     if original:
         R = np.copy(rphotocorr)
@@ -405,11 +405,20 @@ def loadData(folder, dataPars, ew=1):
         vps = dataPars['volumeAcquisitionRate']
 
         #remove outliers with a sliding window of 40 volumes (or 6 seconds)
-        R = nanOutliers(R, np.round(2*3.3*vps).astype(int))[0]
-        G = nanOutliers(G, np.round(2*3.3*vps).astype(int))[0]
+      #  R = nanOutliers(R, np.round(2*3.3*vps).astype(int))[0]
+      #  G = nanOutliers(G, np.round(2*3.3*vps).astype(int))[0]
 
         R = correctPhotobleaching(R, vps)
         G = correctPhotobleaching(G, vps)
+
+        #Insead of doing outlier detection ourselves, just NaN out everything that
+        # Jeff had NaN'd out in his analysis
+        #
+        # The hypothesis here is that photobleaching correction would yield resasonable R^2 if
+        # our outlier detection better matched what Jeff had done in the 3d Brain code
+        R[np.isnan(rphotocorr)] = np.nan
+        G[np.isnan(gphotocorr)] = np.nan
+
 
         if debug:
 
@@ -813,7 +822,7 @@ def nanOutliers(data, window_size, n_sigmas=3):
     newData = np.array(data, dtype=float)
     newData[indices] = np.nan
 
-    Debug = False
+    Debug = True
     if Debug:
         chosen = np.squeeze( np.round(np.random.rand(1) * M-1).astype(int))
         import matplotlib.pyplot as plt
