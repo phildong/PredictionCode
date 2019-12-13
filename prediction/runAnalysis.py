@@ -4,10 +4,12 @@ from __future__ import division #give me floating point when I divide (standard 
 import numpy as np
 import matplotlib.pylab as plt
 import h5py
+import os
 # custom modules 
 import dataHandler as dh
 import makePlots as mp
 import dimReduction as dr
+from prediction import userTracker
 
 ###############################################    
 # 
@@ -31,10 +33,11 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #    load data into dictionary
     #
     ##############################################
-    folder = '/Users/leifer/workspace/PredictionCode/{}_{}/'.format(typ, condition)
-    dataLog = '/Users/leifer/workspace/PredictionCode/{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition)
-    outLoc = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}_results.hdf5".format(typ, condition)
-    outLocData = "/Users/leifer/workspace/PredictionCode/Analysis/{}_{}.hdf5".format(typ, condition)
+    path = userTracker.dataPath()
+    folder = os.path.join(path, '{}_{}/'.format(typ, condition))
+    dataLog = os.path.join(path,'{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition))
+    outLoc = os.path.join(path, 'Analysis/{}_{}_results.hdf5'.format(typ, condition))
+    outLocData = os.path.join(path,'/Analysis/{}_{}.hdf5'.format(typ, condition))
 
     # data parameters
     dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
