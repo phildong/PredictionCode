@@ -390,6 +390,7 @@ def loadData(folder, dataPars, ew=1):
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
 
+    assert np.true_divide(np.sum(np.isnan(rRaw)), rRaw.shape[0]*rRaw.shape[1]) < .3, ["the Red channel is over 1/3rd NaNs. This dataset should be removed from consideration: " + folder ]
     rphotocorr = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
     gphotocorr = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
 
@@ -404,20 +405,34 @@ def loadData(folder, dataPars, ew=1):
         G = gRaw.copy()
         vps = dataPars['volumeAcquisitionRate']
 
-        #remove outliers with a sliding window of 40 volumes (or 6 seconds)
-      #  R = nanOutliers(R, np.round(2*3.3*vps).astype(int))[0]
-      #  G = nanOutliers(G, np.round(2*3.3*vps).astype(int))[0]
-
-        R = correctPhotobleaching(R, vps)
+        R = correctPhotobleaching(R, vps, error_bad_fit=True)
         G = correctPhotobleaching(G, vps)
 
-        #Insead of doing outlier detection ourselves, just NaN out everything that
-        # Jeff had NaN'd out in his analysis
-        #
-        # The hypothesis here is that photobleaching correction would yield resasonable R^2 if
-        # our outlier detection better matched what Jeff had done in the 3d Brain code
-        R[np.isnan(rphotocorr)] = np.nan
-        G[np.isnan(gphotocorr)] = np.nan
+        #Choose whether we want to apply our outlier detection
+        #Or Jeff's
+        jeffs_outlier_detection = False
+        #Note that the paper as posted on the arxiv achieves
+        # very high prediction R^2 using jeff's outlier detection
+
+        if jeffs_outlier_detection:
+             # Below we apply Jeff's outlier nan'ing
+             R[np.isnan(rphotocorr)] = np.nan
+             G[np.isnan(gphotocorr)] = np.nan
+             # Note: Jeff's outlier detection is pretty convoluted
+             # It atually calculates the Delta R/ R0 signal
+             # And then looks for outliers in that and then NaN's them out
+             # And propogates them back into the rphotocorr
+             # signal.
+             #
+             # In other words, its pretty hard to reimpliment exactly
+             # Especially since we don't want to use the ratio approach
+        else:
+            # then we apply ours based on a subset of the criteria
+            # That jeff uses
+            R = nanOutliers(R, zscoreBounds=[-2,5], dataLowerBound=40, max_nan_per_col=0.5, vps=vps)
+            G = nanOutliers(G, zscoreBounds=[-5,5], dataLowerBound=1, max_nan_per_col=0.5, vps=vps)
+
+
 
 
         if debug:
@@ -616,7 +631,7 @@ def loadDictFromHDF(filePath):
     f.close()
     return d
 
-def correctPhotobleaching(raw, vps=6):
+def correctPhotobleaching(raw, vps=6, error_bad_fit=False):
     """ Apply photobleaching correction to raw signals, works on a whole heatmap of neurons
 
     Use Xiaowen's photobleaching correction method which fits an exponential and then divides it off
@@ -661,11 +676,31 @@ def correctPhotobleaching(raw, vps=6):
         pcov = np.zeros([3, 3, N_neurons])
 
         # Exponential Fit on each neuron
+        num_FailsExpFit = 0
         for row in np.arange(N_neurons):
             popt[row, :], pcov[:, :, row], xVals = fitPhotobleaching(smoothed[row, :], vps)
-            photoCorr[row, :] = popt[row, 0] * raw[row, :] / expfunc(xVals, *popt[row, :])
 
-            showPlots = False
+            # If the exponentional we found fits more poorly than a flat line, just use a flat line.
+            residual = raw[row, :] - expfunc(xVals, *popt[row, :])  # its ok to have nan's here
+            sum_of_squares_fit = np.nansum(np.square(residual))
+
+            flatLine = np.nanmean(raw[row, :])
+            residual_flat = raw[row, :] - flatLine
+            sum_of_squares_flat = np.nansum(np.square(residual_flat))
+
+            if sum_of_squares_fit > sum_of_squares_flat:
+                # The fit does more poorly than a flat line
+                #So don't do any photobleaching correction
+
+                print("This trace is better fit by a flat line than an exponential.")
+                photoCorr[row, :] = np.copy(raw[row, :])
+                showPlots = False
+                num_FailsExpFit += 1
+            else:
+                photoCorr[row, :] = popt[row, 0] * raw[row, :] / expfunc(xVals, *popt[row, :])
+                showPlots = False
+
+
             if debug:
                 if np.random.rand() > 0.85:
                     showPlots = True
@@ -680,6 +715,11 @@ def correctPhotobleaching(raw, vps=6):
                 plt.title('correctPhotobleaching()')
                 plt.legend()
                 plt.show()
+
+        if np.true_divide(num_FailsExpFit,N_neurons) > 0.5:
+            print("Uh oh!: The majority of neurons fail to exhibit exponential decay in their raw signals.\n"+
+                    "this could be a sign of a bad recording. \n If this is the red channel its grounds for exclusion., ")
+            assert error_bad_fit is False, "The majority of neurons fail to exhibit exponential decay in their raw signal compared to flat line."
 
     elif raw.ndim == 1:
         smoothed = medfilt(raw, medfilt_window)
@@ -789,50 +829,62 @@ def expfunc(x, a, b, c):
 
 from skimage.util import view_as_windows
 
-def nanOutliers(data, window_size, n_sigmas=3):
-    """using a Hampel filter to detect outliers and replace them with nans.
+def nanOutliers(data, zscoreBounds = [-2, 5], dataLowerBound = 40, max_nan_per_col = 0.5, vps = 6):
+    """Re-implementing Jeff's outlier appraoch from 3DBrain:
+    https://github.com/leiferlab/3dbrain/blob/master/heatMapGeneration.m
 
-        This is based on Xiaowen Chen's MATLAB routine for preprocessing from her Phys Rev E 2019 paper.
-
-    The algorithm assumes the underlying series should be Gaussian. This could be changed by changing the k parameter.
-    Data can contain nans, these will be ignored for median calculation.
-    data: (M, N) array of M timeseries with N samples each.
-    windowsize: integer. This is half of the typical implementation.
-    n_sigmas: float or integer
     """
-    # deal with N = 1 timeseries to conform to (M=1,N) shape
-    if len(data.shape)<2:
-        data = np.reshape(data, (1,-1))
-    k = 1.4826 # scale factor for Gaussian distribution
-    M, N = data.shape # store data shape for quick use below
-    # pad array to achieve at least the same size as original
-    paddata = np.pad(data.copy(), pad_width= [(0,0),(window_size//2,window_size//2)], \
-                     constant_values=(np.median(data)), mode = 'constant')
-    # we use strides to create rolling windows. Not nice in memory, but good in performance.
-    # because its meant for images, it creates some empty axes of size 1.
-    tmpdata = view_as_windows(paddata, (1,window_size))
-    # crop data to center
-    tmpdata = tmpdata[:M, :N]
-    x0N = np.nanmedian(tmpdata, axis = (-1, -2))
-    s0N =k * np.nanmedian(np.abs(tmpdata - x0N[:,:,np.newaxis, np.newaxis]), axis = (-1,-2))
-    # hampel condition
-    hampel = (np.abs(data-x0N) - (n_sigmas*s0N))
-    indices = np.where(hampel>0)
-    # cast to float to allow nans in output data
-    newData = np.array(data, dtype=float)
-    newData[indices] = np.nan
+    dataz=preprocessing.scale(data.T).T
 
-    Debug = True
-    if Debug:
-        chosen = np.squeeze( np.round(np.random.rand(1) * M-1).astype(int))
-        import matplotlib.pyplot as plt
-        plt.cla()
-        plt.plot(data[chosen, :],'r')
-        plt.plot(newData[chosen, :],'b')
-        plt.title('nanOutlier(), neuron: ' +str(chosen))
-        plt.show()
+    #nan out the following:
 
-    return newData, indices
+    # intensity values less than 40
+    # [ANDY: we shoudl pass this in because for green it should be 0, for red it should be 40]
+    data[data < dataLowerBound ] =np.nan
+
+
+    #anything 5 standard deviations above the mean
+    data[dataz > zscoreBounds[1]] = np.nan
+
+    #anything 2 standard deviations below the mean
+    # for red this should not be a requirement
+    data[dataz < zscoreBounds[0]] = np.nan
+
+
+
+    #At the end of finding individual outliers and naning them
+
+    #we need to trash entire columns that have too many nans
+    nan_map = np.isnan(data)
+    bad_col = np.mean(nan_map, 0) > max_nan_per_col # more than half nans is a bad col
+
+    nan_map[:, bad_col] = True #nan out all of the column
+
+
+
+
+    ## This subsection involves finding dense areas of NaNs and Naning out islands of non-Nans
+    ## Which we suspect are unreliable. Some of these comments are taken verbatim from Jeff's Matlab Code
+
+    #do morphological open, removing isolated nans, I'm ok
+    #interpolating through some of these
+  #  nan_map = scipy.ndimage.binary_opening(nan_map, structure=np.ones((1, 3)))
+
+
+    # if many nans appear, merge them, so that we don't have isolated values in a sea of nans
+   # window = np.int(np.round(vps*1.6666))
+    #nan_map = np.logical_or(nan_map, scipy.ndimage.binary_closing(nan_map, structure=np.ones((1, window))))
+
+
+    #Keep all of the realy bad columns nan'd out
+  #  nan_map[:, bad_col] = True #nan out all of the column
+
+
+    data[ nan_map ] = np.nan
+
+
+
+    return data
 
 
 
