@@ -273,8 +273,57 @@ def transformEigenworms(pcs, dataPars):
         pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta
 
+
 def decorrelateNeuronsICA(R, G):
-    """use PCA to remove covariance in Green and Red signals."""
+    """use ICA to remove covariance in Green and Red signals.
+    NaN'd values are excluded. Variance and mean is preserved.
+    """
+    I = np.empty(G.shape)
+    I[:] = np.nan  # initialize it with nans
+
+    ica = FastICA(n_components=2)
+
+    # the fits can't handle the nans, so we gotta tempororaily exclude them
+    # we won't interpolate, we will just remove them than add them back
+    nanmask = np.logical_or(np.isnan(R), np.isnan(G))
+
+    for li in range(len(R)):
+        Y = np.vstack([R[li, ~nanmask[li]], G[li, ~nanmask[li]]]).T
+        sclar2 = StandardScaler(copy=True, with_mean=True, with_std=True)
+        Y = sclar2.fit_transform(Y)
+        S = ica.fit_transform(Y)
+
+        # order components by max correlation with red signal
+        v = [np.corrcoef(s, R[li, ~nanmask[li]])[0, 1] for s in S.T]
+        idn = np.argmin(np.abs(v))
+        # check if signal needs to be inverted
+        sign = np.sign(np.corrcoef(S[:, idn], G[li, ~nanmask[li]])[0, 1])
+        signal = sign * (S[:, idn])
+
+        # Rescale and add back mean WARNING: this means that I values can be negative
+        rescaledSignalTrunc = (np.std(G[li, ~nanmask[li]]) / np.std(signal)) * signal + np.mean(G[li, ~nanmask[li]])
+
+        # until now we had been dealing with truncated variables because we cut out the nans.. now we need to add the nans back
+        I[li, ~nanmask[li]] = rescaledSignalTrunc
+
+        if False:  # Good for debugging
+            print(np.std(G[li]))
+            print(np.std(rescaledSignalTrunc))
+
+            plt.plot(G[li])
+            plt.show()
+
+            plt.plot(R[li])
+            plt.show()
+
+            plt.scatter(G[li, ~nanmask[li]], rescaledSignalTrunc)
+            plt.show()
+            raw_input('Hit enter to continue')
+    return np.array(I)
+
+def decorrelateNeuronsICA_deprecated(R, G):
+    """use ICA to remove covariance in Green and Red signals.
+    This is the old version that assumes no nans, and z-scales"""
     Ynew = []
     ica = FastICA(n_components = 2)
     for li in range(len(R)):
@@ -289,8 +338,8 @@ def decorrelateNeuronsICA(R, G):
         sign = np.sign(np.corrcoef(S[:,idn],G[li])[0,1])
         signal = sign*(S[:,idn])
         Ynew.append(signal)
-    return np.array(Ynew)#, np.mean(var, axis=0), Rs, Gs 
-    
+    return np.array(Ynew)
+
 def decorrelateNeurons(R, G):
     """use PCA to remove covariance in Green and Red signals."""
     Ynew = []
@@ -314,45 +363,39 @@ def decorrelateNeurons(R, G):
 
 def preprocessNeuralData(R, G, dataPars):
     """zscore etc for neural data."""
-    # prep neural data by masking nans
-    mask = np.isnan(R)
-    R[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), R[~mask])
-    mask = np.isnan(G)
-    G[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), G[~mask])
-    
-    # smooth with GCamp6 halftime = 1s
-    RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])       
-    GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
-    print("windowGCaMP:", str(dataPars['windowGCamp']))
-#    YR = GS/RS
-    
-##    meansubtract = False#False#True
-##    if meansubtract:
-##        # long-window size smoothing filter to subtract overall fluctuation in SNR
-##        wind = 90
-##        mean = np.mean(rolling_window(np.mean(YR,axis=0), window=2*wind), axis=1)
-##        #pad with normal mean in front to correctly center the mean values
-##        mean = np.pad(mean, (wind,0), mode='constant', constant_values=(np.mean(np.mean(YR,axis=0)[:wind])))[:-wind]
-##        # do the same in the end
-##        mean[-wind:] = np.repeat(np.mean(np.mean(YR,axis=0)[:-wind]), wind)
-##        YN = YR-mean
-##    else:
-#        YN = YR
-    #YN, _,GS,RS = decorrelateNeurons(RS, GS)
-    YN = decorrelateNeuronsICA(R, G)
-    YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
-    #$YN = GS/RS
-    # percentile scale
-    R0 = np.percentile(YN, [20], axis=1).T
-    dR = np.divide(YN-R0,np.abs(R0))
-    #dR = YN
-    # zscore values 
-    YN =  preprocessing.scale(YN.T).T
-    R0 = np.percentile(GS/RS, [20], axis=1).T
-    RM = np.divide(GS/RS-R0,np.abs(R0))
+
+    #Note: R and G have NaNs
+    I = decorrelateNeuronsICA(R, G) # not normalized, still has NaNs
+
+    backwardCompatible = True
+    if backwardCompatible:
+        # prep neural data by masking nans
+        mask = np.isnan(R)
+        R[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), R[~mask])
+        mask = np.isnan(G)
+        G[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), G[~mask])
+
+        # smooth with GCamp6 halftime = 1s
+        RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])
+        GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
+        print("windowGCaMP:", str(dataPars['windowGCamp']))
+
+        YN = decorrelateNeuronsICA_deprecated(R, G)
+        YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
+        #$YN = GS/RS
+        # percentile scale
+        R0 = np.percentile(YN, [20], axis=1).T
+        dR = np.divide(YN-R0,np.abs(R0))
+        #dR = YN
+        # zscore values
+        YN =  preprocessing.scale(YN.T).T
+        R0 = np.percentile(GS/RS, [20], axis=1).T
+        RM = np.divide(GS/RS-R0,np.abs(R0))
+    else:
+        YN = dR = GS = RS = RM = []
 #    plt.imshow(dR, aspect='auto')
 #    plt.show()
-    return YN, dR, GS, RS, RM
+    return I, YN, dR, GS, RS, RM
 
 def loadData(folder, dataPars, ew=1):
     """load matlab data."""
@@ -461,7 +504,7 @@ def loadData(folder, dataPars, ew=1):
 
     #
     Ratio = np.array(data['Ratio2'])[:,:len(np.array(data['hasPointsTime']))]
-    Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
+    I, Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
     try:
         dY = np.array(data['Ratio2D']).T
     except KeyError:
