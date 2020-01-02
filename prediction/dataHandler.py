@@ -340,26 +340,7 @@ def decorrelateNeuronsICA_deprecated(R, G):
         Ynew.append(signal)
     return np.array(Ynew)
 
-def decorrelateNeurons(R, G):
-    """use PCA to remove covariance in Green and Red signals."""
-    Ynew = []
-    var = []
-    Rs,Gs=[], []
-    pca = PCA(n_components = 2)
-    for li in range(len(R)):
-        Y = np.vstack([R[li], G[li]]).T
-        sclar2= StandardScaler(copy=True, with_mean=True, with_std=True)
-        Y = sclar2.fit_transform(Y)
-        compFull = pca.fit_transform(Y)
-        pcs = pca.components_
-        Ynew.append(compFull[:,1])
-        
-        var.append(pca.explained_variance_ratio_)
-        Yhat = np.dot(compFull[:,1:],pcs[1:,:])
-        Yhat += sclar2.mean_
-        Rs.append(Yhat[:,0])
-        Gs.append(Yhat[:,1])
-    return np.array(Ynew), np.mean(var, axis=0), np.array(Rs), np.array(Gs)
+
 
 def preprocessNeuralData(R, G, dataPars):
     """zscore etc for neural data."""
