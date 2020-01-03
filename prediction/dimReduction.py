@@ -357,22 +357,28 @@ def rankCorrPCA(results):
 #
 ##############################################
 def behaviorCorrelations(data, behaviors, subset = None):
-    """simple r2 scores of behavior and neural activity."""
-    Y = np.copy(data['Neurons']['Activity'])
+    """simple r2 scores of behavior and neural activity.
+    updated Jan 2020 to handle NaNs and to use the
+    mean and variance preserving activity traces
+    """
+    import numpy.ma as ma
+
+    Y = ma.masked_invalid(np.copy(data['Neurons']['I_smooth']))
     print Y.shape
     nNeur = Y.shape[0]
     results = {}
     
     for bindex, beh in enumerate(behaviors):
         r2s = []
-        x = data['Behavior'][beh]
+        x = ma.masked_invalid(data['BehaviorFull'][beh])
         if subset is not None:
+            raise RuntimeError("behaviorCorrelations() was called with a subset. But this feature hasn't been re-implemented yet.")
             print max(subset), Y.shape
             Y = Y[:,subset]
             x = x[subset]
-        x = (x-np.mean(x))/np.std(x)
+        x = (x-ma.mean(x))/ma.std(x)
         for n in range(nNeur):
-            r2s.append(np.corrcoef(x, Y[n])[0,1]**2)
+            r2s.append(ma.corrcoef(x, Y[n])[0,1]**2)
         results[beh] = np.array(r2s)
     return results
     
