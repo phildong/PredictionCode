@@ -472,6 +472,15 @@ def loadData(folder, dataPars, ew=1):
             plt.legend()
             plt.show()
 
+    #NaN-out Flagged volumes (presumably these are manually flagged somehwere in the pipeline)
+    if 'flagged_volumes' in data.keys():
+        if len(data['flagged_volumes'])>0:
+            print data['flagged_volumes']
+            R[:, np.array(data['flagged_volumes'][0])] = np.nan
+            G[:, np.array(data['flagged_volumes'][0])] = np.nan
+
+
+
     #Reject noise common to both Red and Green Channels using ICA
     I = decorrelateNeuronsICA(R, G)
 
@@ -482,26 +491,39 @@ def loadData(folder, dataPars, ew=1):
     I_smooth = np.copy(I_smooth_interp)
     I_smooth[np.isnan(I)]=np.nan
 
-    #CONTINUE CHUGGING HERE
 
-    Ratio = np.array(data['Ratio2'])[:,:len(np.array(data['hasPointsTime']))]
+    #Get the  preferred order  of the neruons,
+    #   Jeff did this from Ratio2 in MATLAB:
+    #   https://github.com/leiferlab/3dbrain/blob/2c25c6187194263424a0bcfc4d9a0b3b33e31dd9/heatMapGeneration.m#L204
+    #       Eventually we want to do our own hierarchical clustering
+    #       because this order is based on the ratio which is NOT what we are using.
+    order = np.array(data['cgIdx']).T[0] - 1
+    # TODO: Reimplement hierarchical clustering on I, not Ratio and get a new order value
+
+    # Remove flagged Neurons
+    try:
+        if len(data['flagged_neurons']) > 0:
+            badNeurs = np.array(data['flagged_neurons'][0])
+            order = np.delete(order, badNeurs)
+    except KeyError:
+        pass
+
+
+
+
+    #<DEPRECATED>
 
     Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
 
-
+    Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
     try:
         dY = np.array(data['Ratio2D']).T
     except KeyError:
         dY = np.zeros(Y.shape)
-    order = np.array(data['cgIdx']).T[0]-1
-    # read flagged neurons
-    try:
-        if len(data['flagged_neurons'])>0:
-            badNeurs = np.array(data['flagged_neurons'][0])
-            order = np.delete(order, badNeurs)
-    except KeyError:
-        pass
+    # </DEPRECATED>
+
+
     # get rid of predominantly nan neurons
     #fracNans = np.sum(np.isnan(Ratio), axis=1)/1.0/len(Ratio[0])
     
@@ -516,7 +538,10 @@ def loadData(folder, dataPars, ew=1):
             nanmask[:,np.array(data['flagged_volumes'][0])] = np.nan
     Rfull = np.copy(Y)
     Rfull[np.isnan(nanmask)] =np.nan
-    
+
+
+
+    #<deprecated>
     Y = Y[order]
     dR = dR[order]
     RM = RM[order]
@@ -524,15 +549,18 @@ def loadData(folder, dataPars, ew=1):
     YD = deconvolveCalcium(Y)
     #regularized derivative
     dY = dY[order]
+    #</deprecated>
+
     # store relevant indices -- crop out the long gaps of nans adn flagged timepoints
     nonNan  = np.where(np.any(np.isfinite(nanmask),axis=0))[0]
-    
-    # create a time axis in seconds
-    T = np.arange(Y.shape[1])/6.
-    # redo time axis in seconds for nan issues
-    T = np.arange(Y[:,nonNan].shape[1])/6.
-    # 
+
+
+
+
+
+    #Setup time axis
     time = np.squeeze(data['hasPointsTime'])
+    # Set zero to be first non-nan time value
     time -= time[nonNan[0]]
     
     # unpack neuron position (only one frame, randomly chosen)
@@ -549,16 +577,20 @@ def loadData(folder, dataPars, ew=1):
     dataDict['CL'] = cl[nonNan]
     dataDict['goodVolumes'] = nonNan
     dataDict['Behavior'] = {}
+    dataDict['BehaviorFull'] = {}
     print RM.shape
     tmpData = [vel[:,0], pc1, pc2, pc3, velo, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
                 'AngleVelocity','Theta', 'Ethogram', 'X', 'Y']):
         dataDict['Behavior'][key] = tmpData[kindex][nonNan]
+        dataDict['BehaviorFull'][key] = tmpData[kindex]
     dataDict['Behavior']['EthogramFull'] = etho
+    dataDict['BehaviorFull']['EthogramFull'] = etho
     dataDict['Neurons'] = {}
-    dataDict['Neurons']['Indices'] =  T#np.arange(Y[:,nonNan].shape[1])/6.#T[nonNan]
     dataDict['Neurons']['Time'] =  time[nonNan] # actual time
+
+    #<deprecated>
     dataDict['Neurons']['TimeFull'] =  time # actual time
     dataDict['Neurons']['ActivityFull'] =  Rfull[order] # full activity
     dataDict['Neurons']['Activity'] = preprocessing.scale(Y[:,nonNan].T).T # redo because nans
@@ -568,11 +600,23 @@ def loadData(folder, dataPars, ew=1):
     dataDict['Neurons']['RedRaw'] = RS
     dataDict['Neurons']['Ratio'] = RM[:,nonNan]
     dataDict['Neurons']['GreenRaw'] = GS
+    #</deprecated>
+
     dataDict['Neurons']['Positions'] = neuroPos
-    dataDict['Neurons']['ordering'] = order
     dataDict['Neurons']['valid'] = nonNan
     dataDict['Neurons']['orientation'] = 1 # dorsal or ventral
-    
+
+    dataDict['Neurons']['ordering'] = order
+
+    # Andys improved photobleaching correction, mean- and variance-preserved variables
+
+    dataDict['Neurons']['I'] = I[order] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_Time'] = time #corresponding time axis
+    dataDict['Neurons']['I_smooth'] = I_smooth[order] # SMOOTHED common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
+    dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
+
     return dataDict
     
     
