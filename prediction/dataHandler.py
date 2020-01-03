@@ -343,40 +343,34 @@ def decorrelateNeuronsICA_deprecated(R, G):
 
 
 def preprocessNeuralData(R, G, dataPars):
-    """zscore etc for neural data."""
+    """ DEPRECATED  zscore etc for neural data."""
 
-    #Note: R and G have NaNs
-    I = decorrelateNeuronsICA(R, G) # not normalized, still has NaNs
+    # prep neural data by masking nans
+    mask = np.isnan(R)
+    R[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), R[~mask])
+    mask = np.isnan(G)
+    G[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), G[~mask])
 
-    backwardCompatible = True
-    if backwardCompatible:
-        # prep neural data by masking nans
-        mask = np.isnan(R)
-        R[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), R[~mask])
-        mask = np.isnan(G)
-        G[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), G[~mask])
+    # smooth with GCamp6 halftime = 1s
+    RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])
+    GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
+    print("windowGCaMP:", str(dataPars['windowGCamp']))
 
-        # smooth with GCamp6 halftime = 1s
-        RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])
-        GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
-        print("windowGCaMP:", str(dataPars['windowGCamp']))
+    YN = decorrelateNeuronsICA_deprecated(R, G)
+    YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
+    #$YN = GS/RS
+    # percentile scale
+    R0 = np.percentile(YN, [20], axis=1).T
+    dR = np.divide(YN-R0,np.abs(R0))
+    #dR = YN
+    # zscore values
+    YN =  preprocessing.scale(YN.T).T
+    R0 = np.percentile(GS/RS, [20], axis=1).T
+    RM = np.divide(GS/RS-R0,np.abs(R0))
 
-        YN = decorrelateNeuronsICA_deprecated(R, G)
-        YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
-        #$YN = GS/RS
-        # percentile scale
-        R0 = np.percentile(YN, [20], axis=1).T
-        dR = np.divide(YN-R0,np.abs(R0))
-        #dR = YN
-        # zscore values
-        YN =  preprocessing.scale(YN.T).T
-        R0 = np.percentile(GS/RS, [20], axis=1).T
-        RM = np.divide(GS/RS-R0,np.abs(R0))
-    else:
-        YN = dR = GS = RS = RM = []
 #    plt.imshow(dR, aspect='auto')
 #    plt.show()
-    return I, YN, dR, GS, RS, RM
+    return  YN, dR, GS, RS, RM
 
 def loadData(folder, dataPars, ew=1):
     """load matlab data."""
@@ -478,14 +472,24 @@ def loadData(folder, dataPars, ew=1):
             plt.legend()
             plt.show()
 
+    #Reject noise common to both Red and Green Channels using ICA
+    I = decorrelateNeuronsICA(R, G)
 
+    #Apply Gaussian Smoothing (and interpolate for free)
+    I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
 
+    #Reinstate the NaNs
+    I_smooth = np.copy(I_smooth_interp)
+    I_smooth[np.isnan(I)]=np.nan
 
+    #CONTINUE CHUGGING HERE
 
-
-    #
     Ratio = np.array(data['Ratio2'])[:,:len(np.array(data['hasPointsTime']))]
-    I, Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
+
+    Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
+
+
+
     try:
         dY = np.array(data['Ratio2D']).T
     except KeyError:
@@ -585,6 +589,36 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
         folder = ''.join([pathTemplate, line[0], '_MS'])
         datasets[line[0]] = loadData(folder, dataPars)
     return datasets
+
+
+def gauss_filterNaN(U,sig):
+    """Gaussian filter with NaNs. Interpolates for free
+    This is a slick trick from here:
+    https://stackoverflow.com/a/36307291
+
+
+    Instead of masking, interpolating, and THEN filtering. This
+    sets NaNs to zeros, filters, and then normalizes by  dividing off
+    the result of a convolution with another mask where nans are 0 and nonNaNs are1.
+
+    It interpolates for free.
+
+
+    One thing I worry about is that this may introduce divide by zero
+    errors for large swathso of only NaNs.
+    """
+    import scipy as sp
+
+    V = U.copy()
+    V[np.isnan(U)] = 0
+    VV = sp.ndimage.gaussian_filter1d(V, sigma=sig)
+
+    W = 0 * U.copy() + 1
+    W[np.isnan(U)] = 0
+    WW = sp.ndimage.gaussian_filter1d(W, sigma=sig)
+
+    Z_interp = VV / WW
+    return  Z_interp
 
 def loadNeuronPositions(filename):
     x = scipy.io.loadmat(filename)['x']
