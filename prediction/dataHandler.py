@@ -475,7 +475,6 @@ def loadData(folder, dataPars, ew=1):
     #NaN-out Flagged volumes (presumably these are manually flagged somehwere in the pipeline)
     if 'flagged_volumes' in data.keys():
         if len(data['flagged_volumes'])>0:
-            print data['flagged_volumes']
             R[:, np.array(data['flagged_volumes'][0])] = np.nan
             G[:, np.array(data['flagged_volumes'][0])] = np.nan
 
@@ -501,6 +500,7 @@ def loadData(folder, dataPars, ew=1):
     # TODO: Reimplement hierarchical clustering on I, not Ratio and get a new order value
 
     # Remove flagged Neurons
+    badNeurs = np.array([])
     try:
         if len(data['flagged_neurons']) > 0:
             badNeurs = np.array(data['flagged_neurons'][0])
@@ -509,6 +509,22 @@ def loadData(folder, dataPars, ew=1):
         pass
 
 
+    # Identify time points in which the majority of neurons are NaN
+    # RATIONALE: For calculations that sum across neurons at a given time
+    # (like regression) it doesn't make sense to throw at the whole volume just becase
+    # a few neurons are NaNs. So we will interpolate. Conversely, if the whole volume
+    # is bad, there is no point including the volume and, if there are large swaths
+    # of all NaN timepoints, it could adversely affect our estimate of our regressions'
+    # performance.
+    #
+    # So identify time points that are majority NaN and exclude them.
+
+    #we only allow half the neurons to be NaN. We must correct for the fact that
+    # we already no some of the rows are bad so we shouldn't count if they are NaN
+    frac_allowed = 0.5 + np.true_divide(badNeurs.shape[0], I.shape[0])
+    valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
+
+    I_smooth_interp_crop_noncontig = np.copy(I_smooth_interp[:, valid_map])
 
 
     #<DEPRECATED>
@@ -521,7 +537,6 @@ def loadData(folder, dataPars, ew=1):
         dY = np.array(data['Ratio2D']).T
     except KeyError:
         dY = np.zeros(Y.shape)
-    # </DEPRECATED>
 
 
     # get rid of predominantly nan neurons
@@ -541,7 +556,7 @@ def loadData(folder, dataPars, ew=1):
 
 
 
-    #<deprecated>
+
     Y = Y[order]
     dR = dR[order]
     RM = RM[order]
@@ -549,11 +564,11 @@ def loadData(folder, dataPars, ew=1):
     YD = deconvolveCalcium(Y)
     #regularized derivative
     dY = dY[order]
-    #</deprecated>
+
 
     # store relevant indices -- crop out the long gaps of nans adn flagged timepoints
     nonNan  = np.where(np.any(np.isfinite(nanmask),axis=0))[0]
-
+    #</deprecated>
 
 
 
@@ -578,13 +593,17 @@ def loadData(folder, dataPars, ew=1):
     dataDict['goodVolumes'] = nonNan
     dataDict['Behavior'] = {}
     dataDict['BehaviorFull'] = {}
+    dataDict['Behavior_crop_noncontig'] = {}
     print RM.shape
     tmpData = [vel[:,0], pc1, pc2, pc3, velo, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
                 'AngleVelocity','Theta', 'Ethogram', 'X', 'Y']):
-        dataDict['Behavior'][key] = tmpData[kindex][nonNan]
+
+        dataDict['Behavior'][key] = tmpData[kindex][nonNan] #Deprecated
+
         dataDict['BehaviorFull'][key] = tmpData[kindex]
+        dataDict['Behavior_crop_noncontig'][key] = tmpData[kindex][valid_map]
     dataDict['Behavior']['EthogramFull'] = etho
     dataDict['BehaviorFull']['EthogramFull'] = etho
     dataDict['Neurons'] = {}
@@ -616,6 +635,11 @@ def loadData(folder, dataPars, ew=1):
     dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
+
+    dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map]  # corresponding time axis
+    dataDict['Neurons']['I_valid_map']=valid_map
+
 
     return dataDict
     

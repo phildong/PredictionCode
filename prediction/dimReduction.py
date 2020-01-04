@@ -197,13 +197,13 @@ def runPCANormal(data, pars, whichPC = 0, testset = None, deriv = False, useRaw=
     nComp = pars['nCompPCA']
     pca = PCA(n_components = nComp)
     if deriv:
-        Neuro = data['Neurons']['derivActivity']
+        raise RuntimeError("Doing PCA on deriv is no longer supported.")
     if pars['useRank']:
-        Neuro = data['Neurons']['rankActivity']
+        raise RuntimeError("Doing PCA on rankActivity is no longer supported")
     if useRaw:
-        Neuro = data['Neurons']['Ratio']
+        Neuro = data['Neurons']['I']
     else:
-        Neuro = np.copy(data['Neurons']['Activity'])
+        Neuro = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig'])
     if testset is not None:
         Yfull = np.copy(Neuro).T
         Y = Neuro[:,testset].T
@@ -270,12 +270,12 @@ def runPCANoiseLevelEstimate(Y, pars):
     sclar= StandardScaler(copy=True, with_mean=True, with_std=False)
     YS = sclar.fit_transform(YS)
     pca.fit(YS)
-    fullShuffle =  pca.explained_variance_
+    fullShuffle =  pca.explained_variance_ratio_
     # make sure data is centered
     sclar= StandardScaler(copy=True, with_mean=True, with_std=False)
     YR = sclar.fit_transform(YR)
     pca.fit(YR)
-    lagShuffle =  pca.explained_variance_
+    lagShuffle =  pca.explained_variance_ratio_
 #    plt.subplot(211)
 #    plt.imshow(YS.T, aspect='auto')
 #    plt.subplot(212)
@@ -584,7 +584,7 @@ def runLinearModel(data, results, pars, splits, plot = False, behaviors = ['Angl
             clustres = runHierarchicalClustering(data, pars)
             X = clustres['Activity'].T
         else:
-            X = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
+            X = np.copy(data['Neurons']['I_smooth_interp']).T # transpose to conform to nsamples*nfeatures
         if subset is not None:
             # only a few neurons
             if len(subset[label])<1:
@@ -817,7 +817,7 @@ def runLasso(data, pars, splits, plot = False, behaviors = ['AngleVelocity', 'Ei
     """run LASSO to fit behavior and neural activity with a linear model."""
     linData = {}
     for label in behaviors:
-        Y = np.reshape(np.copy(data['Behavior'][label]),(-1, 1))
+        Y = np.reshape(np.copy(data['Behavior_crop_noncontig'][label]),(-1, 1))
         trainingsInd, testInd = splits[label]['Train'], splits[label]['Test']
     
         if pars['useRank']:
@@ -826,7 +826,7 @@ def runLasso(data, pars, splits, plot = False, behaviors = ['AngleVelocity', 'Ei
             clustres = runHierarchicalClustering(data, pars)
             X = clustres['Activity'].T
         else:
-            X = np.copy(data['Neurons']['Activity'].T) # transpose to conform to nsamples*nfeatures
+            X = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig'].T) # transpose to conform to nsamples*nfeatures
         # implement time lagging -- forward and reverse
         
         if lag is not None:

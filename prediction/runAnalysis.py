@@ -73,7 +73,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
         resultDict[key]['pars'] = dataPars
     # analysis parameters
 
-    pars ={'nCompPCA':10, # no of PCA components
+    pars ={'nCompPCA': 20, # no of PCA components (Andy wants to calculate all of them, not just 20,
+                             # but for now we use 20 because 'None' fails when you save to the HD5 format
             'PCAtimewarp':False, #timewarp so behaviors are equally represented
             'trainingCut': 0.6, # what fraction of data to use for training
             'trainingType': 'middle', # simple, random or middle.select random or consecutive data for training. Middle is a testset in the middle
@@ -132,16 +133,16 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             for label in behaviors:
                 train, test = dr.createTrainingTestIndices(dataSets[key], pars, label=label)
                 if transient:
-                   train = np.where(dataSets[key]['Neurons']['Time']<4*60)[0]
+                   train = np.where(dataSets[key]['Neurons']['I_Time_crop_noncontig']<4*60)[0]
                     # after 4:30 min
-                   test = np.where((dataSets[key]['Neurons']['Time']>7*60)*(dataSets[key]['Neurons']['Time']<14*60))[0]
+                   test = np.where((dataSets[key]['Neurons']['I_Time_crop_noncontig']>7*60)*(dataSets[key]['Neurons']['Time']<14*60))[0]
                    resultDict[key]['Training']['Half'] ={'Train':train}
                    resultDict[key]['Training']['Half']['Test'] = test
                 else:
                      # add half split
-                    midpoint = np.mean(dataSets[key]['Neurons']['Time'])
-                    trainhalf = np.where(dataSets[key]['Neurons']['Time']<midpoint)[0]
-                    testhalf = np.where(dataSets[key]['Neurons']['Time']>midpoint)[0]
+                    midpoint = np.mean(dataSets[key]['Neurons']['I_Time_crop_noncontig'])
+                    trainhalf = np.where(dataSets[key]['Neurons']['I_Time_crop_noncontig']<midpoint)[0]
+                    testhalf = np.where(dataSets[key]['Neurons']['I_Time_crop_noncontig']>midpoint)[0]
                     resultDict[key]['Training']['Half'] ={'Train':trainhalf}
                     resultDict[key]['Training']['Half']['Test'] = testhalf
                 resultDict[key]['Training'][label] = {'Train':train  }
@@ -157,6 +158,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     if periodogram:
         print 'running periodogram(s)'
+        raise RuntimeError("Periodogram routines were called, but these have not been updated to use the latest activity traces.")
         for kindex, key in enumerate(keyList):
             resultDict[key]['Period'] = dr.runPeriodogram(dataSets[key], pars, testset = None)
     # for half the sample each
@@ -184,9 +186,11 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     # run svm to predict discrete behaviors
     #
     ##############################################
+    #TODO: Remove SVM entirely from codebase
     if svm:
         for kindex, key in enumerate(keyList):
             print 'running SVM.'
+            raise RuntimeError("SVM was called. but this have not been updated to use the latest activity traces.")
             splits = resultDict[key]['Training']
             resultDict[key]['SVM'] = dr.discreteBehaviorPrediction(dataSets[key], pars, splits )
 
@@ -212,6 +216,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     #%%
     if kato_pca:
+        raise RuntimeError("running Kato style PCA is no longer supported.")
+        # TODO: LOW PRIORITY Remove Kato PCA entirely from codebase
         print 'running Kato et. al PCA'
         for kindex, key in enumerate(keyList):
             resultDict[key]['katoPCA'] = dr.runPCANormal(dataSets[key], pars, deriv = True)
@@ -227,6 +233,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     #%%
     if half_pca:
+        raise RuntimeError("running half-split PCA is no longer supported.")
+        # TODO: LOW PRIORITY Remove half-PCA entirely from codebase
         print 'half-split PCA'
         for kindex, key in enumerate(keyList):
             # run PCA on each half
@@ -241,6 +249,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #
     ##############################################
     if predPCA:
+        raise RuntimeError("predicting neural dynamics from beahvior is no longer supported.")
         for kindex, key in enumerate(keyList):
             print 'predicting behavior PCA'
             splits = resultDict[key]['Training']
@@ -254,6 +263,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     if predNeur:
         for kindex, key in enumerate(keyList):
+            raise RuntimeError("predicting neural dynamics from beahvior is no longer supported.")
             print 'predicting neural dynamics from behavior'
             splits = resultDict[key]['Training']
             resultDict[key]['RevPred'] = dr.predictNeuralDynamicsfromBehavior(dataSets[key], splits, pars)
@@ -265,6 +275,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #
     ##############################################
     if hierclust:
+        #TODO: move this hierarchical clustering over to the loadData() functions and use it to set the order of the neurons
         for kindex, key in enumerate(keyList):
             print 'running clustering'
             resultDict[key]['clust'] = dr.runHierarchicalClustering(dataSets[key], pars)
@@ -275,6 +286,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #
     ##############################################
     if bta:
+        raise RuntimeError("BTA is no longer supported.")
+        # TODO: LOW PRIORITY Remove BTA from codebase
         for kindex, key in enumerate(keyList):
             print 'running BTA'
             resultDict[key]['BTA'] =dr.runBehaviorTriggeredAverage(dataSets[key], pars)
