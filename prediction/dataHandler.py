@@ -486,6 +486,8 @@ def loadData(folder, dataPars, ew=1):
     #Apply Gaussian Smoothing (and interpolate for free)
     I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
 
+    assert np.all(np.isfinite(I_smooth_interp))
+
     #Reinstate the NaNs
     I_smooth = np.copy(I_smooth_interp)
     I_smooth[np.isnan(I)]=np.nan
@@ -660,7 +662,7 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
 
 
 def gauss_filterNaN(U,sig):
-    """Gaussian filter with NaNs. Interpolates for free
+    """Gaussian filter with NaNs. Interpolates also
     This is a slick trick from here:
     https://stackoverflow.com/a/36307291
 
@@ -669,13 +671,15 @@ def gauss_filterNaN(U,sig):
     sets NaNs to zeros, filters, and then normalizes by  dividing off
     the result of a convolution with another mask where nans are 0 and nonNaNs are1.
 
-    It interpolates for free.
+    It interpolates also.
 
 
     One thing I worry about is that this may introduce divide by zero
     errors for large swathso of only NaNs.
     """
     import scipy as sp
+
+    assert np.size(np.shape(U)) == 1, "This function expects one dimensional arrays."
 
     V = U.copy()
     V[np.isnan(U)] = 0
@@ -686,6 +690,17 @@ def gauss_filterNaN(U,sig):
     WW = sp.ndimage.gaussian_filter1d(W, sigma=sig)
 
     Z_interp = VV / WW
+
+    #For most datasets we are done here. But some datasets have
+    #Large swaths of NaNs that are even larger than the window size.
+    #In that  case we still have some NaNs floating around.
+
+    valid_mask = np.isfinite(Z_interp)
+    invalid_mask = ~valid_mask
+    if np.any(invalid_mask):
+        # If there are still non finite valus (like NaNs)
+        #Go ahead and do regular old interpolation
+        Z_interp[invalid_mask] = np.interp(np.flatnonzero(invalid_mask), np.flatnonzero(valid_mask), Z_interp[valid_mask])
     return  Z_interp
 
 def loadNeuronPositions(filename):
