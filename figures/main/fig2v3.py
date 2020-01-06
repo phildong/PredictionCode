@@ -118,10 +118,16 @@ label = 'AngleVelocity'
 splits = movingAnalysis['Training']
 train, test = splits[label]['Train'], splits[label]['Test']
 # pull out repeated stuff
-time = moving['Neurons']['TimeFull']
-timeActual = moving['Neurons']['Time']
-t = moving['Neurons']['Time'][test]
-noNeurons = moving['Neurons']['Activity'].shape[0]
+time = moving['Neurons']['I_Time']
+time_crop_noncontig = moving['Neurons']['I_Time_crop_noncontig']
+t = moving['Neurons']['I_Time_crop_noncontig'][test]
+
+#mapping between contiguous and noncontig_cropped traces
+valid_map = moving['Neurons']['I_valid_map']
+indices_contig_trace_test=valid_map[splits[label]['Test']]
+
+
+noNeurons = moving['Neurons']['I_smooth_interp_crop_noncontig'].shape[0]
 results = movingAnalysis['PCA']
 
 # plot heatmap ordered by PCA
@@ -132,18 +138,18 @@ axcb = plt.subplot(gs1[0,1])
 axetho = plt.subplot(gs1[1,0], clip_on=False)
 axEthoLeg = plt.subplot(gs1[1:2,1])#,clip_on=False)
 #heatmap
-cax1 = plotHeatmap(time, moving['Neurons']['ActivityFull'][results['neuronOrderPCA']], ax=axhm, vmin=-2, vmax=2)
+cax1 = plotHeatmap(time, moving['Neurons']['I_smooth'][results['neuronOrderPCA']], ax=axhm, vmin=0, vmax=1000)
 axhm.xaxis.label.set_visible(False)
 axhm.set_xticks([])
 # colorbar
 cbar = fig.colorbar(cax1, cax=axcb, use_gridspec = True)
-cbar.set_ticks([-2,0,2])
-cbar.set_ticklabels(['<-2',0,'>2'])
+#cbar.set_ticks([-2,0,2])
+#cbar.set_ticklabels(['<-2',0,'>2'])
 cbar.outline.set_visible(False)
 moveAxes(axcb, 'left', 0.04)
 moveAxes(axcb, 'scaley', -0.08)
 moveAxes(axcb, 'scalex', -0.02)
-axcb.set_ylabel(r'$\Delta I/I_0$', labelpad = 0, rotation=-90)
+axcb.set_ylabel('I', labelpad = 0  )
 #ethogram
 
 plotEthogram(axetho, time, moving['Behavior']['EthogramFull'], alpha = 1, yValMax=1, yValMin=0, legend=0)
@@ -168,13 +174,18 @@ for i in range(np.min([len(results['pcaComponents']), 3])):
     # normalize
     y =y -np.min(y)
     y =y/np.max(y)
+
+    y_show_nans = np.empty(moving['Neurons']['I_smooth'].shape[1])
+    y_show_nans[:] = np.nan
+    y_show_nans[valid_map] = y
+
     ax4.text(-100, np.mean(y)-i*1.15, 'PC$_{}$'.format(i+1), color = 'k')
-    ax4.plot(time[moving['Neurons']['valid']], -i*1.1+y, label='Component {}'.format(i+1), lw=1, color = 'k')
+    ax4.plot(time, -i*1.1+y_show_nans, label='Component {}'.format(i+1), lw=1, color = 'k')
 # draw a box for the testset
-ax4.axvspan(timeActual[test[0]], timeActual[test[-1]], color=N2, zorder=-10, alpha=0.75)
-ax4.text(np.mean(timeActual[test]), ax4.get_ylim()[-1], 'Testset',horizontalalignment='center')
+ax4.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color=N2, zorder=-10, alpha=0.75)
+ax4.text(np.mean(time_crop_noncontig[test]), ax4.get_ylim()[-1], 'Testset', horizontalalignment='center')
 #ax4.set_xlabel('Time (s)')
-ax4.set_xlim([np.min(timeActual), np.max(timeActual)])
+ax4.set_xlim([np.min(time_crop_noncontig), np.max(time_crop_noncontig)])
 #ax4.spines['left'].set_visible(False)
 #ax4.set_yticks([])
 cleanAxes(ax4)
@@ -184,16 +195,16 @@ gsEWs = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs1[3,0], wspace=0.1
 ax7 = plt.subplot(gsEWs[0,0])
 # XXXX factor 6 for angle v
 alphaBeh = 0.7
-ax7.plot(timeActual, moving['Behavior']['AngleVelocity'], color = R1, alpha=alphaBeh)
+ax7.plot(time_crop_noncontig, moving['Behavior_crop_noncontig']['AngleVelocity'], color = R1, alpha=alphaBeh)
 # draw a box for the testset
-ax7.axvspan(timeActual[test[0]], timeActual[test[-1]], color=N2, zorder=-10, alpha=0.75)
+ax7.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color=N2, zorder=-10, alpha=0.75)
 ax7.axhline(color='k', linestyle = '--', zorder=-1)
 #ax7.text(np.mean(timeActual[test]), ax4.get_ylim()[-1], 'Testset',horizontalalignment='center')
 #ax7.set_ylabel('v(rad/s)', labelpad=-1, color=R1)
-ax7.set_xlim([timeActual[0], timeActual[-1]])
+ax7.set_xlim([time_crop_noncontig[0], time_crop_noncontig[-1]])
 cleanAxes(ax7, where='x')
 # make scalebar
-xscale = timeActual[0]-20
+xscale = time_crop_noncontig[0] - 20
 yscale =  [-0.025, 0.025]
 
 #ax7.plot([xscale, xscale], yscale, color=R1, clip_on=False)
@@ -204,16 +215,16 @@ yscale =  [-0.025, 0.025]
 # remove xlabels
 plt.setp(ax7.get_xticklabels(), visible=False)
 ax8 = plt.subplot(gsEWs[1,0])
-ax8.plot(timeActual,moving['Behavior']['Eigenworm3'], color = B1, alpha=alphaBeh)
+ax8.plot(time_crop_noncontig, moving['Behavior_crop_noncontig']['Eigenworm3'], color = B1, alpha=alphaBeh)
 # draw a box for the testset
-ax8.axvspan(timeActual[test[0]], timeActual[test[-1]], color=N2, zorder=-10, alpha=0.75)
+ax8.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color=N2, zorder=-10, alpha=0.75)
 #ax8.text(np.mean(timeActual[test]), ax4.get_ylim()[-1], 'Testset',horizontalalignment='center')
 ax8.axhline(color='k', linestyle ='--', zorder=-1)
 #ax8.set_ylabel('Turn', labelpad=10, color=B1)
 ax8.get_yaxis().set_label_coords(-0.12, 0.5)
 ax7.get_yaxis().set_label_coords(-0.12, 0.5)
 ax8.set_xlabel('Time (s)')
-ax8.set_xlim([timeActual[0], timeActual[-1]])
+ax8.set_xlim([time_crop_noncontig[0], time_crop_noncontig[-1]])
 moveAxes(ax7, 'up', 0.04)
 moveAxes(ax8, 'up', 0.03)
 moveAxes(ax7, 'scaley', 0.03)
@@ -242,18 +253,25 @@ ybeh = [0, -6]
 yoff = [1.5, 2]
 axscheme1 = plt.subplot(gsPred[0,0])
 axscheme1.set_title('PCA model', y=1.05, fontsize=fs)
+
+
+
 for behavior, color, cpred, yl,yo, label, align in zip(['AngleVelocity','Eigenworm3' ], \
             [N1, N1], [R1, B1], ybeh, yoff,['Velocity', 'Turn'], ['center', 'center']):
-    beh = moving['Behavior'][behavior]
+    beh = moving['BehaviorFull'][behavior]
 
     meanb, maxb = np.nanmean(beh),np.nanstd(beh)
-    beh = (beh[test]-meanb)/maxb
-    
-    behPred = movingAnalysis[flag][behavior]['output'][test]
+    beh = (beh[indices_contig_trace_test]-meanb)/maxb
+
+    #Set up all the NaNs
+    behPred = np.empty(moving['BehaviorFull'][behavior].shape)
+    behPred[:] = np.nan
+    #slot in the behavior.
+    behPred[indices_contig_trace_test] = movingAnalysis[flag][behavior]['output'][test]
     #behPred = (behPred-meanb)/maxb
     
     axscheme1.plot(t, beh+yl, color=color)
-    axscheme1.plot(t, behPred+yl, color=cpred)
+    axscheme1.plot(time, behPred+yl, color=cpred)
     axscheme1.text(t[-1], yl+yo, \
     r'$R^2 = {:.2f}$'.format(np.float(movingAnalysis[flag][behavior]['scorepredicted'])), horizontalalignment = 'right')
 
@@ -278,18 +296,21 @@ axscheme2.set_title('Sparse linear model', y=1.05, fontsize=fs)
 
 for behavior, color, cpred, yl,yo, label, align in zip(['AngleVelocity','Eigenworm3' ], \
             [N1, N1], [R1, B1], ybeh,yoff, ['Velocity', 'Turn'], ['center', 'center']):
-    beh = moving['Behavior'][behavior]
+    beh = moving['BehaviorFull'][behavior]
 
-    meanb, maxb = np.nanmean(beh),np.nanstd(beh)
-    beh = (beh[test]-meanb)/maxb
-    
-    behPred = movingAnalysis[flag][behavior]['output'][test]
+    meanb, maxb = np.nanmean(beh[indices_contig_trace_test]),np.nanstd(beh[indices_contig_trace_test])
+    beh = (beh[indices_contig_trace_test]-meanb)/maxb
+
+    behPred = np.empty(moving['BehaviorFull'][behavior].shape)
+    behPred[:] = np.nan
+
+    behPred[indices_contig_trace_test] = movingAnalysis[flag][behavior]['output'][test]
     behPred = (behPred-meanb)/maxb
     
     axscheme2.plot(t, beh+yl, color=color)
-    axscheme2.plot(t, behPred+yl, color=cpred)
+    axscheme2.plot(time, behPred+yl, color=cpred)
     axscheme2.text(t[-1], yl+yo, \
-    r'$R^2 = {:.2f}$'.format(np.float(movingAnalysis[flag][behavior]['scorepredicted'])), horizontalalignment = 'right')
+        r'$R^2 = {:.2f}$'.format(np.float(movingAnalysis[flag][behavior]['scorepredicted'])), horizontalalignment = 'right')
     #axscheme2.text(t[0]*0.8, yl, label, rotation=90, color=cpred, verticalalignment=align)
 
 # add scalebar
@@ -302,7 +323,7 @@ moveAxes(axscheme1, 'down', 0.04)
 moveAxes(axscheme2, 'down', 0.04)
 moveAxes(axscheme1, 'right', 0.02)
 moveAxes(axscheme1, 'scalex', 0.03)
-moveAxes(axscheme2, 'scalex', 0.03)
+moveAxes(axscheme2, 'scalex', 0.01)
 
 
 ###################################
