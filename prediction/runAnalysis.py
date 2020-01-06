@@ -114,7 +114,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     lagregression = 0
     # this requires moving animals
     if condition != 'immobilized':
-        predNeur = 1
+        predNeur = 0 #moniika had this at 1, but i'm setting it to zero
         svm = 0
         lasso = 0
         elasticnet = 1#True
@@ -127,6 +127,10 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     # create training and test set indices
     #
     ##############################################
+    #Note we are going to do this all on the crop_noncontiguous datasets because
+    # most of the time when we are comparing training and testing we need to be predicting
+    # behavior from many neurons, and so we we have to use the interpolated dataset, but we still want
+    # to omit NaNs that affect the majority of the neurons (like leading and trailing NaNs, or gaps, for example)
     if createIndicesTest:
         for kindex, key in enumerate(keyList):
             resultDict[key] = {'Training':{}}
@@ -245,11 +249,10 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #%%
     ###############################################
     #
-    # predict neural dynamics from behavior
+    # predict behavior from PCA
     #
     ##############################################
     if predPCA:
-        raise RuntimeError("predicting neural dynamics from beahvior is no longer supported.")
         for kindex, key in enumerate(keyList):
             print 'predicting behavior PCA'
             splits = resultDict[key]['Training']
@@ -357,6 +360,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     if lagregression:
         for kindex, key in enumerate(keyList):
+            raise RuntimeError("lagregression not supported yet, because now we are tranistioning to datasets that are non contiguous so we need a mores sophisticated way of handling lags")
             print 'Running lag calculation',  key
             splits = resultDict[key]['Training']
             #resultDict[key]['LagLASSO'] = dr.timelagRegression(dataSets[key], pars, splits, plot = False, behaviors = ['AngleVelocity', 'Eigenworm3'], lags = np.arange(-18,19, 3))

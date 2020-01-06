@@ -116,7 +116,7 @@ def splitIntoSets(y, nBins=5, nSets=5, splitMethod='auto', verbose=0):
     
 def createTrainingTestIndices(data, pars, label):
     """split time points into trainings and test set."""
-    timeLen = data['Neurons']['Activity'].shape[1]
+    timeLen = data['Neurons']['I_smooth_interp_crop_noncontig'].shape[1]
     if pars['trainingType'] == 'start':
         cutoff = int(pars['trainingCut']*timeLen)
         testIndices = np.arange(timeLen)[:cutoff:]
@@ -157,13 +157,13 @@ def createTrainingTestIndices(data, pars, label):
         trainingsIndices = np.setdiff1d(tmpIndices, testIndices)
         # bin  to get probability distribution
         nbin = 5
-        hist, bins = np.histogram(data['Behavior'][label], nbin)
+        hist, bins = np.histogram(data['Behavior_crop_noncontig'][label], nbin)
         # this is the amount of data that will be left in each bin after equalization
         #N = np.sum(hist)/20.#hist[0]+hist[-1]
         N = np.max(hist)/2#*nbin
-        print bins, np.min(data['Behavior'][label]), np.max(data['Behavior'][label])
+        print bins, np.min(data['Behavior_crop_noncontig'][label]), np.max(data['Behavior_crop_noncontig'][label])
         # digitize data 
-        dataProb = np.digitize(data['Behavior'][label], bins=bins[:-2], right=True)
+        dataProb = np.digitize(data['Behavior_crop_noncontig'][label], bins=bins[:-2], right=True)
         # rescale such that we get desired trainingset length
         trainingsIndices= []
         
@@ -179,8 +179,8 @@ def createTrainingTestIndices(data, pars, label):
                         trainingsIndices.append(index)
                         counter[n] +=1
         print len(trainingsIndices)/1.0/timeLen, len(testIndices)/1.0/timeLen
-        plt.hist(data['Behavior'][label], normed=True,bins=nbin )
-        plt.hist(data['Behavior'][label][trainingsIndices], normed=True, alpha=0.5, bins=nbin)
+        plt.hist(data['Behavior_crop_noncontig'][label], normed=True,bins=nbin )
+        plt.hist(data['Behavior_crop_noncontig'][label][trainingsIndices], normed=True, alpha=0.5, bins=nbin)
         plt.show()
     return np.sort(trainingsIndices), np.sort(testIndices)
     
@@ -362,6 +362,10 @@ def behaviorCorrelations(data, behaviors, subset = None):
     mean and variance preserving activity traces
     """
     import numpy.ma as ma
+
+    #Because each neuron is considered seperatley, we don't
+    # need to perform any interpolation.. we just don't
+    # include instances where there were NaNs
 
     Y = ma.masked_invalid(np.copy(data['Neurons']['I_smooth']))
     print Y.shape
@@ -575,16 +579,18 @@ def runLinearModel(data, results, pars, splits, plot = False, behaviors = ['Angl
     """run a linear model to fit behavior and neural activity with a linear model."""
     linData = {}
     for label in behaviors:
-        Y = data['Behavior'][label]
+        Y = data['Behavior_crop_noncontig'][label]
         trainingsInd, testInd = splits[label]['Train'], splits[label]['Test']
     
         if pars['useRank']:
+            raise RuntimeError("not supported")
             X = data['Neurons']['rankActivity'].T
         if pars['useClust']:
+            raise RuntimeError("not supported")
             clustres = runHierarchicalClustering(data, pars)
             X = clustres['Activity'].T
         else:
-            X = np.copy(data['Neurons']['I_smooth_interp']).T # transpose to conform to nsamples*nfeatures
+            X = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T # transpose to conform to nsamples*nfeatures
         if subset is not None:
             # only a few neurons
             if len(subset[label])<1:
@@ -645,7 +651,7 @@ def runLinearModel(data, results, pars, splits, plot = False, behaviors = ['Angl
         linData[label]['weights'] =  weights
         linData[label]['fullweights'] =  weights
         if subset[label] is not None and len(subset[label])>0:
-            fullweights = np.zeros(data['Neurons']['Activity'].shape[0])
+            fullweights = np.zeros(data['Neurons']['I_smooth_interp_crop_noncontig'].shape[0])
             fullweights[subset[label]] = weights
             linData[label]['fullweights'] =  fullweights
         linData[label]['intercepts'] = reg.intercept_
@@ -665,6 +671,8 @@ def runLinearModel(data, results, pars, splits, plot = False, behaviors = ['Angl
 ##############################################   
 def runLassoLars(data, pars, splits, plot = False, behaviors = ['AngleVelocity', 'Eigenworm3'], lag = None):
     """run LASSO to fit behavior and neural activity with a linear model."""
+    raise RuntimeError("lassoLars() not updated yet.")
+
     linData = {}
     for label in behaviors:
         Y = np.reshape(np.copy(data['Behavior'][label]),(-1, 1))
@@ -830,19 +838,17 @@ def runLasso(data, pars, splits, plot = False, behaviors = ['AngleVelocity', 'Ei
         # implement time lagging -- forward and reverse
         
         if lag is not None:
+            raise RuntimeError("Calculating time lags has not been updated to handle I_smooth_interp_crop_noncontig")
+                #We can't just shift indices, because these are non-contiguous time series. There are gaps.
+                # we would have to go back to the time index, move by one and then look up the corresponding volume
+                # In any event, I don't have time to implement this now, so for now we just won't
+                # use this functionality -- Andy 6 Jan 2020
+
             # move neural activity by lag (lag has units of volume)
             # positive lag = behavior trails after neural activity, uses values from the past
             # negative lag = behavior precedes neural activity
             X = np.roll(X, shift = lag, axis = 0)
-        # prep data by scalig
-        # fit scale model
-        scale = False
-        if scale:
-            scalerX = preprocessing.StandardScaler().fit(X[trainingsInd])  
-            scalerY = preprocessing.StandardScaler().fit(Y[trainingsInd])  
-            #scale data
-            X = scalerX.transform(X)
-            Y = scalerY.transform(Y)
+
         Xtrain, Xtest = X[trainingsInd],X[testInd]
         Ytrain, Ytest = Y[trainingsInd],Y[testInd]
         # fit lasso and validate
@@ -938,27 +944,36 @@ def runElasticNet(data, pars, splits, plot = False, scramble = False, behaviors 
     """run EN to fit behavior and neural activity with a linear model."""
     linData = {}
     for label in behaviors:
-        Y = np.copy(data['Behavior'][label])
+        Y = np.copy(data['Behavior_crop_noncontig'][label])
         Y = np.reshape(Y, (-1,1))
         #Y = preprocessing.scale(Y)
         if pars['useRank']:
+            raise RuntimeError("using Rank w/ ElasticNet is not yet supported.")
             X = np.copy(data['Neurons']['rankActivity'].T)
         if pars['useRaw']:
+            raise RuntimeError("using raw activity w/ ElasticNet is not yet supported.")
             X = np.copy(data['Neurons']['RawActivity'].T)
             X -= np.mean(X, axis = 0)
         elif pars['useClust']:
+            raise RuntimeError("using Hierarchical Clustering w/ ElasticNet is not yet supported.")
             clustres = runHierarchicalClustering(data, pars)
             X = clustres['Activity'].T
         elif pars['useDeconv']:
+            raise RuntimeError("using deconvolved activity w/ ElasticNet is not yet supported.")
             X = data['Neurons']['deconvolvedActivity'].T
         else:
-            X = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
+            X = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T # transpose to conform to nsamples*nfeatures
         if scramble:
             # similar to GFP control: scamble timeseries
             np.random.shuffle(Y)
         trainingsInd, testInd = splits[label]['Train'], splits[label]['Test']
         # implement time lagging -- forward and reverse
         if lag is not None:
+            raise RuntimeError("Calculating effects of time lags not yet been updated to handle I_smooth_interp_crop_noncontig")
+                #We can't just shift indices, because these are non-contiguous time series. There are gaps.
+                # we would have to go back to the time index, move by one and then look up the corresponding volume
+                # In any event, I don't have time to implement this now, so for now we just won't
+                # use this functionality -- Andy 6 Jan 2020
             # move neural activity by lag (lag has units of volume)
             # positive lag = behavior lags after neural activity, uses values from the past
             X = np.roll(X, shift = lag, axis = 0)
@@ -1183,11 +1198,12 @@ def scoreModelProgression(data, results, splits, pars, fitmethod = 'LASSO', beha
         weightsInd = np.argsort(np.abs(weights))[::-1]
         
         # sort neurons by weight
-        Y = data['Behavior'][label]
+        Y = data['Behavior_crop_noncontig'][label]
         if pars['useRank']:
+            raise RuntimeError("using rank Activity is not supported.")
             X = data['Neurons']['rankActivity'].T
         else:
-            X = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
+            X = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T # transpose to conform to nsamples*nfeatures
         trainingsInd, testInd = splits[label]['Train'], splits[label]['Test']
         # individual predictive scores
         indScore = []
@@ -1233,12 +1249,13 @@ def reorganizeLinModel(data, results, splits, pars, fitmethod = 'LASSO', behavio
     """takes a model fit and calculates basis vectors etc."""
     # modify data to be like scikit likes it
     if pars['useRank']:
+        raise RuntimeError("rank is not yet supported.")
         X = data['Neurons']['rankActivity'].T
     elif pars['useClust']:
         clustres = runHierarchicalClustering(data, pars)
         X = clustres['Activity']
     else:
-        X = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
+        X = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T # transpose to conform to nsamples*nfeatures
     # get weights
     pcs = np.vstack([results[fitmethod][label]['weights'] for label in behaviors])
     indices = np.argsort(pcs[0])
@@ -1270,6 +1287,7 @@ def reorganizeLinModel(data, results, splits, pars, fitmethod = 'LASSO', behavio
 ##############################################
 def predictNeuralDynamicsfromBehavior(data,  splits, pars):
     """use linear model to predict the neural data from behavior and estimate what worm is thinking about."""
+    raise RunTimeError("This hasn't been updated yet. It still uses the old activity traces.")
     label = 'AngleVelocity'
     train, test = splits[label]['Train'], splits[label]['Test']
     # create dimensionality-reduced behavior - pca with 10 eigenworms
@@ -1360,14 +1378,14 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
         train, test = splits[label]['Train'], splits[label]['Test']
         # create dimensionality-reduced behavior - pca with 10 eigenworms
         # nevermind, use the behaviors we use for lasso instead
-        behavior = data['Behavior'][label]
+        behavior = data['Behavior_crop_noncontig'][label]
         # scale behavior to same 
         behavior = preprocessing.scale(behavior)
        
         # also reduce dimensionality of the neural dynamics.
         nComp = 3#pars['nCompPCA']
         pca = PCA(n_components = nComp)
-        Neuro = np.copy(data['Neurons']['Activity']).T
+        Neuro = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T
         pcs = pca.fit_transform(Neuro)
         #now we use a linear model to train and test our predictions
         # lets build a linear model

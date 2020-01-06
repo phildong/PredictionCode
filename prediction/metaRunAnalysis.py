@@ -11,7 +11,7 @@ This is a meta script to run runAnalysis over and over again.
 import runAnalysis as analysis
 
 analysis.actuallyRun('AML32','moving')
-if False:
+if True:
     analysis.actuallyRun('AML18','moving')
     analysis.actuallyRun('AML70','moving')
     analysis.actuallyRun('AML175','moving')

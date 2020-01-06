@@ -525,6 +525,7 @@ def loadData(folder, dataPars, ew=1):
     # we already no some of the rows are bad so we shouldn't count if they are NaN
     frac_allowed = 0.5 + np.true_divide(badNeurs.shape[0], I.shape[0])
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
+    valid_map = np.flatnonzero(valid_map)
 
     I_smooth_interp_crop_noncontig = np.copy(I_smooth_interp[:, valid_map])
 
