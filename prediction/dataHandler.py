@@ -428,7 +428,7 @@ def loadData(folder, dataPars, ew=1):
 
         #Choose whether we want to apply our outlier detection
         #Or Jeff's
-        jeffs_outlier_detection = False
+        jeffs_outlier_detection = True
         #Note that the paper as posted on the arxiv achieves
         # very high prediction R^2 using jeff's outlier detection
 
@@ -450,7 +450,9 @@ def loadData(folder, dataPars, ew=1):
             R = nanOutliers(R, zscoreBounds=[-2,5], dataLowerBound=40, max_nan_per_col=0.5, vps=vps)
             G = nanOutliers(G, zscoreBounds=[-5,5], dataLowerBound=1, max_nan_per_col=0.5, vps=vps)
 
-
+        #Remove isolated non-NaNs in a sea of NaNs
+        R = close_nan_holes(R)
+        G = close_nan_holes(G)
 
 
         if debug:
@@ -1029,5 +1031,26 @@ def nanOutliers(data, zscoreBounds = [-2, 5], dataLowerBound = 40, max_nan_per_c
     return data
 
 
+
+def close_nan_holes(input):
+    import numpy as np
+    import scipy as sp
+    import scipy.ndimage
+
+    # Function to get rid of isolated NaNs.
+    # NaNs are 1.
+
+    mystruct = np.zeros((3, 3))
+    mystruct[1, 1] = 1
+    mystruct[1, 2] = 1
+    mystruct[1, 0] = 1
+
+    a = np.isnan(input)
+    b = scipy.ndimage.binary_dilation(a, structure=mystruct).astype(a.dtype)
+    c = scipy.ndimage.binary_erosion(b, structure=mystruct).astype(a.dtype)
+
+    out = np.copy(input)
+    out[c] = np.nan
+    return out
 
 
