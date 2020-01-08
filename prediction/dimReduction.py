@@ -1386,7 +1386,13 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
         nComp = 3#pars['nCompPCA']
         pca = PCA(n_components = nComp)
         Neuro = np.copy(data['Neurons']['I_smooth_interp_crop_noncontig']).T
-        pcs = pca.fit_transform(Neuro)
+
+        # make sure data is centered
+        sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
+        Neuro_mean_sub = sclar.fit_transform(Neuro)
+
+
+        pcs = pca.fit_transform(Neuro_mean_sub)
         #now we use a linear model to train and test our predictions
         # lets build a linear model
         lin = linear_model.LinearRegression(normalize=False)

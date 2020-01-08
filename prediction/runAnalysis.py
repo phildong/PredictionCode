@@ -41,7 +41,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
     # data parameters
     dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
-                'gaussWindow': 75, # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
+                'gaussWindow': 100, # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
                 'rotate':False, # rotate Eigenworms using previously calculated rotation matrix
                 'windowGCamp': 5,  # gauss window for red and green channel
                 'interpolateNans': 1,#interpolate gaps smaller than this of nan values in calcium data
@@ -55,11 +55,18 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             'rotate':False,  # rotate Eigenworms using previously calculated rotation matrix
             'windowGCamp': 6,  # gauss window for red and green channel
             'interpolateNans': 6,  #interpolate gaps smaller than this of nan values in calcium data
-
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
+               }
 
-                }
 
+# data parameters
+    dataPars = {'medianWindow': 50,  # smooth eigenworms with gauss filter of that size, must be odd
+            'gaussWindow': 100,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
+            'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
+            'windowGCamp': 5,  # gauss window for red and green channel
+            'interpolateNans': 1,  # interpolate gaps smaller than this of nan values in calcium data
+            'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
+            }
 
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
