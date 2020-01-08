@@ -25,8 +25,11 @@ if True:
 
     analysis.actuallyRun('AML70','chip')
 
-    execfile('../figures/main/fig2v3.py')
-    execfile('../figures/supp/S4.py')
-    execfile('../figures/supp/S2.py')
-    execfile('../figures/main/fig1v3.py')
-    execfile('../figures/main/fig2_expVarslm.py')
+
+execfile('../figures/Debugging/InspectPerformance.py')
+
+execfile('../figures/main/fig2v3.py')
+execfile('../figures/supp/S4.py')
+execfile('../figures/supp/S2.py')
+execfile('../figures/main/fig1v3.py')
+execfile('../figures/main/fig2_expVarslm.py')
