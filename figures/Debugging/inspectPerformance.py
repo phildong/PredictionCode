@@ -112,6 +112,40 @@ def calc_R2(y_true, y_pred):
     R2 = (1 - u / v)
     return R2
 
+def linfunc(x, m, b):
+    return m * x + b
+
+def linear_fit(activity, behavior):
+    """Fit neural activity to behavior using a simple linear fit.
+    """
+    assert activity.ndim == 1, "linear fit funciton only works on a single neuron trace at a time"
+    assert np.all(np.isfinite(activity)), "expects finite values"
+    assert np.all(np.isfinite(behavior)), "expects finite values"
+
+    #scale the behavior to something around 1 for ease of fitting
+    #we will un-scale the results later
+    beh_scalefactor = np.mean(behavior)
+    beh = (1 / beh_scalefactor) * behavior
+
+    # scale the activity to something around 1 for ease of fitting
+    # we will un-scale the results later
+    act_scalefactor = np.mean(activity)
+    act = (1 / act_scalefactor) * activity
+
+    from scipy.optimize import curve_fit
+
+    bounds = ([-20, -20], # lower bound of m (slope) and  b offset
+                [20, 20]) # upper bound of m(slope) and b offset
+
+    popt_guess = [1, 0]  #as a first guess assume no slope and offset
+
+    #y = mx + b where x is activity and y is behavior
+    popt, pcov = curve_fit(linfunc, act, beh, p0=popt_guess, bounds=bounds)
+
+    m = popt[0] * beh_scalefactor / act_scalefactor
+    b = popt[1] * beh_scalefactor
+
+    return m, b, pcov
 
 
 
@@ -159,22 +193,46 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
                 R2_stored = movingAnalysis[flag][behavior]['scorepredicted']
 
                 if pred_type == 'Best Neuron':
-                    #Find the best Neuron
+                    #Get ready to the best Neuron
+                    activity = moving['Neurons']['I_smooth_interp_crop_noncontig']
+                    beh_crop_noncontig = moving['Behavior_crop_noncontig'][behavior]
+
+                    numNeurons = activity.shape[0]
+                    R2_local_all = np.empty(numNeurons)
+                    R2_local_all[:] = np.nan
+
+                    m = np.empty(numNeurons)
+                    b = np.empty(numNeurons)
+                    m[:] = np.nan
+                    b[:] = np.nan
+                    # go through all the neurons in the recording
+                    for neuron in np.arange(numNeurons):
+                        #Perform a linear fit and extram m & b for y=mx+b
+                        m[neuron], b[neuron], pcov = linear_fit(activity[neuron, [train]].flatten(),
+                                                                beh_crop_noncontig[train])
+                        behPred[:] = np.nan
+
+                        #using the m & b, generate the predicted behavior
+                        behPred[valid_map] = linfunc(activity[neuron, :], m[neuron], b[neuron])
+
+                        #Evaluate how well we did at predicting the behavior
+                        R2_local_all[neuron] = calc_R2(beh[valid_map][test], behPred[valid_map][test])
+
+                    #Store the best predicting neurons
+                    bestNeuron = np.argmax(R2_local_all)
+                    #regenerate our prediction from the best predicted neuron
+                    behPred[valid_map] = linfunc(activity[bestNeuron, :], m[bestNeuron], b[bestNeuron])
+
+
+                    #Load the stored R2 value (just to see if its the same)
                     try:
                         R2_stored = np.max(movingAnalysis[flag][behavior]['individualScore'])
-                        nid = np.argmax(movingAnalysis[flag][behavior]['individualScore'])
-
-                        bestNeur= moving['Neurons']['I_smooth_interp_crop_noncontig'][nid,:]
-
-                        bestNeur_scaled = (bestNeur - np.nanmean(bestNeur))  * np.nanstd(beh) / np.nanstd(bestNeur) + np.nanmean(beh)
-
-                        behPred[valid_map] = bestNeur_scaled
                     except:
                         R2_stored = np.nan
-                        bestNeur = np.empty(moving['Neurons']['I_smooth_interp_crop_noncontig'][0,:].shape)
-                        bestNeur[:] = np.nan
 
-                    additional_title_text = ", Neuron ID: %i" % nid
+
+
+                    additional_title_text = ", Neuron ID: %i" % bestNeuron
 
 
                 else:
@@ -194,7 +252,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
                 axes[ax_cnt].set_xlabel('Time (s)')
                 axes[ax_cnt].set_xlim( [time[valid_map[0]], time[valid_map[-1]]])
 
-                axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+0                axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
                             alpha=0.1)
                 #ax7.axhline(color='k', linestyle='--', zorder=-1)
 
@@ -251,6 +309,8 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', '
             ax.set_xlabel('PC1')
             ax.set_ylabel('PC2')
             ax.set_zlabel('PC3')
+        prov.stamp(plt.gca(),.55,.15)
+
 
         fig = plt.figure(figsize=(12,8))
         plt.suptitle(key + idn + '\n PCA (z-scored) ')
@@ -261,6 +321,8 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', '
             ax.set_xlabel('PC1')
             ax.set_ylabel('PC2')
             ax.set_zlabel('PC3')
+        prov.stamp(plt.gca(), .55, .15)
+
 
 
 print("Beginning to save state space trajectories")
