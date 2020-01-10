@@ -99,6 +99,20 @@ prov.stamp(ax2,.55,.15)
 
 
 
+def calc_R2(y_true, y_pred):
+    """calculate the coefficient of determination
+    as defined here:
+    https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html#sklearn.linear_model.ElasticNet
+
+    The goal is to have a transparent external way of calculating R^2
+    seperate of regressions, as a final sanity check.
+    """
+    u = ((y_true - y_pred) ** 2).sum()
+    v = ((y_true - y_true.mean()) ** 2).sum()
+    R2 = (1 - u / v)
+    return R2
+
+
 
 
 # For each type of recording
@@ -110,7 +124,7 @@ for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
     for idn in dset.keys():
         fig_cnt=fig_cnt+1
         fig = plt.figure(fig_cnt, [28, 12])
-        fig.suptitle([key + ' ' + idn])
+        fig.suptitle(key + ' ' + idn)
         row = 3
         col = 2
         axes = []
@@ -142,9 +156,13 @@ for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
                 behPred[:] = np.nan
                 additional_title_text = ''
 
+                R2_stored = movingAnalysis[flag][behavior]['scorepredicted']
+
                 if pred_type == 'Best Neuron':
                     #Find the best Neuron
+                    R2_stored = np.max(movingAnalysis[flag][behavior]['individualScore'])
                     nid = np.argmax(movingAnalysis[flag][behavior]['individualScore'])
+
                     bestNeur= moving['Neurons']['I_smooth_interp_crop_noncontig'][nid,:]
 
                     bestNeur_scaled = (bestNeur - np.nanmean(bestNeur))  * np.nanstd(beh) / np.nanstd(bestNeur) + np.nanmean(beh)
@@ -153,15 +171,20 @@ for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
 
                     additional_title_text = ", Neuron ID: %i" % nid
 
+
                 else:
                     behPred[valid_map] = movingAnalysis[flag][behavior]['output']
 
+                R2_local = calc_R2(beh[valid_map][test], behPred[valid_map][test])
 
                 #Actually Plot
                 axes[ax_cnt].plot(time, beh, label="Measured")
                 axes[ax_cnt].plot(time, behPred, label="Predicted")
 
-                axes[ax_cnt].title.set_text([pred_type + ', ' + title + additional_title_text])
+                axes[ax_cnt].title.set_text(pred_type +  ', '
+                                            + title + additional_title_text +
+                                            ' R2 = %.2f' % R2_stored
+                                            + ' R2_loc = %.2f' % R2_local)
                 axes[ax_cnt].legend()
                 axes[ax_cnt].set_xlabel('Time (s)')
                 axes[ax_cnt].set_xlim( [time[valid_map[0]], time[valid_map[-1]]])
@@ -182,6 +205,45 @@ print("Saving figures to pdf...")
 
 import matplotlib.backends.backend_pdf
 pdf = matplotlib.backends.backend_pdf.PdfPages("output.pdf")
+for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+    pdf.savefig(fig)
+    plt.close(fig)
+pdf.close()
+print("Saved.")
+
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+for key in ['AML32_moving', 'AML70_chip']:
+    dset = data[key]['input']
+    # For each recording
+    for idn in dset.keys():
+
+        dset = data[key]['input'][idn]
+
+        # Plot neural state space trajectories in first 3 PCs
+        # also reduce dimensionality of the neural dynamics.
+        nComp = 3  # pars['nCompPCA']
+        pca = PCA(n_components=nComp)
+        Neuro = np.copy(dset['Neurons']['I_smooth_interp_crop_noncontig']).T
+
+        # make sure data is centered
+        sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
+        Neuro_mean_sub = sclar.fit_transform(Neuro)
+
+        pcs = pca.fit_transform(Neuro_mean_sub)
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot(pcs[:,0], pcs[:,1], pcs[:,2], label = key + idn)
+        ax.legend()
+        plt.pause(30)
+
+
+import matplotlib.backends.backend_pdf
+pdf = matplotlib.backends.backend_pdf.PdfPages("moving_statespace_trajectories.pdf")
 for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
