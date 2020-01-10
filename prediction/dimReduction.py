@@ -980,8 +980,8 @@ def runElasticNet(data, pars, splits, plot = False, scramble = False, behaviors 
         # fit scale model
         scale = 1
         if scale:
-            scalerX = preprocessing.StandardScaler().fit(X[trainingsInd])  
-            scalerY = preprocessing.StandardScaler().fit(Y[trainingsInd])  
+            scalerX = preprocessing.StandardScaler().fit(X[trainingsInd])  #neural activity
+            scalerY = preprocessing.StandardScaler().fit(Y[trainingsInd])   #behavior
             #scale data
             X = scalerX.transform(X)
             Y = scalerY.transform(Y)
@@ -1027,6 +1027,7 @@ def runElasticNet(data, pars, splits, plot = False, scramble = False, behaviors 
         linData[label]['noNeurons'] = len(reg.coef_[np.abs(reg.coef_)>0])
         print 'R2', scorepred, 'N', len(reg.coef_[np.abs(reg.coef_)>0])
         if scale:
+            #apply the inverse scaling for behavior.. and feed in the scaled activity
             linData[label]['output'] = scalerY.inverse_transform(reg.predict(X)) # full output training and test
         else:
             linData[label]['output'] = reg.predict(X)
@@ -1236,6 +1237,10 @@ def scoreModelProgression(data, results, splits, pars, fitmethod = 'LASSO', beha
                 
         linData[label] = {}
         linData[label]['cumulativeScore'] = sumScore
+        #NOTE the indices of indivual score are NOT the natural indices..
+        # on acocunt of the the if abs weight >0 statement
+        # I need to completely redo the best single neuron analysis.
+
         linData[label]['individualScore'] = indScore
         linData[label]['MSE'] = mse
     return linData
@@ -1376,11 +1381,11 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
     linData = {}
     for label in behaviors:
         train, test = splits[label]['Train'], splits[label]['Test']
-        # create dimensionality-reduced behavior - pca with 10 eigenworms
-        # nevermind, use the behaviors we use for lasso instead
+
         behavior = data['Behavior_crop_noncontig'][label]
         # scale behavior to same 
-        behavior = preprocessing.scale(behavior)
+        beh_scale = StandardScaler(copy=True, with_mean=True, with_std=True)
+        behavior_zs = beh_scale.fit_transform(behavior.reshape(-1, 1)).flatten()
        
         # also reduce dimensionality of the neural dynamics.
         nComp = 3#pars['nCompPCA']
@@ -1396,10 +1401,10 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
         #now we use a linear model to train and test our predictions
         # lets build a linear model
         lin = linear_model.LinearRegression(normalize=False)
-        lin.fit(pcs[train], behavior[train])
+        lin.fit(pcs[train],  behavior_zs[train])
         
-        score = lin.score(pcs[train],behavior[train])
-        scorepred = lin.score(pcs[test], behavior[test])
+        score = lin.score(pcs[train],behavior_zs[train])
+        scorepred = lin.score(pcs[test], behavior_zs[test])
         print 'PCA prediction results:'
         print 'Train R2: ',score 
         print 'Test R2: ', scorepred
@@ -1409,8 +1414,11 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
         
         linData[label]['score'] = score
         linData[label]['scorepredicted'] = scorepred
-        
-        linData[label]['output'] = lin.predict(pcs)
+
+        # 1)take the mean-subtracted, PCA'd neural data
+        # 2) apply the weights
+        # 3) un-z-score the behavioral result
+        linData[label]['output'] = beh_scale.inverse_transform(lin.predict(pcs))
         
 #        # check how well it performs with more PCs
 #        r2_more = []
