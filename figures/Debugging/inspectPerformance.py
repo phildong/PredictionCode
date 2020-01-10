@@ -22,7 +22,7 @@ import prediction.dataHandler as dh
 
 data = {}
 for typ in ['AML32', 'AML18', 'AML175', 'AML70']:
-    for condition in ['moving', 'chip']:  # ['moving', 'immobilized', 'chip']:
+    for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '{}_{}/'.format(typ, condition))
         dataLog = os.path.join(path, '{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition))
@@ -67,7 +67,7 @@ labels = ['PCA', 'SLM', 'Best Neuron']
 for behavior in ['AngleVelocity', 'Eigenworm3']:
     scores = []
     #For each type of recording
-    for key, marker in zip(['AML32_moving', 'AML70_chip'],['o', "^"]):
+    for key, marker in zip(['AML32_moving', 'AML70_chip', 'AML70_moving'],['o', "^", "^"]):
         dset = data[key]['analysis']
         results_from_one_dataset = []
 
@@ -79,13 +79,13 @@ for behavior in ['AngleVelocity', 'Eigenworm3']:
             results_from_one_dataset = np.array([results_pca['scorepredicted'], results_SLM['scorepredicted'], np.max(results_SLM['individualScore'])])
 
             #Plot
-            axes[b_cnt].plot(np.arange(0,len(results_from_one_dataset)), results_from_one_dataset, marker=marker, label=idn)
+            axes[b_cnt].plot(np.arange(0,len(results_from_one_dataset)), results_from_one_dataset, marker=marker, label=key + idn)
 
             axes[b_cnt].title.set_text(titles[b_cnt])
             axes[b_cnt].set_ylim([0, 0.7])
             axes[b_cnt].set_xticks(np.arange(0,len(results_from_one_dataset)))
             axes[b_cnt].set_xticklabels(labels)
-            axes[b_cnt].legend()
+            axes[b_cnt].legend(prop={'size': 8})
             axes[b_cnt].set_ylabel('R^2')
     b_cnt = b_cnt+ 1
 
@@ -117,7 +117,7 @@ def calc_R2(y_true, y_pred):
 
 # For each type of recording
 fig_cnt = 1
-for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
+for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
     dset = data[key]['input']
 
     # For each recording
@@ -160,14 +160,19 @@ for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
 
                 if pred_type == 'Best Neuron':
                     #Find the best Neuron
-                    R2_stored = np.max(movingAnalysis[flag][behavior]['individualScore'])
-                    nid = np.argmax(movingAnalysis[flag][behavior]['individualScore'])
+                    try:
+                        R2_stored = np.max(movingAnalysis[flag][behavior]['individualScore'])
+                        nid = np.argmax(movingAnalysis[flag][behavior]['individualScore'])
 
-                    bestNeur= moving['Neurons']['I_smooth_interp_crop_noncontig'][nid,:]
+                        bestNeur= moving['Neurons']['I_smooth_interp_crop_noncontig'][nid,:]
 
-                    bestNeur_scaled = (bestNeur - np.nanmean(bestNeur))  * np.nanstd(beh) / np.nanstd(bestNeur) + np.nanmean(beh)
+                        bestNeur_scaled = (bestNeur - np.nanmean(bestNeur))  * np.nanstd(beh) / np.nanstd(bestNeur) + np.nanmean(beh)
 
-                    behPred[valid_map] = bestNeur_scaled
+                        behPred[valid_map] = bestNeur_scaled
+                    except:
+                        R2_stored = np.nan
+                        bestNeur = np.empty(moving['Neurons']['I_smooth_interp_crop_noncontig'][0,:].shape)
+                        bestNeur[:] = np.nan
 
                     additional_title_text = ", Neuron ID: %i" % nid
 
@@ -204,19 +209,18 @@ for key, marker in zip(['AML32_moving', 'AML70_chip'], ['o', "^"]):
 print("Saving figures to pdf...")
 
 import matplotlib.backends.backend_pdf
-pdf = matplotlib.backends.backend_pdf.PdfPages("output.pdf")
+pdf = matplotlib.backends.backend_pdf.PdfPages("prediction_performance.pdf")
 for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
 print("Saved.")
 
-import matplotlib as mpl
-from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-for key in ['AML32_moving', 'AML70_chip']:
+for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', 'AML70_immobilized', 'AML18_moving', 'AML18_immobilized']:
     dset = data[key]['input']
     # For each recording
     for idn in dset.keys():
@@ -231,21 +235,39 @@ for key in ['AML32_moving', 'AML70_chip']:
 
         # make sure data is centered
         sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
+        zscore = StandardScaler(copy=True, with_mean=True, with_std=True)
         Neuro_mean_sub = sclar.fit_transform(Neuro)
+        Neuro_z = zscore.fit_transform(Neuro)
 
         pcs = pca.fit_transform(Neuro_mean_sub)
+        pcs_z = pca.fit_transform(Neuro_z)
 
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        ax.plot(pcs[:,0], pcs[:,1], pcs[:,2], label = key + idn)
-        ax.legend()
-        plt.pause(30)
+        fig = plt.figure(figsize=(12,8))
+        plt.suptitle( key + idn  + '\n PCA (minimally processed)')
+        for nplot in np.arange(6)+1:
+            ax = plt.subplot(2,3,nplot, projection='3d')
+            ax.plot(pcs[:,0], pcs[:,1], pcs[:,2])
+            ax.view_init(np.random.randint(360), np.random.randint(360))
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+
+        fig = plt.figure(figsize=(12,8))
+        plt.suptitle(key + idn + '\n PCA (z-scored) ')
+        for nplot in np.arange(6)+1:
+            ax = plt.subplot(2,3,nplot, projection='3d')
+            ax.plot(pcs_z[:,0], pcs_z[:,1], pcs_z[:,2],color='orange')
+            ax.view_init(np.random.randint(360), np.random.randint(360))
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
 
 
+print("Beginning to save state space trajectories")
 import matplotlib.backends.backend_pdf
 pdf = matplotlib.backends.backend_pdf.PdfPages("moving_statespace_trajectories.pdf")
 for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
-print("Saved.")
+print("Saved state space trajectories.")
