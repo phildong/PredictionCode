@@ -269,8 +269,9 @@ def transformEigenworms(pcs, dataPars):
     # convolution with gaussian kernel derivative
     velo = gaussian_filter1d(theta, dataPars['gaussWindow'], order=1)
     # velo is in radians/frame
-    for pcindex, pc in enumerate(pcs):
-        pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
+
+ #   for pcindex, pc in enumerate(pcs):
+ #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta
 
 

@@ -18,7 +18,7 @@ from prediction import userTracker
 import prediction.dataHandler as dh
 
 
-
+print("Inspecting performance...")
 
 data = {}
 for typ in ['AML32', 'AML18', 'AML175', 'AML70']:
@@ -54,9 +54,26 @@ print 'Done reading data.'
 import matplotlib.pyplot as plt
 
 fig=plt.figure(1,[12, 10])
+fig.suptitle('Performance on held out testset')
 ax1 = plt.subplot(1,2,1)
 ax2 = plt.subplot(1,2,2)
 axes = [ax1, ax2]
+
+
+figSLM = plt.figure(figsize=[12,10])
+figSLM.suptitle('The alpha parameter found by the algorithm')
+axSLM1 = plt.subplot(1,2,1)
+axSLM2 = plt.subplot(1,2,2)
+axesSLM = [axSLM1, axSLM2]
+
+
+figSLMl1ratio = plt.figure(figsize=[12,10])
+figSLMl1ratio.suptitle('The l1ratio parameter found by the algorithm')
+axSLM1l1ratio = plt.subplot(1,2,1)
+axSLM2l1ratio = plt.subplot(1,2,2)
+axesSLMl1ratio = [axSLM1l1ratio, axSLM2l1ratio]
+
+
 
 
 
@@ -76,7 +93,22 @@ for behavior in ['AngleVelocity', 'Eigenworm3']:
 
             results_pca = dset[idn]['PCAPred'][behavior]
             results_SLM = dset[idn]['ElasticNet'][behavior]
-            results_from_one_dataset = np.array([results_pca['scorepredicted'], results_SLM['scorepredicted'], np.max(results_SLM['individualScore'])])
+            try:
+                SLM_score = results_SLM['scorepredicted']
+                SLM_alpha = results_SLM['alpha']
+                SLM_l1_ratio = results_SLM['l1_ratio']
+            except:
+                SLM_score = np.nan
+                SLM_alpha = np.nan
+
+
+
+
+            try:
+                BSN_score = np.max(results_SLM['individualScore'])
+            except:
+                BSN_score = np.nan
+            results_from_one_dataset = np.array([results_pca['scorepredicted'], SLM_score, BSN_score])
 
             #Plot
             axes[b_cnt].plot(np.arange(0,len(results_from_one_dataset)), results_from_one_dataset, marker=marker, label=key + idn)
@@ -87,11 +119,34 @@ for behavior in ['AngleVelocity', 'Eigenworm3']:
             axes[b_cnt].set_xticklabels(labels)
             axes[b_cnt].legend(prop={'size': 8})
             axes[b_cnt].set_ylabel('R^2')
+
+            if np.isfinite(SLM_score):
+                axesSLM[b_cnt].plot(SLM_score, SLM_alpha, 'o', label=key + idn)
+                axesSLM[b_cnt].legend(prop={'size': 9})
+                axesSLM[b_cnt].set_ylabel('Alpha')
+                axesSLM[b_cnt].set_xlabel('R^2')
+                axesSLM[b_cnt].set_xlim([0, 1])
+                axesSLM[b_cnt].title.set_text(titles[b_cnt])
+
+            if np.isfinite(SLM_l1_ratio):
+                axesSLMl1ratio[b_cnt].plot(SLM_score, SLM_l1_ratio, 'o', label=key + idn)
+                axesSLMl1ratio[b_cnt].legend(prop={'size': 9})
+                axesSLMl1ratio[b_cnt].set_ylabel('l1_ratio')
+                axesSLMl1ratio[b_cnt].set_xlabel('R^2')
+                axesSLMl1ratio[b_cnt].title.set_text(titles[b_cnt])
+                axesSLMl1ratio[b_cnt].set_xlim([0, 1])
+
+
+
+
+
     b_cnt = b_cnt+ 1
 
 
 import prediction.provenance as prov
 prov.stamp(ax2,.55,.15)
+prov.stamp(axSLM1,.55,.15)
+prov.stamp(axSLM1l1ratio,.55,.15)
 
 #Goal 2: show the predictions explicilty for all recordings as compared to true
 # here we will probably have to generate PDFs or PPTs or somethign
@@ -150,7 +205,7 @@ def linear_fit(activity, behavior):
 
 
 # For each type of recording
-fig_cnt = 1
+fig_cnt = plt.gcf().number
 for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
     dset = data[key]['input']
 
@@ -252,7 +307,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
                 axes[ax_cnt].set_xlabel('Time (s)')
                 axes[ax_cnt].set_xlim( [time[valid_map[0]], time[valid_map[-1]]])
 
-0                axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
                             alpha=0.1)
                 #ax7.axhline(color='k', linestyle='--', zorder=-1)
 
@@ -261,6 +316,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
                 #axscheme2.text(t[-1], yl + yo, \
                  #              r'$R^2 = {:.2f}$'.format(np.float(movingAnalysis[flag][behavior]['scorepredicted'])),
                  #              horizontalalignment='right')
+
         prov.stamp(axes[ax_cnt],.55,.15)
 
 

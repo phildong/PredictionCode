@@ -39,15 +39,6 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     outLoc = os.path.join(path, 'Analysis/{}_{}_results.hdf5'.format(typ, condition))
     outLocData = os.path.join(path,'Analysis/{}_{}.hdf5'.format(typ, condition))
 
-    # data parameters
-    dataPars = {'medianWindow':50, # smooth eigenworms with gauss filter of that size, must be odd
-                'gaussWindow': 100, # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
-                'rotate':False, # rotate Eigenworms using previously calculated rotation matrix
-                'windowGCamp': 5,  # gauss window for red and green channel
-                'interpolateNans': 1,#interpolate gaps smaller than this of nan values in calcium data
-                'volumeAcquisitionRate': 6., #rate at which volumes are acquired
-                }
-
 
     #original data parameters
     dataPars = {'medianWindow':50,  # smooth eigenworms with gauss filter of that size, must be odd
@@ -60,8 +51,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
 
 # data parameters
-    dataPars = {'medianWindow': 50,  # smooth eigenworms with gauss filter of that size, must be odd
-            'gaussWindow': 100,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
+    dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
+            'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
             'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
             'windowGCamp': 5,  # gauss window for red and green channel
             'interpolateNans': 1,  # interpolate gaps smaller than this of nan values in calcium data
