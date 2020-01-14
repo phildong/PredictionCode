@@ -270,6 +270,7 @@ def transformEigenworms(pcs, dataPars):
     velo = gaussian_filter1d(theta, dataPars['gaussWindow'], order=1)
     # velo is in radians/frame
 
+#Andy commented this out Jan 2020
  #   for pcindex, pc in enumerate(pcs):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta
@@ -535,6 +536,12 @@ def loadData(folder, dataPars, ew=1):
 
     #<DEPRECATED>
 
+    # load neural data
+    R = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    G = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    #
+    Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
+
     Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
 
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
@@ -637,7 +644,7 @@ def loadData(folder, dataPars, ew=1):
 
     dataDict['Neurons']['I'] = I[order] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_Time'] = time #corresponding time axis
-    dataDict['Neurons']['I_smooth'] = I_smooth[order] # SMOOTHED common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth'] = I_smooth[order] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected

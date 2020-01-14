@@ -998,8 +998,8 @@ def runElasticNet(data, pars, splits, plot = False, scramble = False, behaviors 
             nfold = 5
             tol = 1e-10
         else:
-            l1_ratio = [0.5, 0.7, 0.8, .9, .95,.99, 1]
-            #l1_ratio = [0.99] #monika's value
+            #l1_ratio = [0.5, 0.7, 0.8, .9, .95,.99, 1]
+            l1_ratio = [0.99] #monika's value
             #fold = balancedFolds(Y[trainingsInd], nSets=cv)
             a = np.logspace(-4, -1, 200)
 

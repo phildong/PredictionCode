@@ -203,7 +203,8 @@ def linear_fit(activity, behavior):
     return m, b, pcov
 
 
-
+#Actually plot each prediction
+print("Plotting behavior predictions..")
 # For each type of recording
 fig_cnt = plt.gcf().number
 for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
@@ -320,7 +321,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         prov.stamp(axes[ax_cnt],.55,.15)
 
 
-print("Saving figures to pdf...")
+print("Saving behavior predictions to pdf...")
 
 import matplotlib.backends.backend_pdf
 pdf = matplotlib.backends.backend_pdf.PdfPages("prediction_performance.pdf")
@@ -330,10 +331,105 @@ for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :
 pdf.close()
 print("Saved.")
 
+
+
+
+### Plot Heatmap for each recording
+
+
+### Plot Neural State Space Trajectories
+
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
+print("Plotting heatmaps.....")
+for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', 'AML70_immobilized', 'AML18_moving', 'AML18_immobilized']:
+    dset = data[key]['input']
+    # For each recording
+    for idn in dset.keys():
+
+        dset = data[key]['input'][idn]
+
+
+        #Get the relevant heatmaps
+        I_smooth = dset['Neurons']['I_smooth']
+        I_smooth_interp_crop_noncontig_wnans = np.copy(I_smooth)
+        I_smooth_interp_crop_noncontig_wnans[:] = np.nan
+
+        valid_map = dset['Neurons']['I_valid_map']
+        I_smooth_interp_crop_noncontig_wnans[:, valid_map] = dset['Neurons']['I_smooth_interp_crop_noncontig']
+
+        Iz = dset['Neurons']['ActivityFull']
+        time = dset['Neurons']['I_Time']
+
+        prcntile = 99.7
+        fig = plt.figure(figsize=(22,12))
+        plt.suptitle( key + idn  )
+
+
+        ax = plt.subplot(3,1,1)
+        pos = ax.imshow(I_smooth, aspect='auto',
+                        interpolation='none', vmin=np.nanpercentile(I_smooth.flatten(), 0.1), vmax=np.nanpercentile(I_smooth.flatten(), prcntile),
+                        extent = [ time[0], time[-1], 0, I_smooth.shape[0] ])
+        ax.set_title('I_smooth_interp_noncontig  (smooth, common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Neuron')
+        fig.colorbar(pos, ax=ax)
+        fig.tight_layout(rect=[0, 0.03, 1.1, 0.97])
+
+
+        ax = plt.subplot(3,1,2)
+        pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans, aspect='auto',
+                        interpolation='none', vmin=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1), vmax=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile),
+                        extent = [ time[0], time[-1], 0, I_smooth_interp_crop_noncontig_wnans.shape[0] ])
+        ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Neuron')
+        fig.colorbar(pos, ax=ax)
+
+
+        ax = plt.subplot(3, 1, 3)
+        pos = ax.imshow(Iz, aspect='auto',
+                        interpolation='none', vmin=-2, vmax=2,
+                        extent = [ time[0], time[-1], 0, Iz.shape[0] ])
+        ax.set_title('Activity  (per-neuron z-scored,  aggressive interpolation, common noise rejected,  Jeffs photobleach correction)')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Neuron')
+        fig.colorbar(pos, ax=ax)
+
+
+        prov.stamp(plt.gca(),.9,.15)
+
+
+
+
+
+
+
+
+
+print("Beginning to save heat maps")
+import matplotlib.backends.backend_pdf
+pdf = matplotlib.backends.backend_pdf.PdfPages("heatmaps.pdf")
+for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+    pdf.savefig(fig)
+    plt.close(fig)
+pdf.close()
+print("Saved heatmaps.")
+
+
+
+
+
+
+### Plot Neural State Space Trajectories
+
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+print("Beginning to plot neural state space trajectories..")
 for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', 'AML70_immobilized', 'AML18_moving', 'AML18_immobilized']:
     dset = data[key]['input']
     # For each recording

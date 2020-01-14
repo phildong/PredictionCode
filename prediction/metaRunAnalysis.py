@@ -22,7 +22,7 @@ if True:
 
 
 #Moving control and immobilized
-if False:
+if True:
     analysis.actuallyRun('AML18','moving')
     analysis.actuallyRun('AML32','immobilized')
     analysis.actuallyRun('AML18','immobilized')

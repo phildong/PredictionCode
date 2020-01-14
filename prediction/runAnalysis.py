@@ -55,7 +55,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
             'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
             'windowGCamp': 5,  # gauss window for red and green channel
-            'interpolateNans': 1,  # interpolate gaps smaller than this of nan values in calcium data
+            'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
 
