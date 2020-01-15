@@ -214,7 +214,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
     for idn in dset.keys():
         fig_cnt=fig_cnt+1
         fig = plt.figure(fig_cnt, [28, 12])
-        fig.suptitle(key + ' ' + idn)
+        fig.suptitle('data[' + key + '][' + idn + ']')
         row = 3
         col = 2
         axes = []
@@ -299,6 +299,9 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
                 #Actually Plot
                 axes[ax_cnt].plot(time, beh, label="Measured")
                 axes[ax_cnt].plot(time, behPred, label="Predicted")
+                #axes[ax_cnt].plot(time, beh-behPred, label="resid", linewidth=.5)
+
+
 
                 axes[ax_cnt].title.set_text(pred_type +  ', '
                                             + title + additional_title_text +
@@ -365,7 +368,7 @@ for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', '
 
         prcntile = 99.7
         fig = plt.figure(figsize=(22,12))
-        plt.suptitle( key + idn  )
+        plt.suptitle('data[' + key + '][' + idn + ']')
 
 
         ax = plt.subplot(3,1,1)
