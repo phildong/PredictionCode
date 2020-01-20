@@ -71,13 +71,18 @@ def run():
     train, test = splits[behavior]['Train'], splits[behavior]['Test']
     beh = moving['BehaviorFull'][behavior]
     time = moving['Neurons']['I_Time']
+    time_crop_noncontig = moving['Neurons']['I_Time_crop_noncontig']
+
     behPred_SN = np.empty(moving['BehaviorFull'][behavior].shape)
     behPred_SN[:] = np.nan
     behPred_SLM = np.copy(behPred_SN)
 
-    #### Find best neuron
     activity = moving['Neurons']['I_smooth_interp_crop_noncontig']
     beh_crop_noncontig = moving['Behavior_crop_noncontig'][behavior]
+
+    #### Plot the unfiltered recording and SLM and Best Single Neuron Prediction
+    print("Plotting the unfiltered recording and the predictions.")
+    #### Find best neuron
 
     numNeurons = activity.shape[0]
     R2_local_all = np.empty(numNeurons)
@@ -116,53 +121,213 @@ def run():
 
     import matplotlib.pyplot as plt
 
-    fig=plt.figure(figsize=[24, 12])
+    fig=plt.figure(figsize=[24, 14])
     fig.suptitle('NO ADDITIONAL FILTERING data[' + key + '][' + idn + ']')
     row = 2
     col = 2
 
+    R2 = calc_R2(beh[valid_map][test], behPred_SLM[valid_map][test])
+    R2_train = calc_R2(beh[valid_map][train], behPred_SLM[valid_map][train])
 
-    ax1 = fig.add_subplot(row, col, 1, title='SLM Unfiltered')
-
+    ax1 = fig.add_subplot(row, col, 1, title='SLM Unfiltered R2=%.2f, R_train = %.2f' % (R2, R2_train))
     ax1.plot(time, beh, label="Measured")
     ax1.plot(time, behPred_SLM, label="Predicted")
     ax1.axhline(linewidth=0.5, color='k')
     ax1.set_xlabel('Time (s)')
     ax1.set_ylabel('Velocity')
+    ax1.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                                alpha=0.1)
     ax1.legend()
 
 
-    ax3 = fig.add_subplot(row, col, 3, title='SLM Unfiltered Residuals', sharex=ax1, sharey=ax1)
-    ax3.plot(time, beh-behPred_SLM, label="resid")
+    ax3 = fig.add_subplot(row, col, 3, title='SLM Unfiltered Residuals R2=%.2f, R_train = %.2f' % (R2, R2_train), sharex=ax1, sharey=ax1)
+    resid_SLM = beh-behPred_SLM
+    ax3.plot(time, resid_SLM, 'g', label="resid")
+    test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+    ax3.plot(time[test_indices],
+             np.nancumsum((resid_SLM[test_indices]) ** 2) / np.nansum(
+                 (beh[test_indices] - np.nanmean(beh[test_indices])) ** 2) * 3 * np.nanmean(beh ** 2),
+             'm',
+             label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+
     ax3.axhline(linewidth=0.5, color='k')
     ax3.set_xlabel('Time (s)')
     ax3.set_ylabel('Velocity')
+    ax3.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                                alpha=0.1)
     ax3.legend()
 
 
+    R2 = calc_R2(beh[valid_map][test], behPred_SN[valid_map][test])
+    R2_train = calc_R2(beh[valid_map][train], behPred_SN[valid_map][train])
 
-    ax2 = fig.add_subplot(row, col, 2, title='Best Single NEuron Unfiltered')
 
+    ax2 = fig.add_subplot(row, col, 2, title='Best Single Neuron Unfiltered R2=%.2f, R_train = %.2f' % (R2, R2_train), sharex=ax1, sharey=ax1)
     ax2.plot(time, beh, label="Measured")
     ax2.plot(time, behPred_SN, label="Predicted")
     ax2.axhline(linewidth=0.5, color='k')
     ax2.set_xlabel('Time (s)')
     ax2.set_ylabel('Velocity')
+    ax2.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                                alpha=0.1)
     ax2.legend()
 
 
-    ax4 = fig.add_subplot(row, col, 4, title='Best Single Neuron Unfiltered Residuals', sharex=ax1, sharey=ax1)
-    ax4.plot(time, beh-behPred_SN, label="resid")
+    ax4 = fig.add_subplot(row, col, 4, title='Best Single Neuron Unfiltered Residuals R2=%.2f, R_train = %.2f' % (R2, R2_train), sharex=ax1, sharey=ax1)
+    resid_SN = beh-behPred_SN
+    ax4.plot(time, resid_SN, 'g', label="resid")
+    test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+    ax4.plot(time[test_indices],
+             np.nancumsum((resid_SN[test_indices])**2) / np.nansum((beh[test_indices] - np.nanmean(beh[test_indices]))**2) * 3 * np.nanmean(beh**2),
+            'm',
+             label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
     ax4.axhline(linewidth=0.5, color='k')
     ax4.set_xlabel('Time (s)')
     ax4.set_ylabel('Velocity')
     ax4.legend()
+    ax4.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                                alpha=0.1)
+
+    from prediction.dataHandler import gauss_filterNaN
 
 
 
-    raise RuntimeError, "Stop here"
 
 
+
+
+    ## Goal here is to try smoothing different amounts and measure
+    ## performance on the smoothed versions
+    ## I think we will not only want to plot the residuals of the testset
+    ## But maybe also plot the difference between the true and the smooth
+
+    least_filtering = 0.9
+    most_filtering = 5
+    num_filters = 10
+
+    for sigma in np.linspace(least_filtering, most_filtering, num_filters):
+        fig = plt.figure(figsize=[24, 14])
+        fig.suptitle('$\\sigma=%.2f$ s Gauss Smoothing data[' % sigma + key + '][' + idn + ']')
+        row = 2
+        col = 2
+
+        #Smooth all the data
+        beh_smooth = gauss_filterNaN(beh, sigma)
+        beh_smooth[np.isnan(beh)] = np.nan
+
+        behPred_SLM_smooth = gauss_filterNaN(behPred_SLM, sigma)
+        behPred_SLM_smooth[np.isnan(behPred_SLM)] = np.nan
+        
+        behPred_SN_smooth = gauss_filterNaN(behPred_SN, sigma)
+        behPred_SN_smooth[np.isnan(behPred_SN)] = np.nan
+
+
+
+
+
+        R2 = calc_R2(beh_smooth[valid_map][test], behPred_SLM_smooth[valid_map][test])
+        R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SLM_smooth[valid_map][train])
+
+        ax1 = fig.add_subplot(row, col, 1, title='SLM Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train))
+        ax1.plot(time, beh_smooth, label="Measured")
+        ax1.plot(time, behPred_SLM_smooth, label="Predicted")
+        ax1.axhline(linewidth=0.5, color='k')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Velocity')
+        ax1.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax1.legend()
+
+        ax3 = fig.add_subplot(row, col, 3, title='SLM Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        resid_SLM_smooth = beh_smooth - behPred_SLM_smooth
+        ax3.plot(time, resid_SLM_smooth, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax3.plot(time[test_indices],
+                 np.nancumsum((resid_SLM_smooth[test_indices]) ** 2) / np.nansum(
+                     (beh_smooth[test_indices] - np.nanmean(beh_smooth[test_indices])) ** 2) * 3 * np.nanmean(beh_smooth ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+
+        ax3.axhline(linewidth=0.5, color='k')
+        ax3.set_xlabel('Time (s)')
+        ax3.set_ylabel('Velocity')
+        ax3.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax3.legend()
+
+        R2 = calc_R2(beh_smooth[valid_map][test], behPred_SN_smooth[valid_map][test])
+        R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SN_smooth[valid_map][train])
+
+        ax2 = fig.add_subplot(row, col, 2,
+                              title='Best Single Neuron Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        ax2.plot(time, beh_smooth, label="Measured")
+        ax2.plot(time, behPred_SN_smooth, label="Predicted")
+        ax2.axhline(linewidth=0.5, color='k')
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Velocity')
+        ax2.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax2.legend()
+
+        ax4 = fig.add_subplot(row, col, 4,
+                              title='Best Single Neuron Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        resid_SN_smooth = beh_smooth - behPred_SN_smooth
+        ax4.plot(time, resid_SN_smooth, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax4.plot(time[test_indices],
+                 np.nancumsum((resid_SN_smooth[test_indices]) ** 2) / np.nansum(
+                     (beh_smooth[test_indices] - np.nanmean(beh_smooth[test_indices])) ** 2) * 3 * np.nanmean(beh_smooth ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+        ax4.axhline(linewidth=0.5, color='k')
+        ax4.set_xlabel('Time (s)')
+        ax4.set_ylabel('Velocity')
+        ax4.legend()
+        ax4.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+
+        import prediction.provenance as prov
+        prov.stamp(plt.gca(), .55, .15)
+
+    print("Beginning to save smoothing metric plots")
+    import matplotlib.backends.backend_pdf
+    pdf = matplotlib.backends.backend_pdf.PdfPages("smoothingmetric.pdf")
+    for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+        pdf.savefig(fig)
+        plt.close(fig)
+    pdf.close()
+    print("Saved smoothing metric plots.")
+
+
+    raise RuntimeError, "stop here for now."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #Generating the fitlers
+    print("Generating the filters..")
     from scipy.signal import freqz
 
 
@@ -170,8 +335,8 @@ def run():
     # Sample rate and desired cutoff frequencies (in Hz).
     fs = 6.0
     lowest = 0.001
-    highest = fs/2
-    numBands=4*10
+    highest = 1
+    numBands = 3*10
 
     bandEdges = np.linspace(lowest, highest, numBands)
 
@@ -201,40 +366,121 @@ def run():
 
 
 
+        fig = plt.figure(figsize=[24, 14])
+        fig.suptitle('Metric w/ Bandpass  %.2f - %.2f Hz filter data[' % (lowcut, highcut) + key + '][' + idn + ']')
+        row = 3
+        col = 2
+
+
+        ##### Filter the true and predicted signals
+        beh_filt = np.copy(beh)
+        beh_filt[:] =np.nan
+        behPred_SLM_filt = np.copy(beh_filt)
+        behPred_SN_filt = np.copy(beh_filt)
+
+        beh_filt[valid_map] = butter_bandpass_filter(beh[valid_map], lowcut, highcut, fs, order=order)
+        behPred_SLM_filt[valid_map] = butter_bandpass_filter(behPred_SLM[valid_map], lowcut, highcut, fs, order=order)
+        behPred_SN_filt[valid_map] = butter_bandpass_filter(behPred_SN[valid_map], lowcut, highcut, fs, order=order)
 
 
 
-        plt.figure()
+        R2 = calc_R2(beh[valid_map][test], behPred_SLM[valid_map][test])
+
+        ax1 = fig.add_subplot(row, col, 1, title='SLM Unfiltered R2=%.2f' % R2)
+        ax1.plot(time, beh, label="Measured")
+        ax1.plot(time, behPred_SLM, label="Predicted")
+        ax1.axhline(linewidth=0.5, color='k')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Velocity')
+        ax1.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax1.legend()
+
+        R2 = calc_R2(beh_filt[valid_map][test], behPred_SLM_filt[valid_map][test])
+
+        ax3 = fig.add_subplot(row, col, 3, title='SLM Filtered (%.2f-%.2f Hz) R2=%.2f' % (lowcut, highcut, R2))
+        plt.autoscale(enable=True)
+        ax3.plot(time, beh_filt, label="Measured Filtered")
+        ax3.plot(time, behPred_SLM_filt, label="Predicted Filtered")
+        ax3.axhline(linewidth=0.5, color='k')
+        ax3.set_xlabel('Time (s)')
+        ax3.set_ylabel('Velocity')
+        ax3.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax3.legend()
+
+        ax5 = fig.add_subplot(row, col, 5,
+                              title='SLM Filtered (%.2f-%.2f Hz) Residuals R2=%.2f' % (lowcut, highcut, R2),
+                              sharex=ax3, sharey=ax3)
+        resid_SLM_filt = beh_filt - behPred_SLM_filt
+        ax5.plot(time, resid_SLM_filt, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax5.plot(time[test_indices],
+                 np.nancumsum((resid_SLM_filt[test_indices]) ** 2) / np.nansum(
+                     (beh_filt[test_indices] - np.nanmean(beh_filt[test_indices])) ** 2) * 3 * np.nanmean(beh_filt ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+
+        ax5.axhline(linewidth=0.5, color='k')
+        ax5.set_xlabel('Time (s)')
+        ax5.set_ylabel('Velocity')
+        ax5.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax5.legend()
 
 
 
+        R2 = calc_R2(beh[valid_map][test], behPred_SN[valid_map][test])
+
+        ax2 = fig.add_subplot(row, col, 2, title='Best Single Neuron Unfiltered R2=%.2f' % R2, sharex=ax3, sharey=ax3)
+        ax2.plot(time, beh, label="Measured")
+        ax2.plot(time, behPred_SN, label="Predicted")
+        ax2.axhline(linewidth=0.5, color='k')
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Velocity')
+        ax2.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax2.legend()
+
+
+        R2 = calc_R2(beh_filt[valid_map][test], behPred_SN_filt[valid_map][test])
+
+        ax4 = fig.add_subplot(row, col, 4,
+                              title='Best Single Neuron Filtered (%.2f - %.2f Hz)  R2=%.2f' % (lowcut, highcut, R2),
+                              sharex=ax3, sharey=ax3)
+        ax4.plot(time, beh_filt, label="Measured Filtered")
+        ax4.plot(time, behPred_SN_filt, label="Predicted Filtered")
+        ax4.axhline(linewidth=0.5, color='k')
+        ax4.set_xlabel('Time (s)')
+        ax4.set_ylabel('Velocity')
+        ax4.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax4.legend()
+
+
+        #CONTINUE HERE
+        ax6 = fig.add_subplot(row, col, 6,
+                              title='Best Single Neuron Filtered (%.2f-%.2f Hz) Residuals R2=%.2f' % (lowcut, highcut, R2),
+                              sharex=ax3, sharey=ax3)
+        resid_SN_filt = beh_filt - behPred_SN_filt
+        ax6.plot(time, resid_SN_filt, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax6.plot(time[test_indices],
+                 np.nancumsum((resid_SN_filt[test_indices]) ** 2) / np.nansum(
+                     (beh_filt[test_indices] - np.nanmean(beh_filt[test_indices])) ** 2) * 3 * np.nanmean(beh_filt ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+        ax6.axhline(linewidth=0.5, color='k')
+        ax6.set_xlabel('Time (s)')
+        ax6.set_ylabel('Velocity')
+        ax6.legend()
+        ax6.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        plt.axis('tight')
+        plt.show()
 
 
 
-
-    # Filter a noisy signal.
-    T = 600
-    nsamples = T * fs
-    t = np.linspace(0, T, nsamples, endpoint=False)
-    a = 0.02
-    f0 =0.2
-    x = 0.1 * np.sin(2 * np.pi * 1.2 * np.sqrt(t))
-    x += 0.01 * np.cos(2 * np.pi * 312 * t + 0.1)
-    x += a * np.cos(2 * np.pi * f0 * t + .11)
-    x += 0.03 * np.cos(2 * np.pi * 2000 * t)
-    plt.figure(2)
-    plt.clf()
-    plt.plot(t, x, label='Noisy signal')
-
-    y = butter_bandpass_filter(x, lowcut, highcut, fs, order=1)
-    plt.plot(t, y, label='Filtered signal (%g Hz)' % f0)
-    plt.xlabel('time (seconds)')
-    plt.hlines([-a, a], 0, T, linestyles='--')
-    plt.grid(True)
-    plt.axis('tight')
-    plt.legend(loc='upper left')
-
-    plt.show()
 
 
 run()
