@@ -201,19 +201,26 @@ def run():
     ## I think we will not only want to plot the residuals of the testset
     ## But maybe also plot the difference between the true and the smooth
 
-    least_filtering = 0.9
-    most_filtering = 5
+    vps = 6
+    least_filtering = 1 * vps
+    most_filtering = 10 * vps
     num_filters = 10
 
     for sigma in np.linspace(least_filtering, most_filtering, num_filters):
         fig = plt.figure(figsize=[24, 14])
-        fig.suptitle('$\\sigma=%.2f$ s Gauss Smoothing data[' % sigma + key + '][' + idn + ']')
+        fig.suptitle('$\\sigma=%.2f$ s Gauss Smoothing data[' % np.true_divide(sigma, vps) + key + '][' + idn + ']')
         row = 2
         col = 2
 
         #Smooth all the data
-        beh_smooth = gauss_filterNaN(beh, sigma)
-        beh_smooth[np.isnan(beh)] = np.nan
+        
+        only_smooth_neural = True
+
+        if only_smooth_neural:
+            beh_smooth = np.copy(beh)
+        else:
+            beh_smooth = gauss_filterNaN(beh, sigma)
+            beh_smooth[np.isnan(beh)] = np.nan
 
         behPred_SLM_smooth = gauss_filterNaN(behPred_SLM, sigma)
         behPred_SLM_smooth[np.isnan(behPred_SLM)] = np.nan
@@ -228,7 +235,7 @@ def run():
         R2 = calc_R2(beh_smooth[valid_map][test], behPred_SLM_smooth[valid_map][test])
         R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SLM_smooth[valid_map][train])
 
-        ax1 = fig.add_subplot(row, col, 1, title='SLM Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train))
+        ax1 = fig.add_subplot(row, col, 1, title='SLM NEURAL ONLY Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (np.true_divide(sigma, vps), R2, R2_train))
         ax1.plot(time, beh_smooth, label="Measured")
         ax1.plot(time, behPred_SLM_smooth, label="Predicted")
         ax1.axhline(linewidth=0.5, color='k')
@@ -238,7 +245,7 @@ def run():
                     alpha=0.1)
         ax1.legend()
 
-        ax3 = fig.add_subplot(row, col, 3, title='SLM Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+        ax3 = fig.add_subplot(row, col, 3, title='SLM NEURAL ONLY Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (np.true_divide(sigma, vps), R2, R2_train),
                               sharex=ax1, sharey=ax1)
         resid_SLM_smooth = beh_smooth - behPred_SLM_smooth
         ax3.plot(time, resid_SLM_smooth, 'g', label="resid")
@@ -260,7 +267,7 @@ def run():
         R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SN_smooth[valid_map][train])
 
         ax2 = fig.add_subplot(row, col, 2,
-                              title='Best Single Neuron Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+                              title='Best Single Neuron NEURAL ONLY Smoothed $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (np.true_divide(sigma, vps), R2, R2_train),
                               sharex=ax1, sharey=ax1)
         ax2.plot(time, beh_smooth, label="Measured")
         ax2.plot(time, behPred_SN_smooth, label="Predicted")
@@ -272,7 +279,7 @@ def run():
         ax2.legend()
 
         ax4 = fig.add_subplot(row, col, 4,
-                              title='Best Single Neuron Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (sigma, R2, R2_train),
+                              title='Best Single Neuron NEURAL ONLY Smoothed $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (np.true_divide(sigma, vps), R2, R2_train),
                               sharex=ax1, sharey=ax1)
         resid_SN_smooth = beh_smooth - behPred_SN_smooth
         ax4.plot(time, resid_SN_smooth, 'g', label="resid")
