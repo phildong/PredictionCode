@@ -217,11 +217,23 @@ def main():
             fig_cnt=fig_cnt+1
             fig = plt.figure(fig_cnt, [28, 12])
             fig.suptitle('data[' + key + '][' + idn + ']')
+
             row = 3
             col = 2
             axes = []
             for each in np.arange(row * col)+1:
                 axes = np.append(axes, plt.subplot(row, col, each))
+
+
+            fig_cnt=fig_cnt+1
+            fig.suptitle(' data[' + key + '][' + idn + ']')
+            fig_scatter = plt.figure(fig_cnt,[24, 12])
+            fig_scatter.suptitle('Scatter  data[' + key + '][' + idn + ']')
+
+
+            axes_scatter = []
+            for each in np.arange(row * col)+1:
+                axes_scatter = np.append(axes_scatter, plt.subplot(row, col, each))
 
 
             ax_cnt =-1
@@ -251,7 +263,7 @@ def main():
                     R2_stored = movingAnalysis[flag][behavior]['scorepredicted']
 
                     if pred_type == 'Best Neuron':
-                        #Get ready to the best Neuron
+                        #Get ready to test the best Neuron
                         activity = moving['Neurons']['I_smooth_interp_crop_noncontig']
                         beh_crop_noncontig = moving['Behavior_crop_noncontig'][behavior]
 
@@ -304,8 +316,6 @@ def main():
                     axes[ax_cnt].plot(time, behPred, label="Predicted")
                     #axes[ax_cnt].plot(time, beh-behPred, label="resid", linewidth=.5)
 
-
-
                     axes[ax_cnt].title.set_text(pred_type +  ', '
                                                 + title + additional_title_text +
                                                 ' R2 = %.2f' % R2_stored
@@ -317,29 +327,49 @@ def main():
 
                     axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
                                 alpha=0.1)
-                    #ax7.axhline(color='k', linestyle='--', zorder=-1)
+
+
+                    #Generate scatter plots too (on the other figure)
+                    axes_scatter[ax_cnt].plot(beh[valid_map][train], behPred[valid_map][train], linestyle='',
+                                              marker='o', markersize=0.7, label='Train')
+                    axes_scatter[ax_cnt].plot(beh[valid_map][test], behPred[valid_map][test], linestyle='',
+                                              marker='o', markersize=0.7, color='m', label='Test')
+                    axes_scatter[ax_cnt].set_xlim([np.nanmin(beh), np.nanmax(beh)])
+                    axes_scatter[ax_cnt].set_ylim([np.nanmin(beh), np.nanmax(beh)])
+
+                    axes_scatter[ax_cnt].title.set_text(pred_type + ', '
+                                                + title + additional_title_text +
+                                                ' R2 = %.2f' % R2_stored
+                                                + ' R2_loc = %.2f' % R2_local +
+                                                ' R2_train = %.2f' % R2_train)
+                    axes_scatter[ax_cnt].set_xlabel('Measured')
+                    axes_scatter[ax_cnt].set_ylabel('Predicted')
+                    axes_scatter[ax_cnt].plot([np.nanmin(beh), np.nanmax(beh)], [np.nanmin(beh), np.nanmax(beh)], 'r')
+                    axes_scatter[ax_cnt].axhline(linewidth=0.5, color='k')
+                    axes_scatter[ax_cnt].axvline(linewidth=0.5, color='k')
+                    axes_scatter[ax_cnt].set_aspect('equal', 'box')
+                    axes_scatter[ax_cnt].legend()
 
 
 
-                    #axscheme2.text(t[-1], yl + yo, \
-                    #              r'$R^2 = {:.2f}$'.format(np.float(movingAnalysis[flag][behavior]['scorepredicted'])),
-                    #              horizontalalignment='right')
-
-            prov.stamp(axes[ax_cnt],.55,.15)
+            prov.stamp(axes_scatter[ax_cnt], .55, .15)
+            prov.stamp(axes[ax_cnt], .55, .15)
 
 
     print("Saving behavior predictions to pdf...")
 
     import matplotlib.backends.backend_pdf
     pdf = matplotlib.backends.backend_pdf.PdfPages("prediction_performance.pdf")
-    for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+    numFigs = plt.gcf().number + 1
+    for fig in xrange(1, numFigs): ## will open an empty extra figure :(
+        print("Saving Figure %d of %d" % (fig, numFigs))
         pdf.savefig(fig)
         plt.close(fig)
     pdf.close()
     print("Saved.")
 
 
-
+    raise RuntimeError, "Stopping here for now."
 
     ### Plot Heatmap for each recording
 
