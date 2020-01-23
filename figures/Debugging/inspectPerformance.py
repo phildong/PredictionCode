@@ -208,14 +208,12 @@ def main():
     #Actually plot each prediction
     print("Plotting behavior predictions..")
     # For each type of recording
-    fig_cnt = plt.gcf().number
     for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         dset = data[key]['input']
 
         # For each recording
         for idn in dset.keys():
-            fig_cnt=fig_cnt+1
-            fig = plt.figure(fig_cnt, [28, 12])
+            fig = plt.figure(figsize=[28, 12])
             fig.suptitle('data[' + key + '][' + idn + ']')
 
             row = 3
@@ -225,10 +223,10 @@ def main():
                 axes = np.append(axes, plt.subplot(row, col, each))
 
 
-            fig_cnt=fig_cnt+1
             fig.suptitle(' data[' + key + '][' + idn + ']')
-            fig_scatter = plt.figure(fig_cnt,[24, 12])
+            fig_scatter = plt.figure(figsize=[24, 12])
             fig_scatter.suptitle('Scatter  data[' + key + '][' + idn + ']')
+
 
 
             axes_scatter = []
@@ -350,10 +348,19 @@ def main():
                     axes_scatter[ax_cnt].set_aspect('equal', 'box')
                     axes_scatter[ax_cnt].legend()
 
-
-
             prov.stamp(axes_scatter[ax_cnt], .55, .15)
             prov.stamp(axes[ax_cnt], .55, .15)
+
+            vel = moving['BehaviorFull']['AngleVelocity']
+            curve = moving['BehaviorFull']['Eigenworm3']
+            fig_vc, ax_vc = plt.subplots(1,1, figsize=[8,8])
+            fig_vc.suptitle('Measured Velocity vs Measured Curvature \n data[' + key + '][' + idn + ']')
+            ax_vc.plot(vel, curve, linestyle='', marker='o', markersize=0.7)
+            ax_vc.set_xlim([np.nanmin(vel), np.nanmax(vel)])
+            ax_vc.set_ylim([np.nanmin(curve), np.nanmax(curve)])
+            ax_vc.set_xlabel('Measured Velocity')
+            ax_vc.set_ylabel('Mesaured Curvature')
+            prov.stamp(ax_vc, .55, .15)
 
 
     print("Saving behavior predictions to pdf...")
