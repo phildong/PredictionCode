@@ -213,18 +213,18 @@ def main():
 
         # For each recording
         for idn in dset.keys():
-            fig = plt.figure(figsize=[28, 12])
+            fig = plt.figure(figsize=[30, 12])
             fig.suptitle('data[' + key + '][' + idn + ']')
 
             row = 3
-            col = 2
+            col = 3
             axes = []
             for each in np.arange(row * col)+1:
                 axes = np.append(axes, plt.subplot(row, col, each))
 
 
             fig.suptitle(' data[' + key + '][' + idn + ']')
-            fig_scatter = plt.figure(figsize=[24, 12])
+            fig_scatter = plt.figure(figsize=[28, 12])
             fig_scatter.suptitle('Scatter  data[' + key + '][' + idn + ']')
 
 
@@ -236,7 +236,7 @@ def main():
 
             ax_cnt =-1
             for flag, pred_type in zip(['PCAPred', 'ElasticNet', 'ElasticNet'], ['PCA', 'SLM', 'Best Neuron']):
-                for behavior, title in zip(['AngleVelocity', 'Eigenworm3'],  ['Velocity', 'Turn']):
+                for behavior, title in zip(['AngleVelocity', 'AngleAccel', 'Eigenworm3'],  ['Velocity', 'Acceleration', 'Turn']):
                     ax_cnt = ax_cnt + 1
 
                     #Get the data
@@ -327,7 +327,7 @@ def main():
                                 alpha=0.1)
 
 
-                    #Generate scatter plots too (on the other figure)
+                    #Generate scatter plots too of prediction vs measured (on the other figure)
                     axes_scatter[ax_cnt].plot(beh[valid_map][train], behPred[valid_map][train], linestyle='',
                                               marker='o', markersize=0.7, label='Train')
                     axes_scatter[ax_cnt].plot(beh[valid_map][test], behPred[valid_map][test], linestyle='',
