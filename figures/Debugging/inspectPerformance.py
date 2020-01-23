@@ -30,8 +30,14 @@ def calc_R2(y_true, y_pred):
     The goal is to have a transparent external way of calculating R^2
     seperate of regressions, as a final sanity check.
     """
-    u = ((y_true - y_pred) ** 2).sum()
-    v = ((y_true - y_true.mean()) ** 2).sum()
+
+    #make sure that if there is a NaN in one set, there is a NaN in the
+    # corresponding time point in the other
+    y_true[np.isnan(y_pred)]=np.nan
+    y_pred[np.isnan(y_true)]=np.nan
+
+    u = ((y_true - y_pred) ** 2).nansum()
+    v = ((y_true - y_true.nanmean()) ** 2).nansum()
     R2 = (1 - u / v)
     return R2
 
@@ -217,7 +223,7 @@ def main():
             fig.suptitle('data[' + key + '][' + idn + ']')
 
             row = 3
-            col = 3
+            col = 2
             axes = []
             for each in np.arange(row * col)+1:
                 axes = np.append(axes, plt.subplot(row, col, each))
@@ -236,7 +242,7 @@ def main():
 
             ax_cnt =-1
             for flag, pred_type in zip(['PCAPred', 'ElasticNet', 'ElasticNet'], ['PCA', 'SLM', 'Best Neuron']):
-                for behavior, title in zip(['AngleVelocity', 'AngleAccel', 'Eigenworm3'],  ['Velocity', 'Acceleration', 'Turn']):
+                for behavior, title in zip(['AngleVelocity', 'Eigenworm3'],  ['Velocity', 'Turn']):
                     ax_cnt = ax_cnt + 1
 
                     #Get the data

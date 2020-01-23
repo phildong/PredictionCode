@@ -115,6 +115,7 @@ def run():
     # regenerate our prediction from the best predicted neuron
     behPred_SN[valid_map] = linfunc(activity[bestNeuron, :], m[bestNeuron], b[bestNeuron])
 
+
     ### Get the behavior predicted from the best Senigle Neuron
     behPred_SLM[valid_map] = movingAnalysis['ElasticNet'][behavior]['output']
 
@@ -194,8 +195,6 @@ def run():
 
 
 
-
-
     ## Goal here is to try smoothing different amounts and measure
     ## performance on the smoothed versions
     ## I think we will not only want to plot the residuals of the testset
@@ -214,7 +213,7 @@ def run():
 
         #Smooth all the data
         
-        only_smooth_neural = True
+        only_smooth_neural = False
 
         if only_smooth_neural:
             beh_smooth = np.copy(beh)
@@ -299,9 +298,145 @@ def run():
         import prediction.provenance as prov
         prov.stamp(plt.gca(), .55, .15)
 
+        ## Goal here is to test  a metric that compares the derivative of the predicted to
+        ## the derivative of the measured
+
+
+    vps = 6
+    least_filtering = 1 * vps
+    most_filtering = 5 * vps
+    num_filters = 10
+
+    for sigma in np.linspace(least_filtering, most_filtering, num_filters):
+        fig = plt.figure(figsize=[24, 14])
+        fig.suptitle('$\\sigma=%.2f$ s Gauss Derivative data[' % np.true_divide(sigma, vps) + key + '][' + idn + ']')
+        row = 2
+        col = 2
+
+        # Smooth all the data
+
+        only_smooth_neural = False
+
+        from scipy.interpolate import interp1d
+        import scipy as sp
+
+        if only_smooth_neural:
+            beh_smooth = np.copy(beh)
+        else:
+
+
+
+
+            #cubic interpolate over NaNs
+            f = interp1d(time[valid_map], beh[valid_map], kind='cubic')
+            beh_interp = f(time[valid_map[0]:valid_map[-1]])
+            beh_smooth = np.copy(beh)
+            beh_smooth[:] = np.nan
+            # Take gaussian Derivative
+            beh_smooth[valid_map[0]:valid_map[-1]] = sp.ndimage.gaussian_filter1d(beh_interp, sigma, order=1)
+            #Re-implement NaNs
+            beh_smooth[np.isnan(beh)] = np.nan
+
+        #cubic interpolate over nans
+        f = interp1d(time[valid_map], behPred_SLM[valid_map], kind='cubic')
+        behPred_SLM_interp = f(time[valid_map[0]:valid_map[-1]])
+        behPred_SLM_smooth = np.copy(behPred_SLM)
+        behPred_SLM_smooth[:] = np.nan
+        #Take Gaussian Derivative
+        behPred_SLM_smooth[valid_map[0]:valid_map[-1]] = sp.ndimage.gaussian_filter1d(behPred_SLM_interp, sigma, order=1)
+        #Put NaNs back
+        behPred_SLM_smooth[np.isnan(behPred_SLM)] = np.nan
+
+
+        #cubic interpolate over nans
+        f = interp1d(time[valid_map], behPred_SN[valid_map], kind='cubic')
+        behPred_SN_interp = f(time[valid_map[0]:valid_map[-1]])
+        behPred_SN_smooth = np.copy(behPred_SN)
+        behPred_SN_smooth[:] = np.nan
+
+        #Take Gaussian Derivative
+        behPred_SN_smooth[valid_map[0]:valid_map[-1]] = sp.ndimage.gaussian_filter1d(behPred_SN_interp, sigma, order=1)
+        behPred_SN_smooth[np.isnan(behPred_SN)] = np.nan
+
+        R2 = calc_R2(beh_smooth[valid_map][test], behPred_SLM_smooth[valid_map][test])
+        R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SLM_smooth[valid_map][train])
+
+        ax1 = fig.add_subplot(row, col, 1, title='SLM  Gauss Derivative $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (
+        np.true_divide(sigma, vps), R2, R2_train))
+        ax1.plot(time, beh_smooth, label="Measured")
+        ax1.plot(time, behPred_SLM_smooth, label="Predicted")
+        ax1.axhline(linewidth=0.5, color='k')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Velocity')
+        ax1.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax1.legend()
+
+        ax3 = fig.add_subplot(row, col, 3,
+                              title='SLM  Gauss Derivative $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (
+                              np.true_divide(sigma, vps), R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        resid_SLM_smooth = beh_smooth - behPred_SLM_smooth
+        ax3.plot(time, resid_SLM_smooth, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax3.plot(time[test_indices],
+                 np.nancumsum((resid_SLM_smooth[test_indices]) ** 2) / np.nansum(
+                     (beh_smooth[test_indices] - np.nanmean(beh_smooth[test_indices])) ** 2) * 3 * np.nanmean(
+                     beh_smooth ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+
+        ax3.axhline(linewidth=0.5, color='k')
+        ax3.set_xlabel('Time (s)')
+        ax3.set_ylabel('Velocity')
+        ax3.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax3.legend()
+
+        R2 = calc_R2(beh_smooth[valid_map][test], behPred_SN_smooth[valid_map][test])
+        R2_train = calc_R2(beh_smooth[valid_map][train], behPred_SN_smooth[valid_map][train])
+
+        ax2 = fig.add_subplot(row, col, 2,
+                              title='Best Single Neuron Gauss Derivative $\\sigma=%.2f$ s R2=%.2f, R_train = %.2f' % (
+                              np.true_divide(sigma, vps), R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        ax2.plot(time, beh_smooth, label="Measured")
+        ax2.plot(time, behPred_SN_smooth, label="Predicted")
+        ax2.axhline(linewidth=0.5, color='k')
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Velocity')
+        ax2.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+        ax2.legend()
+
+        ax4 = fig.add_subplot(row, col, 4,
+                              title='Best Single Neuron Gauss Deriv  $\\sigma=%.2f$ s Residuals R2=%.2f, R_train = %.2f' % (
+                              np.true_divide(sigma, vps), R2, R2_train),
+                              sharex=ax1, sharey=ax1)
+        resid_SN_smooth = beh_smooth - behPred_SN_smooth
+        ax4.plot(time, resid_SN_smooth, 'g', label="resid")
+        test_indices = np.arange(valid_map[test[0]], valid_map[test[-1]])
+        ax4.plot(time[test_indices],
+                 np.nancumsum((resid_SN_smooth[test_indices]) ** 2) / np.nansum(
+                     (beh_smooth[test_indices] - np.nanmean(beh_smooth[test_indices])) ** 2) * 3 * np.nanmean(
+                     beh_smooth ** 2),
+                 'm',
+                 label=r'$\frac{\sum_0^i(y-\hat{y})^2}{\sum(y-\langle y \rangle)^2} * 3\langle y \rangle ^2$')
+        ax4.axhline(linewidth=0.5, color='k')
+        ax4.set_xlabel('Time (s)')
+        ax4.set_ylabel('Velocity')
+        ax4.legend()
+        ax4.axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
+                    alpha=0.1)
+
+        import prediction.provenance as prov
+        prov.stamp(plt.gca(), .55, .15)
+
+
+
     print("Beginning to save smoothing metric plots")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages("smoothingmetric.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages("smoothingmetric_both.pdf")
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
