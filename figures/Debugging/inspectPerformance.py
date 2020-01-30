@@ -33,11 +33,11 @@ def calc_R2(y_true, y_pred):
 
     #make sure that if there is a NaN in one set, there is a NaN in the
     # corresponding time point in the other
-    y_true[np.isnan(y_pred)]=np.nan
-    y_pred[np.isnan(y_true)]=np.nan
+    y_true[np.isnan(y_pred)] = np.nan
+    y_pred[np.isnan(y_true)] = np.nan
 
-    u = ((y_true - y_pred) ** 2).nansum()
-    v = ((y_true - y_true.nanmean()) ** 2).nansum()
+    u = np.nansum((y_true - y_pred) ** 2)
+    v = np.nansum((y_true - np.nanmean(y_true)) ** 2)
     R2 = (1 - u / v)
     return R2
 
@@ -219,6 +219,7 @@ def main():
 
         # For each recording
         for idn in dset.keys():
+            # Plot with time traces of predicted and measured
             fig = plt.figure(figsize=[30, 12])
             fig.suptitle('data[' + key + '][' + idn + ']')
 
@@ -227,23 +228,33 @@ def main():
             axes = []
             for each in np.arange(row * col)+1:
                 axes = np.append(axes, plt.subplot(row, col, each))
-
-
             fig.suptitle(' data[' + key + '][' + idn + ']')
+
+            # Plot Showing Neural Weights
+            fig_weights = plt.figure(figsize=[28, 12])
+            fig_weights.suptitle('Neural weights data[' + key + '][' + idn + ']')
+            #need one subplot for each column (behavior)
+            axes_weights = []
+            #setup the subplots so that by simply incrementing the index of
+            # axes_weights we can move through all the rows of each column
+            weightfig_rows = 2
+            for  each in np.reshape(np.arange(weightfig_rows * col)+1,(weightfig_rows,col), order='F').ravel():
+                    axes_weights = np.append(axes_weights, plt.subplot(2, col, each))
+
+
+
+            #Scatter plots of predicted vs Measured
             fig_scatter = plt.figure(figsize=[28, 12])
             fig_scatter.suptitle('Scatter  data[' + key + '][' + idn + ']')
-
-
-
             axes_scatter = []
             for each in np.arange(row * col)+1:
                 axes_scatter = np.append(axes_scatter, plt.subplot(row, col, each))
 
-
-            ax_cnt =-1
+            ax_cnt = -1
             for flag, pred_type in zip(['PCAPred', 'ElasticNet', 'ElasticNet'], ['PCA', 'SLM', 'Best Neuron']):
-                for behavior, title in zip(['AngleVelocity', 'Eigenworm3'],  ['Velocity', 'Turn']):
+                for behavior, title, beh_cnt in zip(['AngleVelocity', 'Eigenworm3'],  ['Velocity', 'Turn'], np.arange(2)):
                     ax_cnt = ax_cnt + 1
+
 
                     #Get the data
                     moving = data[key]['input'][idn]
@@ -266,10 +277,10 @@ def main():
 
                     R2_stored = movingAnalysis[flag][behavior]['scorepredicted']
 
+                    activity = moving['Neurons']['I_smooth_interp_crop_noncontig']
+                    beh_crop_noncontig = moving['Behavior_crop_noncontig'][behavior]
                     if pred_type == 'Best Neuron':
                         #Get ready to test the best Neuron
-                        activity = moving['Neurons']['I_smooth_interp_crop_noncontig']
-                        beh_crop_noncontig = moving['Behavior_crop_noncontig'][behavior]
 
                         numNeurons = activity.shape[0]
                         R2_local_all = np.empty(numNeurons)
@@ -354,9 +365,63 @@ def main():
                     axes_scatter[ax_cnt].set_aspect('equal', 'box')
                     axes_scatter[ax_cnt].legend()
 
+
+                    ax_weight_cnt = beh_cnt * 2
+                    # Generate plots of the neural  weights
+                    if pred_type == 'Best Neuron':
+                        axes_weights[ax_weight_cnt].plot(bestNeuron, m[bestNeuron], marker='o', label='Best Single Neuron')
+
+                    elif pred_type == 'SLM':
+                        #For now we will just plot SLM weights raw without any scaling corrections for the variance
+                        SLM_w_raw = movingAnalysis[flag][behavior]['weights']
+                        SLM_w = np.true_divide(SLM_w_raw, np.std(activity,axis=1)) * np.std(beh_crop_noncontig)
+                        axes_weights[ax_weight_cnt].plot(SLM_w_raw * np.linalg.norm(SLM_w)/np.linalg.norm(SLM_w_raw), label='SLM uncorrected * c')
+                        axes_weights[ax_weight_cnt].plot(SLM_w, label='SLM')
+
+
+
+                    elif pred_type == 'PCA':
+                        # implement later
+                        meta_weights = movingAnalysis[flag][behavior]['weights']
+                        pc_weights = movingAnalysis[flag][behavior]['PCA_components']
+
+                        ## Check size and such
+                        PCA_model_weights_raw = np.matmul(meta_weights, pc_weights)
+
+                        # Correct for scaling done on behavior (no scaling on neural activity)
+                        PCA_model_weights = PCA_model_weights_raw * np.std(beh_crop_noncontig)
+                        axes_weights[ax_weight_cnt].plot(PCA_model_weights, label='PCA')
+
+
+
+                    axes_weights[ax_weight_cnt].set_xlabel('Neuron')
+                    axes_weights[ax_weight_cnt].set_ylabel('Weight')
+                    axes_weights[ax_weight_cnt].title.set_text(behavior + ' weights')
+                    axes_weights[ax_weight_cnt].legend()
+
+
+
+
+                    ax_weight_cnt = beh_cnt * 2 + 1
+                    #Now in the second row of the  weights figures
+                    # we want to plot the mean value of the nueral activity and the variance
+                    axes_weights[ax_weight_cnt].errorbar(np.arange(activity.shape[0]),
+                                                         np.nanmean(activity, axis=1),
+                                                         yerr=np.nanstd(activity,axis=1)/2,
+                                                         label='Mean Activity I and Standard Dev')
+                    axes_weights[ax_weight_cnt].set_xlabel('Neuron')
+                    axes_weights[ax_weight_cnt].set_ylabel('Fluorescent Intensity, I (common-noise removed)')
+                    axes_weights[ax_weight_cnt].legend()
+
+
+
+
+            #Stamp the weights with git info
             prov.stamp(axes_scatter[ax_cnt], .55, .15)
             prov.stamp(axes[ax_cnt], .55, .15)
+            prov.stamp(axes_weights[beh_cnt], .55, .15)
 
+            # Generate Scatter plot to test how related velocity and body curvature are to one another
             vel = moving['BehaviorFull']['AngleVelocity']
             curve = moving['BehaviorFull']['Eigenworm3']
             fig_vc, ax_vc = plt.subplots(1,1, figsize=[8,8])
@@ -367,6 +432,8 @@ def main():
             ax_vc.set_xlabel('Measured Velocity')
             ax_vc.set_ylabel('Mesaured Curvature')
             prov.stamp(ax_vc, .55, .15)
+
+
 
 
     print("Saving behavior predictions to pdf...")
@@ -421,7 +488,7 @@ def main():
             ax = plt.subplot(4,1,1)
             pos = ax.imshow(I_smooth, aspect='auto',
                             interpolation='none', vmin=np.nanpercentile(I_smooth.flatten(), 0.1), vmax=np.nanpercentile(I_smooth.flatten(), prcntile),
-                            extent = [ time[0], time[-1], 0, I_smooth.shape[0] ])
+                            extent = [ time[0], time[-1], 0, I_smooth.shape[0] ], origin='lower')
             ax.set_title('I_smooth_interp_noncontig  (smooth, common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
@@ -432,7 +499,7 @@ def main():
             ax = plt.subplot(4,1,2)
             pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans, aspect='auto',
                             interpolation='none', vmin=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1), vmax=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile),
-                            extent = [ time[0], time[-1], 0, I_smooth_interp_crop_noncontig_wnans.shape[0] ])
+                            extent = [ time[0], time[-1], 0, I_smooth_interp_crop_noncontig_wnans.shape[0] ], origin='lower')
             ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
@@ -442,7 +509,7 @@ def main():
             ax = plt.subplot(4, 1, 3)
             pos = ax.imshow(Iz, aspect='auto',
                             interpolation='none', vmin=-2, vmax=2,
-                            extent = [time[0], time[-1], 0, Iz.shape[0] ])
+                            extent = [time[0], time[-1], 0, Iz.shape[0] ], origin='lower')
             ax.set_title('Activity  (per-neuron z-scored,  aggressive interpolation, common noise rejected,  Jeffs photobleach correction)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
