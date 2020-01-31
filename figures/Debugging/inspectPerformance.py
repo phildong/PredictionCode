@@ -63,8 +63,8 @@ def linear_fit(activity, behavior):
 
     from scipy.optimize import curve_fit
 
-    bounds = ([-20, -20], # lower bound of m (slope) and  b offset
-                [20, 20]) # upper bound of m(slope) and b offset
+    bounds = ([-60, -60], # lower bound of m (slope) and  b offset
+                [60, 60]) # upper bound of m(slope) and b offset
 
     popt_guess = [1, 0]  #as a first guess assume no slope and offset
 
@@ -75,6 +75,30 @@ def linear_fit(activity, behavior):
     b = popt[1] * beh_scalefactor
 
     return m, b, pcov
+
+
+def calc_weight_p_value(a, b):
+    """ Calculate the p-value that the observed dot product of a and b do not come from the distribution
+    of two random vectors in D dimensional space.
+
+    See: https://stats.stackexchange.com/questions/85916/distribution-of-scalar-products-of-two-random-unit-vectors-in-d-dimensions
+
+    """
+
+    D = a.shape[0] #dimensionality of the weights
+    
+    
+    from numpy import linalg as la
+    #Calculate normalized dot product
+    normdot = np.dot(np.true_divide(a, la.norm(a)), np.true_divide(b, la.norm(b)))
+
+    from scipy import special
+    #rescale by dimensionality to set width of the gaussian distribution
+    #And calculate the complementary error function to get a p-value
+    return special.erfc(normdot / (1 / np.sqrt(D)))
+
+
+
 
 def main():
     print("Inspecting performance...")
@@ -226,7 +250,7 @@ def main():
             row = 3
             col = 2
             axes = []
-            for each in np.arange(row * col)+1:
+            for each in np.reshape(np.arange(row * col)+1, ( col, row), order='F').ravel():
                 axes = np.append(axes, plt.subplot(row, col, each))
             fig.suptitle(' data[' + key + '][' + idn + ']')
 
@@ -238,7 +262,7 @@ def main():
             #setup the subplots so that by simply incrementing the index of
             # axes_weights we can move through all the rows of each column
             weightfig_rows = 2
-            for  each in np.reshape(np.arange(weightfig_rows * col)+1,(weightfig_rows,col), order='F').ravel():
+            for each in np.reshape(np.arange(weightfig_rows * col)+1,(weightfig_rows,col), order='F').ravel():
                     axes_weights = np.append(axes_weights, plt.subplot(2, col, each))
 
 
@@ -251,8 +275,9 @@ def main():
                 axes_scatter = np.append(axes_scatter, plt.subplot(row, col, each))
 
             ax_cnt = -1
-            for flag, pred_type in zip(['PCAPred', 'ElasticNet', 'ElasticNet'], ['PCA', 'SLM', 'Best Neuron']):
-                for behavior, title, beh_cnt in zip(['AngleVelocity', 'Eigenworm3'],  ['Velocity', 'Turn'], np.arange(2)):
+            for behavior, title, beh_cnt in zip(['AngleVelocity', 'Eigenworm3'], ['Velocity', 'Turn'], np.arange(2)):
+                for flag, pred_type in zip(['PCAPred', 'ElasticNet', 'ElasticNet'], ['PCA', 'SLM', 'Best Neuron']):
+
                     ax_cnt = ax_cnt + 1
 
 
@@ -381,7 +406,6 @@ def main():
 
 
                     elif pred_type == 'PCA':
-                        # implement later
                         meta_weights = movingAnalysis[flag][behavior]['weights']
                         pc_weights = movingAnalysis[flag][behavior]['PCA_components']
 
@@ -393,25 +417,27 @@ def main():
                         axes_weights[ax_weight_cnt].plot(PCA_model_weights, label='PCA')
 
 
+                axes_weights[ax_weight_cnt].set_xlabel('Neuron')
+                axes_weights[ax_weight_cnt].set_ylabel('Weight')
+                axes_weights[ax_weight_cnt].title.set_text(behavior +
+                                                           ' weights. SLM to PCA p-value = %.3f'
+                                                           % calc_weight_p_value(SLM_w, PCA_model_weights))
+                axes_weights[ax_weight_cnt].legend()
 
-                    axes_weights[ax_weight_cnt].set_xlabel('Neuron')
-                    axes_weights[ax_weight_cnt].set_ylabel('Weight')
-                    axes_weights[ax_weight_cnt].title.set_text(behavior + ' weights')
-                    axes_weights[ax_weight_cnt].legend()
 
 
 
-
-                    ax_weight_cnt = beh_cnt * 2 + 1
-                    #Now in the second row of the  weights figures
-                    # we want to plot the mean value of the nueral activity and the variance
-                    axes_weights[ax_weight_cnt].errorbar(np.arange(activity.shape[0]),
-                                                         np.nanmean(activity, axis=1),
-                                                         yerr=np.nanstd(activity,axis=1)/2,
-                                                         label='Mean Activity I and Standard Dev')
-                    axes_weights[ax_weight_cnt].set_xlabel('Neuron')
-                    axes_weights[ax_weight_cnt].set_ylabel('Fluorescent Intensity, I (common-noise removed)')
-                    axes_weights[ax_weight_cnt].legend()
+                ax_weight_cnt = beh_cnt * 2 + 1
+                #Now in the second row of the  weights figures
+                # we want to plot the mean value of the nueral activity and the variance
+                axes_weights[ax_weight_cnt].clear()
+                axes_weights[ax_weight_cnt].errorbar(np.arange(activity.shape[0]),
+                                                     np.nanmean(activity, axis=1),
+                                                     yerr=np.nanstd(activity,axis=1)/2,
+                                                     label='Mean Activity I and Standard Dev')
+                axes_weights[ax_weight_cnt].set_xlabel('Neuron')
+                axes_weights[ax_weight_cnt].set_ylabel('Fluorescent Intensity, I (common-noise removed)')
+                axes_weights[ax_weight_cnt].legend()
 
 
 
@@ -447,6 +473,7 @@ def main():
         plt.close(fig)
     pdf.close()
     print("Saved.")
+
 
 
     raise RuntimeError, "Stopping here for now."
