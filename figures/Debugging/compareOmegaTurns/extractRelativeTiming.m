@@ -25,8 +25,7 @@ for k=1:size(vlc_bf,1)
 
 end
 
+U=[T,array2table(volume,'VariableNames',{'StartVolume','EndVolume'})];
+writetable(U,'realtiveTimingWithVolumes.txt','Delimiter',',') 
 
-
-commonTime
-volume
 
