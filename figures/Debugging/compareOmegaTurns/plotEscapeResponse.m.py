@@ -219,6 +219,9 @@ for each in np.arange(timing_info.shape[0]):
 
                 #NOTE WE ARE INTERPOLATING OVER NANS HERE
 
+                import prediction.provenance as prov
+                prov.stamp(ax[2], .55, .15)
+
 
 
 

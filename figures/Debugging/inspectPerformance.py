@@ -533,14 +533,24 @@ def main():
             # Generate Scatter plot to test how related velocity and body curvature are to one another
             vel = moving['BehaviorFull']['AngleVelocity']
             curve = moving['BehaviorFull']['Eigenworm3']
-            fig_vc, ax_vc = plt.subplots(1,1, figsize=[8,8])
-            fig_vc.suptitle('Measured Velocity vs Measured Curvature \n data[' + key + '][' + idn + ']')
-            ax_vc.plot(vel, curve, linestyle='', marker='o', markersize=0.7)
-            ax_vc.set_xlim([np.nanmin(vel), np.nanmax(vel)])
-            ax_vc.set_ylim([np.nanmin(curve), np.nanmax(curve)])
-            ax_vc.set_xlabel('Measured Velocity')
-            ax_vc.set_ylabel('Mesaured Curvature')
-            prov.stamp(ax_vc, .55, .15)
+            fig_vc, ax_vc = plt.subplots(1,2, figsize=[12, 6])
+            fig_vc.suptitle('Relations between measured behavior variables \n data[' + key + '][' + idn + ']')
+            ax_vc[0].plot(vel, curve, linestyle='', marker='o', markersize=0.7)
+            ax_vc[0].set_title('Measured Velocity vs Measured Curvature ')
+            ax_vc[0].set_xlim([np.nanmin(vel), np.nanmax(vel)])
+            ax_vc[0].set_ylim([np.nanmin(curve), np.nanmax(curve)])
+            ax_vc[0].set_xlabel('Measured Velocity')
+            ax_vc[0].set_ylabel('Mesaured Curvature')
+
+            ax_vc[1].plot(vel, moving['BehaviorFull']['CMSVelocity'], linestyle='', marker='o', markersize=0.7)
+            ax_vc[1].set_title('Body Bend vs COM Velocity  R2=%.2f' % calc_R2(vel, moving['BehaviorFull']['CMSVelocity']))
+            ax_vc[1].set_xlim([np.nanmin(vel), np.nanmax(vel)])
+            ax_vc[1].set_ylim([np.nanmin(moving['BehaviorFull']['CMSVelocity']), np.nanmax(moving['BehaviorFull']['CMSVelocity'])])
+            ax_vc[1].set_xlabel('Measured Velocity (Body Bend)')
+            ax_vc[1].axhline(linewidth=0.5, color='k')
+            ax_vc[1].axvline(linewidth=0.5, color='k')
+            ax_vc[1].set_ylabel('Center of Mass Velocity \n(with possible camera scaling and orientation errors)')
+            prov.stamp(ax_vc[1], .55, .15)
 
 
 
