@@ -387,7 +387,9 @@ def loadData(folder, dataPars, ew=1):
     # get centerlines with full temporal resolution of 50Hz
     clFull, clIndices = loadCenterlines(folder, full=True)
     # load new eigenworms
-    eigenworms = loadEigenBasis(filename = '../utility/Eigenworms.dat', nComp=3, new=True)
+    import userTracker
+    codePath = userTracker.codePath()
+    eigenworms = loadEigenBasis(filename = os.path.join(codePath,'utility/Eigenworms.dat'), nComp=3, new=True)
     # get full set of Eigenworms
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     # do Eigenworm transformations and calculate velocity etc. 
@@ -1060,5 +1062,3 @@ def close_nan_holes(input):
     out = np.copy(input)
     out[c] = np.nan
     return out
-
-

@@ -145,10 +145,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
                     midpoint = np.mean(dataSets[key]['Neurons']['I_Time_crop_noncontig'])
                     trainhalf = np.where(dataSets[key]['Neurons']['I_Time_crop_noncontig']<midpoint)[0]
                     testhalf = np.where(dataSets[key]['Neurons']['I_Time_crop_noncontig']>midpoint)[0]
-                    resultDict[key]['Training']['Half'] ={'Train':trainhalf}
-                    resultDict[key]['Training']['Half']['Test'] = testhalf
-                resultDict[key]['Training'][label] = {'Train':train  }
-                resultDict[key]['Training'][label]['Test']=test
+                    resultDict[key]['Training']['Half'] = {'Train':trainhalf, 'Test': testhalf}
+                resultDict[key]['Training'][label] = {'Train':train, 'Test': test}
 
 
         print "Done generating trainingsets"

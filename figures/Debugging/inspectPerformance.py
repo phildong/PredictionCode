@@ -73,6 +73,9 @@ def linear_fit(activity, behavior):
 def main():
     print("Inspecting performance...")
 
+    codePath = userTracker.codePath()
+    outputFolder = os.path.join(codePath,'figures/Debugging')
+
     data = {}
     for typ in ['AML32', 'AML18', 'AML175', 'AML70']:
         for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
@@ -297,6 +300,7 @@ def main():
                         behPred[valid_map] = movingAnalysis[flag][behavior]['output']
 
                     R2_local = calc_R2(beh[valid_map][test], behPred[valid_map][test])
+                    R2_local_train = calc_R2(beh[valid_map][train], behPred[valid_map][train])
 
                     #Actually Plot
                     axes[ax_cnt].plot(time, beh, label="Measured")
@@ -308,13 +312,14 @@ def main():
                     axes[ax_cnt].title.set_text(pred_type +  ', '
                                                 + title + additional_title_text +
                                                 ' R2 = %.2f' % R2_stored
-                                                + ' R2_loc = %.2f' % R2_local)
+                                                + ' R2_loc = %.2f' % R2_local
+                                                + ' R2_train = %.2f' % R2_local_train)
                     axes[ax_cnt].legend()
                     axes[ax_cnt].set_xlabel('Time (s)')
                     axes[ax_cnt].set_xlim( [time[valid_map[0]], time[valid_map[-1]]])
 
                     axes[ax_cnt].axvspan(time_crop_noncontig[test[0]], time_crop_noncontig[test[-1]], color='gray', zorder=-10,
-                                alpha=0.1)
+                        alpha=0.1)
                     #ax7.axhline(color='k', linestyle='--', zorder=-1)
 
 
@@ -329,7 +334,7 @@ def main():
     print("Saving behavior predictions to pdf...")
 
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages("prediction_performance.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "prediction_performance.pdf"))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
@@ -416,7 +421,7 @@ def main():
 
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages("heatmaps.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps.pdf"))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
@@ -484,7 +489,7 @@ def main():
 
     print("Beginning to save state space trajectories")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages("moving_statespace_trajectories.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "moving_statespace_trajectories.pdf"))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
