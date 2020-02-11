@@ -54,7 +54,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
             'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
             'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
-            'windowGCamp': 5,  # gauss window for red and green channel
+            'windowGCamp': 6,  # gauss window for red and green channel
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
@@ -88,7 +88,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
 
 
-    behaviors = ['AngleVelocity', 'Eigenworm3']
+    behaviors = ['AngleVelocity', 'Eigenworm3', 'AngleAccel']
 
     ###############################################
     #

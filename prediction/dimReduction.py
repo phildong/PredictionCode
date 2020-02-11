@@ -784,6 +784,9 @@ def runLassoLars(data, pars, splits, plot = False, behaviors = ['AngleVelocity',
         linData[label]['scorepredicted'] = scorepred
         linData[label]['noNeurons'] = len(reg.coef_[np.abs(reg.coef_)>0])
         if scale:
+            #The output in normal behavior units is:
+                # mean subtracted, normalized variance, NEURAL signals MULTIPLY BY the weights...
+                # then undo the mean subtraction and normalized variance that was applied to the BEHAVIOR
             linData[label]['output'] = scalerY.inverse_transform(reg.predict(X)) # full output training and test
         else:
             linData[label]['output'] = reg.predict(X)
@@ -1414,11 +1417,11 @@ def predictBehaviorFromPCA(data,  splits, pars, behaviors):
         linData[label] = {}
         linData[label]['weights'] =  lin.coef_
         linData[label]['intercepts'] = lin.intercept_
-        
+        linData[label]['PCA_components'] = pca.components_
         linData[label]['score'] = score
         linData[label]['scorepredicted'] = scorepred
 
-        # 1)take the mean-subtracted, PCA'd neural data
+        # 1)take the mean-subtracted neural data, that is then PCA'd
         # 2) apply the weights
         # 3) un-z-score the behavioral result
         linData[label]['output'] = beh_scale.inverse_transform(lin.predict(pcs))

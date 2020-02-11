@@ -270,10 +270,12 @@ def transformEigenworms(pcs, dataPars):
     velo = gaussian_filter1d(theta, dataPars['gaussWindow'], order=1)
     # velo is in radians/frame
 
+    accel = gaussian_filter1d(theta, 2*dataPars['gaussWindow'], order=2)
+
 #Andy commented this out Jan 2020
  #   for pcindex, pc in enumerate(pcs):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
-    return pcs, velo, theta
+    return pcs, velo, theta, accel
 
 
 def decorrelateNeuronsICA(R, G):
@@ -384,6 +386,12 @@ def loadData(folder, dataPars, ew=1):
         data = scipy.io.loadmat(os.path.join(folder,'heatData.mat'))
     # unpack behavior variables
     ethoOrig, xPos, yPos, vel, pc12, pc3 = data['behavior'][0][0].T
+    # Jan 2020: andy suspects this "vel" variable comes from the COM of the centerline +
+    # the stage position, as Jeff calculates (and smooths) here:
+    # https://github.com/leiferlab/3dbrain/blob/e38908c6dd5a4ae2829946ab91b9a00af9516f2e/fiducialCropper3.m#L57
+
+
+
     # get centerlines with full temporal resolution of 50Hz
     clFull, clIndices = loadCenterlines(folder, full=True)
     # load new eigenworms
@@ -393,12 +401,13 @@ def loadData(folder, dataPars, ew=1):
     # get full set of Eigenworms
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     # do Eigenworm transformations and calculate velocity etc. 
-    pcs, velo, theta = transformEigenworms(pcsFull, dataPars)
+    pcs, velo, theta, accel = transformEigenworms(pcsFull, dataPars)
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
 
     velo = velo[clIndices]*50. # to get it in per Volume units -> This is radians per sec
-    
+    accel = accel[clIndices]*50
+
     theta = theta[clIndices] # get it in per seconds
     cl = clFull[clIndices]
     # ethogram redone
@@ -610,10 +619,10 @@ def loadData(folder, dataPars, ew=1):
     dataDict['BehaviorFull'] = {}
     dataDict['Behavior_crop_noncontig'] = {}
     print RM.shape
-    tmpData = [vel[:,0], pc1, pc2, pc3, velo, theta, etho, xPos, yPos]
+    tmpData = [vel[:,0], pc1, pc2, pc3, velo, accel, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
-                'AngleVelocity','Theta', 'Ethogram', 'X', 'Y']):
+                'AngleVelocity', 'AngleAccel', 'Theta', 'Ethogram', 'X', 'Y']):
 
         dataDict['Behavior'][key] = tmpData[kindex][nonNan] #Deprecated
 
