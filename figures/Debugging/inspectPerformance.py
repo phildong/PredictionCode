@@ -545,6 +545,7 @@ def main():
             ax_vc[0].set_xlabel('Measured Velocity')
             ax_vc[0].set_ylabel('Mesaured Curvature')
 
+            #Test how COM Velocity relates to body bend velocity
             ax_vc[1].plot(vel, moving['BehaviorFull']['CMSVelocity'], linestyle='', marker='o', markersize=0.7)
             ax_vc[1].set_title('Body Bend vs COM Velocity  R2=%.2f' % calc_R2(vel, moving['BehaviorFull']['CMSVelocity']))
             ax_vc[1].set_xlim([np.nanmin(vel), np.nanmax(vel)])
