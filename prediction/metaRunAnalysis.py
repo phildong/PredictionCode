@@ -10,23 +10,25 @@ This is a meta script to run runAnalysis over and over again.
 
 import runAnalysis as analysis
 
-analysis.actuallyRun('AML32','moving')
-if True:
-    analysis.actuallyRun('AML70','moving')
-    analysis.actuallyRun('AML175','moving')
+analysis.actuallyRun('AKS297.51', 'moving')
 
-    analysis.actuallyRun('AML32','chip')
-    analysis.actuallyRun('Special','transition') #Note these are identicail..
-                                                # I copied and pasted the input files..
-    analysis.actuallyRun('AML70','chip')
+# analysis.actuallyRun('AML32','moving')
+# if True:
+#     analysis.actuallyRun('AML70','moving')
+#     analysis.actuallyRun('AML175','moving')
+
+#     analysis.actuallyRun('AML32','chip')
+#     analysis.actuallyRun('Special','transition') #Note these are identicail..
+#                                                 # I copied and pasted the input files..
+#     analysis.actuallyRun('AML70','chip')
 
 
-#Moving control and immobilized
-if True:
-    analysis.actuallyRun('AML18','moving')
-    analysis.actuallyRun('AML32','immobilized')
-    analysis.actuallyRun('AML18','immobilized')
-    analysis.actuallyRun('AML70','immobilized')
+# #Moving control and immobilized
+# if True:
+#     analysis.actuallyRun('AML18','moving')
+#     analysis.actuallyRun('AML32','immobilized')
+#     analysis.actuallyRun('AML18','immobilized')
+#     analysis.actuallyRun('AML70','immobilized')
 
 
 
