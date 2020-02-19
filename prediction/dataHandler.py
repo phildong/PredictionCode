@@ -680,6 +680,11 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
     for lindex, line in enumerate(np.loadtxt(dataLog, dtype=str, ndmin = 2)[:nDatasets]):
         folder = ''.join([pathTemplate, line[0], '_MS'])
         datasets[line[0]] = loadData(folder, dataPars)
+        if len(line) == 2: #cut volume indicated
+            datasets[line[0]]['cutVolume'] = int(line[1])
+        else:
+            datasets[line[0]]['cutVolume'] = len(datasets[line[0]]['Neurons']['I_Time_crop_noncontig'])
+
     return datasets
 
 
