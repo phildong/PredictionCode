@@ -10,6 +10,7 @@ import dataHandler as dh
 import makePlots as mp
 import dimReduction as dr
 from prediction import userTracker
+import SLM
 
 ###############################################    
 # 
@@ -109,6 +110,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     svm = 0
     lasso = 0
     elasticnet = 0
+    slm = 0
+    slm_shrub = 0
     lagregression = 0
     # this requires moving animals
     if condition != 'immobilized':
@@ -116,6 +119,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
         svm = 0
         lasso = 0
         elasticnet = 1#True
+        slm = 1
+        slm_shrub = 1
         predPCA = 1
         lagregression = 0
 
@@ -346,6 +351,48 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             # run scrambled control
             #print 'Running Elastic Net scrambled'
             #resultDict[key]['ElasticNetRandomized'] = dr.runElasticNet(dataSets[key], pars,splits, plot=0, behaviors = behaviors, scramble=True)
+
+
+    #%%
+    ###############################################
+    #
+    # linear regression using SLM.py
+    #
+    ##############################################
+    if slm:
+        for kindex, key in enumerate(keyList):
+            print 'Running SLM',  key
+
+            splits = resultDict[key]['Training']
+            
+            cutVolume = dataSets[key]['cutVolume']
+            time = dataSets[key]['Neurons']['I_Time_crop_noncontig'][:cutVolume]
+            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][:,:cutVolume]
+            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity'][:cutVolume]
+            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3'][:cutVolume]
+
+            resultDict[key]['SLM'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature)}
+
+    #%%
+    ###############################################
+    #
+    # linear regression using SLM.py with decision shrub
+    #
+    ##############################################
+    if slm_shrub:
+        for kindex, key in enumerate(keyList):
+            print 'Running SLM',  key
+
+            splits = resultDict[key]['Training']
+            
+            cutVolume = dataSets[key]['cutVolume']
+            time = dataSets[key]['Neurons']['I_Time_crop_noncontig'][:cutVolume]
+            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][:,:cutVolume]
+            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity'][:cutVolume]
+            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3'][:cutVolume]
+
+            resultDict[key]['SLM_shrub'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity, options={'decision_tree': True}), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature, options={'decision_tree': True})}
+
 
 
     #%%
