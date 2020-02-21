@@ -365,11 +365,10 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
             splits = resultDict[key]['Training']
             
-            cutVolume = dataSets[key]['cutVolume']
-            time = dataSets[key]['Neurons']['I_Time_crop_noncontig'][:cutVolume]
-            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][:,:cutVolume]
-            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity'][:cutVolume]
-            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3'][:cutVolume]
+            time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
+            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
+            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
             resultDict[key]['SLM'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature)}
 
@@ -381,15 +380,15 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     ##############################################
     if slm_shrub:
         for kindex, key in enumerate(keyList):
-            print 'Running SLM',  key
+            print 'Running SLM_shrub',  key
 
             splits = resultDict[key]['Training']
             
             cutVolume = dataSets[key]['cutVolume']
-            time = dataSets[key]['Neurons']['I_Time_crop_noncontig'][:cutVolume]
-            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][:,:cutVolume]
-            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity'][:cutVolume]
-            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3'][:cutVolume]
+            time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
+            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
+            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
             resultDict[key]['SLM_shrub'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity, options={'decision_tree': True}), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature, options={'decision_tree': True})}
 

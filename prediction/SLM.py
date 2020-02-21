@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
     output_data = {}
 
-    for typ_cond in ['AML32_moving']:#, 'AML70_chip', 'AML70_moving', 'AML18_moving']:
+    for typ_cond in ['AKS297.51_moving']:#, 'AML32_moving']:#, 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -286,7 +286,7 @@ if __name__ == '__main__':
             settings = [(j, k) for j in range(2) for k in range(2)]
             r2s = {}
             for s in settings:
-                res = optimize_slm(time, neurons, velocity, options = {'decision_tree': s[0], 'best_neuron': s[1], 'alphas': np.logspace(-0.5, 2.5, 5) if s[0] else np.logspace(-1.5, 0.5, 5)})
+                res = optimize_slm(time, neurons, velocity, options = {'decision_tree': s[0], 'best_neuron': s[1]})
                 r2s[s] = res
                 print(s, res['R2_train'], res['R2_test'])
             
@@ -335,5 +335,5 @@ if __name__ == '__main__':
     pdf.close()
 
     import pickle
-    with open('all_regression_results.dat', 'wb') as handle:
+    with open('aks_regression_results.dat', 'wb') as handle:
         pickle.dump(output_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
