@@ -108,7 +108,7 @@ def main():
     outputFolder = os.path.join(codePath,'figures/Debugging')
 
     data = {}
-    for typ in ['AML32', 'AML18', 'AML175', 'AML70']:
+    for typ in ['AKS297.51', 'AML32', 'AML18']:
         for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
             path = userTracker.dataPath()
             folder = os.path.join(path, '{}_{}/'.format(typ, condition))
@@ -171,7 +171,9 @@ def main():
     for behavior in ['AngleVelocity', 'Eigenworm3']:
         scores = []
         #For each type of recording
-        for key, marker in zip(['AML32_moving', 'AML70_chip', 'AML70_moving'],['o', "^", "^"]):
+#        for key, marker in zip(['AML32_moving', 'AML70_chip', 'AML70_moving'],['o', "^", "^"]):
+        for key, marker in zip(['AML32_moving', 'AKS297.51_moving'],['o', "^"]):
+
             dset = data[key]['analysis']
             results_from_one_dataset = []
 
@@ -242,7 +244,9 @@ def main():
     #Actually plot each prediction
     print("Plotting behavior predictions..")
     # For each type of recording
-    for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
+
+    for key in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
+    #for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         dset = data[key]['input']
 
         # For each recording
@@ -419,7 +423,7 @@ def main():
                         #For now we will just plot SLM weights raw without any scaling corrections for the variance
                         SLM_w_raw = movingAnalysis[flag][behavior]['weights']
                         SLM_w = np.true_divide(SLM_w_raw, np.std(activity,axis=1)) * np.std(beh_crop_noncontig)
-                        axes_weights[ax_weight_cnt].plot(SLM_w_raw * np.linalg.norm(SLM_w)/np.linalg.norm(SLM_w_raw), label='SLM uncorrected * c')
+                        axes_weights[ax_weight_cnt].plot(SLM_w_raw * np.linalg.norm(SLM_w)/np.linalg.norm(SLM_w_raw), label='(SLM for z-scored activity) * c')
                         axes_weights[ax_weight_cnt].plot(SLM_w, label='SLM')
 
 
@@ -573,7 +577,6 @@ def main():
 
 
 
-    raise RuntimeError, "Stopping here for now."
 
     ### Plot Heatmap for each recording
 
@@ -585,7 +588,7 @@ def main():
     from sklearn.preprocessing import StandardScaler
 
     print("Plotting heatmaps.....")
-    for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', 'AML70_immobilized', 'AML18_moving', 'AML18_immobilized']:
+    for key in ['AKS297.51_moving', 'AML32_moving', 'AML32_immobilized', 'AML18_moving', 'AML18_immobilized']:
         dset = data[key]['input']
         # For each recording
         for idn in dset.keys():
@@ -677,6 +680,9 @@ def main():
 
 
 
+
+
+
     ### Plot Neural State Space Trajectories
 
     import matplotlib.pyplot as plt
@@ -684,7 +690,7 @@ def main():
     from sklearn.preprocessing import StandardScaler
 
     print("Beginning to plot neural state space trajectories..")
-    for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML32_immobilized', 'AML70_immobilized', 'AML18_moving', 'AML18_immobilized']:
+    for key in ['AKS297.51_moving', 'AML32_moving', 'AML32_immobilized',  'AML18_moving', 'AML18_immobilized']:
         dset = data[key]['input']
         # For each recording
         for idn in dset.keys():
