@@ -376,7 +376,7 @@ def preprocessNeuralData(R, G, dataPars):
 #    plt.show()
     return  YN, dR, GS, RS, RM
 
-def loadData(folder, dataPars, ew=1):
+def loadData(folder, dataPars, ew=1, cutVolume = None):
     """load matlab data."""
     print 'Loading ', folder
     try:
@@ -542,7 +542,11 @@ def loadData(folder, dataPars, ew=1):
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
     valid_map = np.flatnonzero(valid_map)
 
-    I_smooth_interp_crop_noncontig = np.copy(I_smooth_interp[:, valid_map])
+    valid_map_data = valid_map[valid_map < cutVolume]
+    valid_map_identity = valid_map[valid_map >= cutVolume]
+
+    I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
+    I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
 
 
     #<DEPRECATED>
@@ -627,7 +631,7 @@ def loadData(folder, dataPars, ew=1):
         dataDict['Behavior'][key] = tmpData[kindex][nonNan] #Deprecated
 
         dataDict['BehaviorFull'][key] = tmpData[kindex]
-        dataDict['Behavior_crop_noncontig'][key] = tmpData[kindex][valid_map]
+        dataDict['Behavior_crop_noncontig'][key] = tmpData[kindex][valid_map_data]
     dataDict['Behavior']['EthogramFull'] = etho
     dataDict['BehaviorFull']['EthogramFull'] = etho
     dataDict['Neurons'] = {}
@@ -660,9 +664,11 @@ def loadData(folder, dataPars, ew=1):
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
 
-    dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map]  # corresponding time axis
-    dataDict['Neurons']['I_valid_map']=valid_map
+    dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
+    dataDict['Neurons']['I_valid_map']=valid_map_data
+
+    dataDict['Identities'] = {'I_smooth_interp_crop_noncontig': I_smooth_interp_crop_noncontig_identity[order]}
 
 
     return dataDict
@@ -679,7 +685,12 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
     datasets={}
     for lindex, line in enumerate(np.loadtxt(dataLog, dtype=str, ndmin = 2)[:nDatasets]):
         folder = ''.join([pathTemplate, line[0], '_MS'])
-        datasets[line[0]] = loadData(folder, dataPars)
+        if len(line) == 2: #cut volume indicated
+            datasets[line[0]] = loadData(folder, dataPars, cutVolume=int(line[1]))
+        else:
+            datasets[line[0]] = loadData(folder, dataPars)
+
+
     return datasets
 
 
