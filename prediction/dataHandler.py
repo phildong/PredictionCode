@@ -519,17 +519,28 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #   https://github.com/leiferlab/3dbrain/blob/2c25c6187194263424a0bcfc4d9a0b3b33e31dd9/heatMapGeneration.m#L204
     #       Eventually we want to do our own hierarchical clustering
     #       because this order is based on the ratio which is NOT what we are using.
-    order = np.array(data['cgIdx']).T[0] - 1
+
+    jeffsOrdering = False
+    if jeffsOrdering:
+        order = np.array(data['cgIdx']).T[0] - 1
+    else:
+        #Don't order things. Keep it simple.
+        #NOTE PYTHON INDICES BY ZERO. MATLAB BY ONE.
+        order = np.arange(rRaw.shape[0])
+
+
     # TODO: Reimplement hierarchical clustering on I, not Ratio and get a new order value
 
     # Remove flagged Neurons
     badNeurs = np.array([])
-    try:
-        if len(data['flagged_neurons']) > 0:
-            badNeurs = np.array(data['flagged_neurons'][0])
-            order = np.delete(order, badNeurs)
-    except KeyError:
-        pass
+
+    if jeffsOrdering:
+        try:
+            if len(data['flagged_neurons']) > 0:
+                badNeurs = np.array(data['flagged_neurons'][0])
+                order = np.delete(order, badNeurs)
+        except KeyError:
+            pass
 
 
     # Identify time points in which the majority of neurons are NaN

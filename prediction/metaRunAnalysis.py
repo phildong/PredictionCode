@@ -12,6 +12,8 @@ import runAnalysis as analysis
 
 analysis.actuallyRun('AKS297.51', 'moving')
 
+raise Exception("Stopping here but don't forget to run all the way through overnight!")
+
 analysis.actuallyRun('AML32','moving')
 # if True:
 #     analysis.actuallyRun('AML70','moving')
