@@ -542,8 +542,11 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
     valid_map = np.flatnonzero(valid_map)
 
-    valid_map_data = valid_map[valid_map < cutVolume]
-    valid_map_identity = valid_map[valid_map >= cutVolume]
+    if cutVolume is None:
+        cutVolume = np.max(valid_map)
+
+    valid_map_data = valid_map[valid_map <= cutVolume]
+    valid_map_identity = valid_map[valid_map > cutVolume]
 
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
@@ -596,6 +599,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     # store relevant indices -- crop out the long gaps of nans adn flagged timepoints
     nonNan  = np.where(np.any(np.isfinite(nanmask),axis=0))[0]
+    nonNan_data = nonNan[nonNan <= cutVolume]
+    nonNan_identities = nonNan[nonNan > cutVolume]
+
+    idx = np.arange(I_smooth.shape[1])
+    idx_data = idx[idx <= cutVolume]
+    idx_identities = idx[idx > cutVolume]
     #</deprecated>
 
 
@@ -628,39 +637,43 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     'Eigenworm3',\
                 'AngleVelocity', 'AngleAccel', 'Theta', 'Ethogram', 'X', 'Y']):
 
-        dataDict['Behavior'][key] = tmpData[kindex][nonNan] #Deprecated
+        dataDict['Behavior'][key] = tmpData[kindex][nonNan_data] #Deprecated
 
-        dataDict['BehaviorFull'][key] = tmpData[kindex]
+        dataDict['BehaviorFull'][key] = tmpData[kindex][idx_data]
         dataDict['Behavior_crop_noncontig'][key] = tmpData[kindex][valid_map_data]
     dataDict['Behavior']['EthogramFull'] = etho
     dataDict['BehaviorFull']['EthogramFull'] = etho
     dataDict['Neurons'] = {}
-    dataDict['Neurons']['Time'] =  time[nonNan] # actual time
+    dataDict['Neurons']['Time'] =  time[nonNan_data] # actual time
 
     #<deprecated>
-    dataDict['Neurons']['TimeFull'] =  time # actual time
-    dataDict['Neurons']['ActivityFull'] =  Rfull[order] # full activity
-    dataDict['Neurons']['Activity'] = preprocessing.scale(Y[:,nonNan].T).T # redo because nans
-    dataDict['Neurons']['RawActivity'] = dR[:,nonNan]
-    dataDict['Neurons']['derivActivity'] = dY[:,nonNan]
-    dataDict['Neurons']['deconvolvedActivity'] = YD[:,nonNan]
-    dataDict['Neurons']['RedRaw'] = RS
-    dataDict['Neurons']['Ratio'] = RM[:,nonNan]
-    dataDict['Neurons']['GreenRaw'] = GS
+    dataDict['Neurons']['TimeFull'] =  time[idx_data] # actual time
+    dataDict['Neurons']['ActivityFull'] =  Rfull[order][:,idx_data] # full activity
+    dataDict['Neurons']['Activity'] = preprocessing.scale(Y[:,nonNan_data].T).T # redo because nans
+    dataDict['Neurons']['RawActivity'] = dR[:,nonNan_data]
+    dataDict['Neurons']['derivActivity'] = dY[:,nonNan_data]
+    dataDict['Neurons']['deconvolvedActivity'] = YD[:,nonNan_data]
+    dataDict['Neurons']['Ratio'] = RM[:,nonNan_data]
+    
+    dataDict['Neurons']['RedRaw'] = rRaw
+    dataDict['Neurons']['GreenRaw'] = gRaw
+    # dataDict['Neurons']['RedRaw'] = RS
+    # dataDict['Neurons']['GreenRaw'] = GS
+
     #</deprecated>
 
     dataDict['Neurons']['Positions'] = neuroPos
-    dataDict['Neurons']['valid'] = nonNan
+    dataDict['Neurons']['valid'] = nonNan_data
     dataDict['Neurons']['orientation'] = 1 # dorsal or ventral
 
     dataDict['Neurons']['ordering'] = order
 
     # Andys improved photobleaching correction, mean- and variance-preserved variables
 
-    dataDict['Neurons']['I'] = I[order] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_Time'] = time #corresponding time axis
-    dataDict['Neurons']['I_smooth'] = I_smooth[order] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
 
@@ -668,7 +681,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
-    dataDict['Identities'] = {'I_smooth_interp_crop_noncontig': I_smooth_interp_crop_noncontig_identity[order]}
+    dataDict['Identities'] = {}
+    dataDict['Identities']['I_smooth'] = I_smooth[order][:,idx_identities]
+    dataDict['Identities']['I_smooth_interp'] = I_smooth_interp[order][:,idx_identities]
+    dataDict['Identities']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_identity[order]
 
 
     return dataDict
