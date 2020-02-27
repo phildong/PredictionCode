@@ -16,7 +16,7 @@ import dataHandler as dh
 import userTracker
 
 def train_tree(X, Y):
-    clf = linear_model.DecisionTreeClassifier(max_depth=1)
+    clf = tree.DecisionTreeClassifier(max_depth=1)
     clf = clf.fit(X, np.sign(Y))
     return clf
 

@@ -434,11 +434,11 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     debug = False
     original = False
     if original:
-        R = np.copy(rphotocorr)[idx_data]
-        G = np.copy(gphotocorr)[idx_data]
+        R = np.copy(rphotocorr)[:, idx_data]
+        G = np.copy(gphotocorr)[:, idx_data]
     else:
-        R = rRaw.copy()[idx_data]
-        G = gRaw.copy()[idx_data]
+        R = rRaw.copy()[:,  idx_data]
+        G = gRaw.copy()[:, idx_data]
 
         vps = dataPars['volumeAcquisitionRate']
 
@@ -453,8 +453,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
         if jeffs_outlier_detection:
              # Below we apply Jeff's outlier nan'ing
-             R[np.isnan(rphotocorr)] = np.nan
-             G[np.isnan(gphotocorr)] = np.nan
+             R[np.isnan(rphotocorr[:, idx_data])] = np.nan
+             G[np.isnan(gphotocorr[:, idx_data])] = np.nan
              # Note: Jeff's outlier detection is pretty convoluted
              # It atually calculates the Delta R/ R0 signal
              # And then looks for outliers in that and then NaN's them out
@@ -658,8 +658,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['Neurons']['deconvolvedActivity'] = YD[:,nonNan_data]
     dataDict['Neurons']['Ratio'] = RM[:,nonNan_data]
     
-    dataDict['Neurons']['RedRaw'] = rRaw
-    dataDict['Neurons']['GreenRaw'] = gRaw
+    dataDict['Neurons']['rRaw'] = (rRaw[:, idx_data])[order,:]
+    dataDict['Neurons']['gRaw'] = (gRaw[:, idx_data])[order,:]
     # dataDict['Neurons']['RedRaw'] = RS
     # dataDict['Neurons']['GreenRaw'] = GS
 
@@ -685,11 +685,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
     dataDict['Identities'] = {}
-    dataDict['Identities']['I_smooth'] = I_smooth[order][:,idx_identities]
-    dataDict['Identities']['I_smooth_interp'] = I_smooth_interp[order][:,idx_identities]
-    dataDict['Identities']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_identity[order]
-
-
+    dataDict['Identities']['rRaw'] = (rRaw[:, idx_identities])[order, :]
+    dataDict['Identities']['gRaw'] = (gRaw[:, idx_identities])[order, :]
     return dataDict
     
     
