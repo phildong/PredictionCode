@@ -421,6 +421,11 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
 
+    idx = np.arange(rRaw.shape[1])
+    idx_data = idx[idx <= cutVolume]
+    idx_identities = idx[idx > cutVolume]
+
+
     assert np.true_divide(np.sum(np.isnan(rRaw)), rRaw.shape[0]*rRaw.shape[1]) < .3, ["the Red channel is over 1/3rd NaNs. This dataset should be removed from consideration: " + folder ]
     rphotocorr = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
     gphotocorr = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
@@ -429,11 +434,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     debug = False
     original = False
     if original:
-        R = np.copy(rphotocorr)
-        G = np.copy(gphotocorr)
+        R = np.copy(rphotocorr)[idx_data]
+        G = np.copy(gphotocorr)[idx_data]
     else:
-        R = rRaw.copy()
-        G = gRaw.copy()
+        R = rRaw.copy()[idx_data]
+        G = gRaw.copy()[idx_data]
+
         vps = dataPars['volumeAcquisitionRate']
 
         R = correctPhotobleaching(R, vps, error_bad_fit=True)
@@ -602,9 +608,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     nonNan_data = nonNan[nonNan <= cutVolume]
     nonNan_identities = nonNan[nonNan > cutVolume]
 
-    idx = np.arange(I_smooth.shape[1])
-    idx_data = idx[idx <= cutVolume]
-    idx_identities = idx[idx > cutVolume]
     #</deprecated>
 
 

@@ -50,9 +50,12 @@ idn = 'BrainScanner20200130_110803'
 ### Get the relevant data.
 dset = data[key]['input'][idn]
 activity = dset['Neurons']['I_smooth']
+time = dset['Neurons']['I_Time']
+gRaw = dset['Neurons']['gRaw']
 numNeurons = activity.shape[0]
 vel = dset['BehaviorFull']['AngleVelocity']
 curv = dset['BehaviorFull']['Eigenworm3']
+
 
 
 
@@ -62,13 +65,14 @@ import matplotlib.gridspec as gridspec
 
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
-    fig = plt.figure(constrained_layout=True, figsize=[22, 12])
-    gs = gridspec.GridSpec(ncols=6, nrows=5, figure=fig)
+    fig = plt.figure(constrained_layout=True, figsize=[22, 16])
+    gs = gridspec.GridSpec(ncols=7, nrows=5, figure=fig)
     ax1 = fig.add_subplot(gs[0, 1])
     ax2 = fig.add_subplot(gs[0, 4])
     ax3 = fig.add_subplot(gs[1, :])
-    ax4 = fig.add_subplot(gs[2, :])
-    ax5 = fig.add_subplot(gs[3, :])
+    ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
+    ax5 = fig.add_subplot(gs[3, :], sharex=ax3)
+    ax6 = fig.add_subplot(gs[4, :], sharex=ax3)
 
     ax = [ax1, ax2, ax3, ax4, ax5]
 
@@ -94,21 +98,30 @@ for neuron in np.arange(numNeurons):
     ax[0].set_xlabel('Velocity')
     ax[1].set_xlabel('Curvature')
 
+
     ax[0].set_ylabel('Fluorescence (common-noise rejected)')
     ax[1].set_ylabel('Fluorescence (common-noise rejected)')
 
 
-    ax[2].plot(activity[neuron, :])
-    ax[2].set_xlabel('Activity')
-    ax[2].set_ylabel('Volumes')
+    ax[2].plot(time, activity[neuron, :])
+    ax[2].set_ylabel('Activity')
+    ax[2].set_xlabel('Volumes')
+
 
     ax[3].plot(vel)
-    ax[3].set_xlabel('Velocity')
-    ax[3].set_ylabel('Volumes')
+    ax[3].set_ylabel('Velocity')
+    ax[3].set_xlabel('Volumes')
+    ax[3].axhline(linewidth=0.5, color='k')
+
 
     ax[4].plot(curv)
-    ax[4].set_xlabel('Curvature')
-    ax[4].set_ylabel('Volumes')
+    ax[4].set_ylabel('Curvature')
+    ax[4].set_xlabel('Volumes')
+    ax[4].axhline(linewidth=0.5, color='k')
+
+    ax[5].plot(gRaw)
+    ax[5].set_ylabel('gRaw')
+    ax[5].set_xlabel('Volumes')
 
 
 
