@@ -384,7 +384,6 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
             splits = resultDict[key]['Training']
             
-            cutVolume = dataSets[key]['cutVolume']
             time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
             neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
             velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
