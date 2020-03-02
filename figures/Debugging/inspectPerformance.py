@@ -313,7 +313,7 @@ def main():
 
                     beh = moving['BehaviorFull'][behavior]
 
-                    time = moving['Neurons']['I_Time']
+                    time = moving['Neurons']['TimeFull']
                     time_crop_noncontig = moving['Neurons']['I_Time_crop_noncontig']
 
                     behPred = np.empty(moving['BehaviorFull'][behavior].shape)
@@ -643,7 +643,7 @@ def main():
             fig.colorbar(pos, ax=ax)
 
             beh = dset['BehaviorFull']['AngleVelocity']
-            time = dset['Neurons']['I_Time']
+            time = dset['Neurons']['TimeFull']
 
             axbeh = plt.subplot(4, 1, 4)
             axbeh.plot(time, beh)

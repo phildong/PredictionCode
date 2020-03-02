@@ -421,6 +421,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
 
+
+    if cutVolume is None:
+        cutVolume = rRaw.shape[1]
+
     idx = np.arange(rRaw.shape[1])
     idx_data = idx[idx <= cutVolume]
     idx_identities = idx[idx > cutVolume]
@@ -559,8 +563,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
     valid_map = np.flatnonzero(valid_map)
 
-    if cutVolume is None:
-        cutVolume = np.max(valid_map)
+
 
     valid_map_data = valid_map[valid_map <= cutVolume]
     valid_map_identity = valid_map[valid_map > cutVolume]
@@ -685,7 +688,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # Andys improved photobleaching correction, mean- and variance-preserved variables
 
     dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_Time'] = time #corresponding time axis
+    dataDict['Neurons']['I_Time'] = time[idx_data] #corresponding time axis
     dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected

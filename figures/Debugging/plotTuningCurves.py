@@ -54,6 +54,7 @@ time = dset['Neurons']['I_Time']
 gRaw = dset['Neurons']['gRaw']
 numNeurons = activity.shape[0]
 vel = dset['BehaviorFull']['AngleVelocity']
+comVel = dset['BehaviorFull']['CMSVelocity']
 curv = dset['BehaviorFull']['Eigenworm3']
 
 
@@ -63,16 +64,41 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
+#Just compare some of the behavior
+behFig = plt.figure(figsize=[22, 9])
+behGs = gridspec.GridSpec(ncols=1, nrows=3, figure=behFig)
+bax1 = behFig.add_subplot(behGs[0,0])
+bax2 = behFig.add_subplot(behGs[1,0], sharex=bax1)
+bax3 = behFig.add_subplot(behGs[2,0], sharex=bax1)
+
+bax1.plot(activity[53, :])
+bax1.set_title('Activity of Neuron 18')
+
+bax2.plot(vel, label='eigenworm velocity')
+bax2.set_title('Eigenworm Based Velocity'
+               )
+bax3.plot(comVel, label='incorrectly calibrated com velocity')
+bax3.set_title('COM Velocity (w/ incorrect calibration)')
+
+
+plt.figure(figsize=[10,10])
+plt.plot(vel, comVel)
+
+
+
+
+
+
+
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
     fig = plt.figure(constrained_layout=True, figsize=[22, 16])
-    gs = gridspec.GridSpec(ncols=7, nrows=5, figure=fig)
+    gs = gridspec.GridSpec(ncols=6, nrows=4 , figure=fig)
     ax1 = fig.add_subplot(gs[0, 1])
     ax2 = fig.add_subplot(gs[0, 4])
     ax3 = fig.add_subplot(gs[1, :])
     ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
     ax5 = fig.add_subplot(gs[3, :], sharex=ax3)
-    ax6 = fig.add_subplot(gs[4, :], sharex=ax3)
 
     ax = [ax1, ax2, ax3, ax4, ax5]
 
@@ -80,7 +106,7 @@ for neuron in np.arange(numNeurons):
 
     #Randomize the axes order withour replacement
     #Actually Plot
-    ax[0].plot(vel, activity[neuron, :],'o', markersize=0.7)
+    ax[0].plot(vel, activity[neuron, :], 'o', markersize=0.7)
 
     # Randomize the axes order withour replacement
     ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7)
@@ -103,7 +129,7 @@ for neuron in np.arange(numNeurons):
     ax[1].set_ylabel('Fluorescence (common-noise rejected)')
 
 
-    ax[2].plot(time, activity[neuron, :])
+    ax[2].plot(activity[neuron, :])
     ax[2].set_ylabel('Activity')
     ax[2].set_xlabel('Volumes')
 
@@ -119,9 +145,9 @@ for neuron in np.arange(numNeurons):
     ax[4].set_xlabel('Volumes')
     ax[4].axhline(linewidth=0.5, color='k')
 
-    ax[5].plot(gRaw)
-    ax[5].set_ylabel('gRaw')
-    ax[5].set_xlabel('Volumes')
+#    ax[5].plot(gRaw[neuron, :])
+#    ax[5].set_ylabel('gRaw')
+#    ax[5].set_xlabel('Volumes')
 
 
 
