@@ -20,6 +20,7 @@ def rectified_derivative(neurons):
     nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 14))
 
     flat = 0*neurons.copy()+1
+    flat[np.isnan(neurons)] = 0
     flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 14))
 
     deriv = nan_zero_filtered/flat_filtered
@@ -91,14 +92,15 @@ if __name__ == '__main__':
         keyList = np.sort(dataSets.keys())
 
         for key in keyList:
-            time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
-            neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-            velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
-            curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
+            time = dataSets[key]['Neurons']['I_Time']
+            neurons = dataSets[key]['Neurons']['I_smooth']
+            velocity = dataSets[key]['BehaviorFull']['CMSVelocity']
+            curvature = dataSets[key]['BehaviorFull']['Eigenworm3']
 
             nderiv_pos, nderiv_neg = rectified_derivative(neurons)
 
             X = np.vstack((neurons, nderiv_pos, nderiv_neg))
+            X[np.isnan(X)] = 0
 
             velocity_res = optimize_clf(time, X, velocity)
             print(key, 'velocity', velocity_res['score'], velocity_res['scorepredicted'])
