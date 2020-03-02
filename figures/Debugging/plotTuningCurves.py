@@ -71,7 +71,7 @@ bax2 = behFig.add_subplot(behGs[1,0], sharex=bax1)
 bax3 = behFig.add_subplot(behGs[2,0], sharex=bax1)
 
 bax1.plot(activity[53, :])
-bax1.set_title('Activity of Neuron 18')
+bax1.set_title('Activity of AVA')
 
 bax2.plot(vel, label='eigenworm velocity')
 bax2.set_title('Eigenworm Based Velocity'
@@ -120,7 +120,7 @@ for neuron in np.arange(numNeurons):
     # Randomize the axes order withour replacement
     ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7)
     ax2b.plot(curv, pos_deriv[neuron, :],'o', markersize=0.7)
-    ax2b.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7)
+    ax2c.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7)
 
 
 

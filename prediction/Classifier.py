@@ -17,11 +17,11 @@ import userTracker
 def rectified_derivative(neurons):
     nan_zero = np.copy(neurons)
     nan_zero[np.isnan(neurons)] = 0
-    nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 14))
+    nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 7))
 
     flat = 0*neurons.copy()+1
     flat[np.isnan(neurons)] = 0
-    flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 14))
+    flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 7))
 
     deriv = nan_zero_filtered/flat_filtered
     deriv_pos = np.copy(deriv)
