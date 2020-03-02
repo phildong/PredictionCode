@@ -15,9 +15,20 @@ import dataHandler as dh
 import userTracker
 
 def rectified_derivative(neurons):
-    deriv = gaussian_filter(neurons, order = 1, sigma = (0, 14))
-    deriv[deriv < 0] = 0
-    return deriv
+    nan_zero = np.copy(neurons)
+    nan_zero[np.isnan(neurons)] = 0
+    nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 14))
+
+    flat = 0*neurons.copy()+1
+    flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 14))
+
+    deriv = nan_zero_filtered/flat_filtered
+    deriv_pos = np.copy(deriv)
+    deriv_neg = np.copy(deriv)
+    deriv_pos[deriv < 0] = 0
+    deriv_neg[deriv > 0] = 0
+
+    return deriv_pos, deriv_neg
 
 def score(predict, true):
     return 1-(np.count_nonzero(predict-true)+.0)/np.count_nonzero(mode(true).mode-true)
@@ -85,23 +96,14 @@ if __name__ == '__main__':
             velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
             curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
-            nderiv = rectified_derivative(neurons)
+            nderiv_pos, nderiv_neg = rectified_derivative(neurons)
 
-            if key[-6:] == '110803':
-                # plt.plot(neurons[13,:])
-                fig, ax = plt.subplots(1, 1, figsize=(10,10))
-                ax.plot(velocity, nderiv[13,:], 'k.')
-                ax.set_xlabel('CMS Velocity')
-                ax.set_ylabel('Rectified Derivative #13')
-                ax.set_title(key+' Neuron #13')
+            X = np.vstack((neurons, nderiv_pos, nderiv_neg))
 
-                fig.tight_layout()
-                fig.savefig('tuning_13_110803.png')
-
-            velocity_res = optimize_clf(time, nderiv, velocity)
+            velocity_res = optimize_clf(time, X, velocity)
             print(key, 'velocity', velocity_res['score'], velocity_res['scorepredicted'])
 
-            curvature_res = optimize_clf(time, nderiv, curvature)
+            curvature_res = optimize_clf(time, X, curvature)
             print(key, 'curvature', curvature_res['score'], curvature_res['scorepredicted'])
             
             output_data[typ_cond+" "+key] = {'velocity': velocity_res, 'curvature': curvature_res}
