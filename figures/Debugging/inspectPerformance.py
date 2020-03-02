@@ -245,7 +245,8 @@ def main():
     print("Plotting behavior predictions..")
     # For each type of recording
 
-    for key in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
+    #for key in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
+    for key in ['AKS297.51_moving']:
     #for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         dset = data[key]['input']
 
@@ -577,6 +578,7 @@ def main():
 
 
 
+    raise Exception('Stopping here for now..')
 
     ### Plot Heatmap for each recording
 

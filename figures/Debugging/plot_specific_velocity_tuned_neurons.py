@@ -76,7 +76,7 @@ b2ax3 = behFig2.add_subplot(behGs2[2,0], sharex=b2ax1)
 
 b2ax1.plot(activity[11, :], label='Neuron 11')
 b2ax1.plot(activity[24, :], label='Neuron 24')
-b2ax1.plot(activity[74, :], label='Neuron 85')
+b2ax1.plot(activity[74, :], label='Neuron 74')
 b2ax1.plot(activity[30, :], label='Neuron 30')
 b2ax1.set_ylabel('Motion-corrected fluorescence intensity F')
 b2ax1.set_xlabel('Volume (6 vol/s)')

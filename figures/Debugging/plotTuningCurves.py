@@ -49,13 +49,12 @@ idn = 'BrainScanner20200130_110803'
 
 ### Get the relevant data.
 dset = data[key]['input'][idn]
-activity = dset['Neurons']['I_smooth']
-time = dset['Neurons']['I_Time']
-gRaw = dset['Neurons']['gRaw']
+activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+time = dset['Neurons']['I_Time_crop_noncontig']
 numNeurons = activity.shape[0]
-vel = dset['BehaviorFull']['AngleVelocity']
-comVel = dset['BehaviorFull']['CMSVelocity']
-curv = dset['BehaviorFull']['Eigenworm3']
+vel = dset['Behavior_crop_noncontig']['AngleVelocity']
+comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
+curv = dset['Behavior_crop_noncontig']['Eigenworm3']
 
 
 
@@ -88,28 +87,42 @@ plt.plot(vel, comVel)
 
 
 
+from prediction.Classifier import rectified_derivative
 
+pos_deriv, neg_deriv = rectified_derivative(activity)
 
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
     fig = plt.figure(constrained_layout=True, figsize=[22, 16])
-    gs = gridspec.GridSpec(ncols=6, nrows=4 , figure=fig)
-    ax1 = fig.add_subplot(gs[0, 1])
-    ax2 = fig.add_subplot(gs[0, 4])
+    gs = gridspec.GridSpec(ncols=6, nrows=5, figure=fig)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax1b = fig.add_subplot(gs[0, 1], sharex=ax1)
+    ax1c = fig.add_subplot(gs[0, 2], sharex=ax1)
+    ax2 = fig.add_subplot(gs[0, 3])
+    ax2b = fig.add_subplot(gs[0, 4], sharex=ax2)
+    ax2c = fig.add_subplot(gs[0, 5], sharex=ax2)
     ax3 = fig.add_subplot(gs[1, :])
     ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
     ax5 = fig.add_subplot(gs[3, :], sharex=ax3)
+    ax6 = fig.add_subplot(gs[4, :], sharex=ax3)
 
-    ax = [ax1, ax2, ax3, ax4, ax5]
+    ax = [ax1, ax2, ax3, ax4, ax5, ax6]
 
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
     #Randomize the axes order withour replacement
     #Actually Plot
-    ax[0].plot(vel, activity[neuron, :], 'o', markersize=0.7)
+    ax[0].plot(comVel, activity[neuron, :], 'o', markersize=0.7)
+
+    ax1b.plot(comVel, pos_deriv[neuron, :], 'o', markersize=0.7)
+    ax1c.plot(comVel, neg_deriv[neuron, :], 'o', markersize=0.7)
 
     # Randomize the axes order withour replacement
     ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7)
+    ax2b.plot(curv, pos_deriv[neuron, :],'o', markersize=0.7)
+    ax2b.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7)
+
+
 
     ax[0].set_title(key + ' ' + idn + ' Neuron: #' + str(neuron),
                     fontsize=10)
@@ -121,33 +134,41 @@ for neuron in np.arange(numNeurons):
     ax[1].axvline(linewidth=0.5, color='k')
 
 
-    ax[0].set_xlabel('Velocity')
+    ax[0].set_xlabel('Center of Mass Velocity')
+    ax1b.set_xlabel('Center of Mass Velocity')
+    ax1c.set_xlabel('Center of Mass Velocity')
     ax[1].set_xlabel('Curvature')
-
+    ax2b.set_xlabel('Curvature')
+    ax2c.set_xlabel('Curvature')
 
     ax[0].set_ylabel('Fluorescence (common-noise rejected)')
     ax[1].set_ylabel('Fluorescence (common-noise rejected)')
+    ax1b.set_ylabel('(+) Rectified dF/dt')
+    ax1c.set_ylabel('(-) Rectified dF/dt')
+    ax2b.set_ylabel('(+) Rectified dF/dt')
+    ax2c.set_ylabel('(-) Rectified dF/dt')
 
 
-    ax[2].plot(activity[neuron, :])
+    ax[2].plot(time, activity[neuron, :])
     ax[2].set_ylabel('Activity')
-    ax[2].set_xlabel('Volumes')
+    ax[2].set_xlabel('Time (s)')
 
 
-    ax[3].plot(vel)
-    ax[3].set_ylabel('Velocity')
-    ax[3].set_xlabel('Volumes')
+    ax[3].plot(time, comVel)
+    ax[3].set_ylabel('Center of Mass Velocity')
+    ax[3].set_xlabel('Time (s)')
     ax[3].axhline(linewidth=0.5, color='k')
 
 
-    ax[4].plot(curv)
+    ax[4].plot(time, curv)
     ax[4].set_ylabel('Curvature')
-    ax[4].set_xlabel('Volumes')
+    ax[4].set_xlabel('Time (s)')
     ax[4].axhline(linewidth=0.5, color='k')
 
-#    ax[5].plot(gRaw[neuron, :])
-#    ax[5].set_ylabel('gRaw')
-#    ax[5].set_xlabel('Volumes')
+    ax[5].plot(time, pos_deriv[neuron, :])
+    ax[5].plot(time, neg_deriv[neuron, :])
+    ax[5].set_ylabel('Rectified dF/dt')
+    ax[5].set_xlabel('Time (s)')
 
 
 
