@@ -421,6 +421,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     rRaw=np.array(data['rRaw'])[:,:len(np.array(data['hasPointsTime']))]
     gRaw=np.array(data['gRaw'])[:,:len(np.array(data['hasPointsTime']))]
 
+
+    if cutVolume is None:
+        cutVolume = rRaw.shape[1]
+
     idx = np.arange(rRaw.shape[1])
     idx_data = idx[idx <= cutVolume]
     idx_identities = idx[idx > cutVolume]
@@ -519,17 +523,28 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #   https://github.com/leiferlab/3dbrain/blob/2c25c6187194263424a0bcfc4d9a0b3b33e31dd9/heatMapGeneration.m#L204
     #       Eventually we want to do our own hierarchical clustering
     #       because this order is based on the ratio which is NOT what we are using.
-    order = np.array(data['cgIdx']).T[0] - 1
+
+    jeffsOrdering = False
+    if jeffsOrdering:
+        order = np.array(data['cgIdx']).T[0] - 1
+    else:
+        #Don't order things. Keep it simple.
+        #NOTE PYTHON INDICES BY ZERO. MATLAB BY ONE.
+        order = np.arange(rRaw.shape[0])
+
+
     # TODO: Reimplement hierarchical clustering on I, not Ratio and get a new order value
 
     # Remove flagged Neurons
     badNeurs = np.array([])
-    try:
-        if len(data['flagged_neurons']) > 0:
-            badNeurs = np.array(data['flagged_neurons'][0])
-            order = np.delete(order, badNeurs)
-    except KeyError:
-        pass
+
+    if jeffsOrdering:
+        try:
+            if len(data['flagged_neurons']) > 0:
+                badNeurs = np.array(data['flagged_neurons'][0])
+                order = np.delete(order, badNeurs)
+        except KeyError:
+            pass
 
 
     # Identify time points in which the majority of neurons are NaN
@@ -548,8 +563,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
     valid_map = np.flatnonzero(valid_map)
 
-    if cutVolume is None:
-        cutVolume = np.max(valid_map)
+
 
     valid_map_data = valid_map[valid_map <= cutVolume]
     valid_map_identity = valid_map[valid_map > cutVolume]
@@ -674,7 +688,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # Andys improved photobleaching correction, mean- and variance-preserved variables
 
     dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_Time'] = time #corresponding time axis
+    dataDict['Neurons']['I_Time'] = time[idx_data] #corresponding time axis
     dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected

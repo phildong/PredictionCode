@@ -120,7 +120,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
         lasso = 0
         elasticnet = 1#True
         slm = 1
-        slm_shrub = 1
+        slm_shrub = 0
         predPCA = 1
         lagregression = 0
 
@@ -367,7 +367,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             
             time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
             neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+            velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
             curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
             resultDict[key]['SLM'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature)}
