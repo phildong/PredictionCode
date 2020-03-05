@@ -390,7 +390,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # the stage position, as Jeff calculates (and smooths) here:
     # https://github.com/leiferlab/3dbrain/blob/e38908c6dd5a4ae2829946ab91b9a00af9516f2e/fiducialCropper3.m#L57
 
-
+    if cutVolume is None:
+        cutVolume = np.max(vel.size)
 
     # get centerlines with full temporal resolution of 50Hz
     clFull, clIndices = loadCenterlines(folder, full=True)
@@ -562,8 +563,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     frac_allowed = 0.5 + np.true_divide(badNeurs.shape[0], I.shape[0])
     valid_map = np.mean(np.isnan(I), axis=0) < frac_allowed
     valid_map = np.flatnonzero(valid_map)
-
-
 
     valid_map_data = valid_map[valid_map <= cutVolume]
     valid_map_identity = valid_map[valid_map > cutVolume]
