@@ -46,6 +46,11 @@ print('Done reading data.')
 ### CHOOSE DATASET TO PLOT
 key = 'AKS297.51_moving'
 idn = 'BrainScanner20200130_110803'
+idn = 'BrainScanner20200130_105254'
+
+
+key = 'AML32_moving'
+idn = 'BrainScanner20170424_105620'
 
 ### Get the relevant data.
 dset = data[key]['input'][idn]
@@ -63,26 +68,35 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-#Just compare some of the behavior
-behFig = plt.figure(figsize=[22, 9])
-behGs = gridspec.GridSpec(ncols=1, nrows=3, figure=behFig)
-bax1 = behFig.add_subplot(behGs[0,0])
-bax2 = behFig.add_subplot(behGs[1,0], sharex=bax1)
-bax3 = behFig.add_subplot(behGs[2,0], sharex=bax1)
+if False:
+    #Just compare some of the behavior
+    behFig = plt.figure(figsize=[22, 9])
+    behGs = gridspec.GridSpec(ncols=1, nrows=3, figure=behFig)
+    bax1 = behFig.add_subplot(behGs[0,0])
+    bax2 = behFig.add_subplot(behGs[1,0], sharex=bax1)
+    bax3 = behFig.add_subplot(behGs[2,0], sharex=bax1)
 
-bax1.plot(activity[53, :])
-bax1.set_title('Activity of AVA')
+    neuron =14
+    bax1.plot(activity[neuron, :])
+    bax1.set_title('Activity of AVA, #%d' % neuron)
 
-bax2.plot(vel, label='eigenworm velocity')
-bax2.set_title('Eigenworm Based Velocity'
-               )
-bax3.plot(comVel, label='incorrectly calibrated com velocity')
-bax3.set_title('COM Velocity (w/ incorrect calibration)')
+    bax2.plot(vel, label='eigenworm velocity')
+    bax2.set_title('Eigenworm Based Velocity'
+                   )
+    bax3.plot(comVel, label='incorrectly calibrated com velocity')
+    bax3.set_title('COM Velocity')
 
 
-plt.figure(figsize=[10,10])
-plt.plot(vel, comVel)
+    plt.figure(figsize=[10,10])
+    plt.plot(vel, comVel)
 
+UseCOM = False
+if UseCOM:
+    velName = 'Eigenworm Velocity'
+    velocity = vel
+else:
+    velName = 'COM Velocity'
+    velocity = comVel
 
 
 
@@ -112,15 +126,15 @@ for neuron in np.arange(numNeurons):
 
     #Randomize the axes order withour replacement
     #Actually Plot
-    ax[0].plot(comVel, activity[neuron, :], 'o', markersize=0.7)
+    ax[0].plot(velocity, activity[neuron, :], 'o', markersize=0.7, rasterized=True
 
-    ax1b.plot(comVel, pos_deriv[neuron, :], 'o', markersize=0.7)
-    ax1c.plot(comVel, neg_deriv[neuron, :], 'o', markersize=0.7)
+    ax1b.plot(velocity, pos_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
+    ax1c.plot(velocity, neg_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
 
     # Randomize the axes order withour replacement
-    ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7)
-    ax2b.plot(curv, pos_deriv[neuron, :],'o', markersize=0.7)
-    ax2c.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7)
+    ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7, rasterized=True)
+    ax2b.plot(curv, pos_deriv[neuron, :],'o', markersize=0.7, rasterized=True)
+    ax2c.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7, rasterized=True)
 
 
 
@@ -133,10 +147,9 @@ for neuron in np.arange(numNeurons):
     ax[0].axvline(linewidth=0.5, color='k')
     ax[1].axvline(linewidth=0.5, color='k')
 
-
-    ax[0].set_xlabel('Center of Mass Velocity')
-    ax1b.set_xlabel('Center of Mass Velocity')
-    ax1c.set_xlabel('Center of Mass Velocity')
+    ax[0].set_xlabel(velName)
+    ax1b.set_xlabel(velName)
+    ax1c.set_xlabel(velName)
     ax[1].set_xlabel('Curvature')
     ax2b.set_xlabel('Curvature')
     ax2c.set_xlabel('Curvature')
@@ -154,8 +167,8 @@ for neuron in np.arange(numNeurons):
     ax[2].set_xlabel('Time (s)')
 
 
-    ax[3].plot(time, comVel)
-    ax[3].set_ylabel('Center of Mass Velocity')
+    ax[3].plot(time, velocity)
+    ax[3].set_ylabel(velName)
     ax[3].set_xlabel('Time (s)')
     ax[3].axhline(linewidth=0.5, color='k')
 
@@ -177,9 +190,10 @@ for neuron in np.arange(numNeurons):
 
 
 print("Saving tuning curve plots to PDF...")
-
+filename = key + "_" + idn + "_tuning.pdf"
+print(filename)
 import matplotlib.backends.backend_pdf
-pdf = matplotlib.backends.backend_pdf.PdfPages(key + "_" + idn + "_tuning.pdf")
+pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
 numFigs = plt.gcf().number + 1
 for fig in xrange(1, numFigs): ## will open an empty extra figure :(
     print("Saving Figure %d of %d" % (fig, numFigs))

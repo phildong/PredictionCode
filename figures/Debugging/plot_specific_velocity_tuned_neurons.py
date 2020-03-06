@@ -64,7 +64,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-anti_AVA_like = [11, 24, 74, 30, 88]
+anti_AVA_like = [11, 24, 74, 30,85,  88]
 
 #Just compare some of the behavior
 behFig2 = plt.figure(figsize=[24, 12])

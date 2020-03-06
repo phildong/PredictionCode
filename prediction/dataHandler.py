@@ -644,6 +644,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict = {}
     # store centerlines subsampled to volumes
     dataDict['CL'] = cl[nonNan]
+    dataDict['CLFull'] = cl[idx_data]
     dataDict['goodVolumes'] = nonNan
     dataDict['Behavior'] = {}
     dataDict['BehaviorFull'] = {}
@@ -658,6 +659,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
         dataDict['BehaviorFull'][key] = tmpData[kindex][idx_data]
         dataDict['Behavior_crop_noncontig'][key] = tmpData[kindex][valid_map_data]
+        dataDict['Behavior_crop_noncontig']['CL'] = cl[valid_map_data]
     dataDict['Behavior']['EthogramFull'] = etho
     dataDict['BehaviorFull']['EthogramFull'] = etho
     dataDict['Neurons'] = {}
