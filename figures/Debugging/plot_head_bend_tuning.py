@@ -108,16 +108,35 @@ def calc_head_angle(centerlines):
     return head_angle
 
 
-
 head_angle = np.unwrap(calc_head_angle(centerlines))
+sigma = 3
+smooth_head_angle = dh.gauss_filterNaN(head_angle, sigma)
+
 
 ## Find peaks of head swings
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
-peaks, _ = find_peaks(head_angle, height=0, prominence=1)
+prominence=0.4
+peaks, _ = find_peaks(smooth_head_angle, height=0, prominence=0.4)
+neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=0, prominence=0.4)
 
 
+def find_phase(peaks, time):
+    #Use interpolation
 
+    cum_phase_pks = 2*np.pi * np.arange(peaks.shape[0])
+
+    from scipy import interpolate
+    f = interpolate.interp1d(time[peaks], cum_phase_pks, fill_value="extrapolate")
+
+    cum_phase = f(time)
+
+    phase = np.mod(cum_phase, 2*np.pi)
+
+    return phase
+
+phase = find_phase(peaks, time)
+neg_phase = find_phase(neg_peaks, time)
 
 
 #Loop through each neuron
@@ -127,9 +146,11 @@ for neuron in np.arange(numNeurons):
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
     gs = gridspec.GridSpec(ncols=3, nrows=3, figure=fig)
-    ax0 = fig.add_subplot(gs[0,1])
-    ax1 = fig.add_subplot(gs[1,:])
-    ax2 = fig.add_subplot(gs[2,:], sharex=ax1)
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[0, 1])
+    ax2 = fig.add_subplot(gs[0, 2])
+    ax3 = fig.add_subplot(gs[1, :])
+    ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
 
 
     ax0.plot(head_angle, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
@@ -137,19 +158,28 @@ for neuron in np.arange(numNeurons):
     ax0.set_ylabel('F (motion rejected)')
 
 
-    ax1.plot(time, activity[neuron, :])
-    ax1.set_xlabel('Time (s)')
+    ax1.plot(phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
+    ax1.set_xlabel('Phase (radians)')
     ax1.set_ylabel('F (motion rejected)')
-    ax1.set_xlim(time[np.round(activity.shape[1]/4)], time[3*np.round(activity.shape[1]/4)] )
 
-    ax2.plot(time, head_angle)
-    ax2.plot(time[peaks], head_angle[peaks], "x", markersize=12)
-    ax2.axhline(color='k')
-    ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('Head Bend (radians)')
+    ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
+    ax2.set_xlabel('Negative Peak Phase (radians)')
+    ax2.set_ylabel('F (motion rejected)')
+
+    ax3.plot(time, activity[neuron, :])
+    ax3.set_xlabel('Time (s)')
+    ax3.set_ylabel('F (motion rejected)')
+    ax3.set_xlim(time[np.round(activity.shape[1] / 4)], time[3 * np.round(activity.shape[1] / 4)])
+
+    ax4.plot(time, head_angle)
+    ax4.plot(time[peaks], head_angle[peaks], "x", markersize=12)
+    ax4.plot(time[neg_peaks], head_angle[neg_peaks], "o", markersize=12)
+    ax4.axhline(color='k')
+    ax4.set_xlabel('Time (s)')
+    ax4.set_ylabel('Head Bend (radians)')
 
     import prediction.provenance as prov
-    prov.stamp(ax2, .55, .15)
+    prov.stamp(ax4, .55, .15)
 
 print("Saving head angle plots to PDF...")
 filename = key + "_" + idn + "head_tuning.pdf"
