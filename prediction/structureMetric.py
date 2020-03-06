@@ -125,7 +125,7 @@ def main():
     plots.append((plot_moments(test_data1(), title = 'Structured Example'), -1))
     plots.append((plot_moments(test_data2(), title = 'Spherical Example'), -1))
 
-    typ_conds = ['AML32_moving', 'AML32_immobilized', 'AML70_moving', 'AML70_chip', 'AML18_moving', 'AML18_immobilized']
+    typ_conds = ['AKS297.51_moving', 'AML32_moving', 'AML32_immobilized', 'AML70_moving', 'AML70_chip', 'AML18_moving', 'AML18_immobilized']
     
     for typ_cond in typ_conds:
         path = userTracker.dataPath()
@@ -163,8 +163,10 @@ def main():
     for p in plots:
         pdf.savefig(p[0][0])
 
-    colors = {k: v for k, v in zip(typ_conds, ['red', 'red', 'orange', 'orange', 'blue', 'blue'])}
-    markers = {k: v for k, v in zip(typ_conds, ['o', '+', 'o', '^', 'o', '+'])}
+    pdf.close()
+
+    colors = {k: v for k, v in zip(typ_conds, ['black', 'red', 'red', 'orange', 'orange', 'blue', 'blue'])}
+    markers = {k: v for k, v in zip(typ_conds, ['o', 'o', '+', 'o', '^', 'o', '+'])}
 
     fig, ax = plt.subplots(1, 1, figsize=(10,7))
     for typ_cond in typ_conds:

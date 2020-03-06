@@ -12,11 +12,13 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 import os
 from copy import deepcopy
 
+from Classifier import rectified_derivative
+
 import dataHandler as dh
 import userTracker
 
 def train_tree(X, Y):
-    clf = tree.DecisionTreeClassifier(max_depth=1)
+    clf = tree.DecisionTreeClassifier(max_depth=3, min_samples_split=.1)
     clf = clf.fit(X, np.sign(Y))
     return clf
 
@@ -38,7 +40,7 @@ def optimize_slm(time, Xfull, Yfull, options = None):
     'decision_tree': False,
     'best_neuron': False,
     'max_depth': 1,
-    'alphas': np.logspace(-1.5, 1.5, 7),
+    'alphas': np.logspace(-1.5, 2.5, 7),
     'l1_ratios': np.linspace(0, 1, 5),
     'sigma': 14,
     'derivative_weight': 10,
@@ -125,7 +127,7 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                         'params'         : P,
                         'error'          : result.fun,
                         'alpha'          : best_alpha,
-                        'l1_ratio'       : options['l1_ratio'],
+                        'l1_ratio'       : best_l1_ratio,
                         'score'          : R2(P, f, X, Y),
                         'scorepredicted' : R2(P, f, Xtest, Ytest),
                         'signal'         : Yfull,
@@ -292,13 +294,16 @@ if __name__ == '__main__':
         for key in keyList:
             time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
             neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-            velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+            velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
             curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
+
+            nderiv_pos, nderiv_neg = rectified_derivative(neurons)
+            X = np.vstack((neurons, nderiv_pos, nderiv_neg))
 
             settings = [(j, k) for j in range(2) for k in range(2)]
             r2s = {}
             for s in settings:
-                res = optimize_slm(time, neurons, velocity, options = {'decision_tree': s[0], 'best_neuron': s[1], 'l1_ratios': [.9]})
+                res = optimize_slm(time, X, velocity, options = {'decision_tree': s[0], 'best_neuron': s[1], 'l1_ratios': [.9]})
                 r2s[s] = res
                 print(s, res['score'], res['scorepredicted'])
             
