@@ -48,8 +48,8 @@ print('Done reading data.')
 
 ### CHOOSE DATASET TO PLOT
 key = 'AKS297.51_moving'
-idn = 'BrainScanner20200130_110803'
-#idn = 'BrainScanner20200130_105254'
+#idn = 'BrainScanner20200130_110803'
+idn = 'BrainScanner20200130_105254'
 
 
 #key = 'AML32_moving'
@@ -113,12 +113,17 @@ sigma = 3
 smooth_head_angle = dh.gauss_filterNaN(head_angle, sigma)
 
 
+if idn == 'BrainScanner20200130_105254':
+    prominence = 0.2
+else:
+    prominence = 0.4
+
 ## Find peaks of head swings
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 prominence=0.4
-peaks, _ = find_peaks(smooth_head_angle, height=0, prominence=0.4)
-neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=0, prominence=0.4)
+peaks, _ = find_peaks(smooth_head_angle, height=-.3, prominence=prominence)
+neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=-.3, prominence=prominence)
 
 
 def find_phase(peaks, time):
