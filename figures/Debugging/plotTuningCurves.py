@@ -46,11 +46,11 @@ print('Done reading data.')
 ### CHOOSE DATASET TO PLOT
 key = 'AKS297.51_moving'
 idn = 'BrainScanner20200130_110803'
-idn = 'BrainScanner20200130_105254'
+#idn = 'BrainScanner20200130_105254'
 
 
-key = 'AML32_moving'
-idn = 'BrainScanner20170424_105620'
+#key = 'AML32_moving'
+#idn = 'BrainScanner20170424_105620'
 
 ### Get the relevant data.
 dset = data[key]['input'][idn]
@@ -105,6 +105,31 @@ from prediction.Classifier import rectified_derivative
 
 pos_deriv, neg_deriv = rectified_derivative(activity)
 
+def fit_line(behavior, activity, ignore_0_activity=True, range=None):
+    # examples from https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html#numpy.linalg.lstsq
+
+    if ignore_0_activity:
+        valid = np.nonzero(activity)
+    else:
+        valid = np.arange(len(activity))
+
+    if range is 'Positive':
+        range_idx = np.where(behavior > 0)
+    elif range is 'Negative':
+        range_idx= np.where(behavior < 0)
+    else:
+        range_idx = np.arange(len(behavior))
+
+    valid = np.intersect1d(valid, range_idx)
+
+
+
+    A = np.vstack([behavior[valid], np.ones(len(behavior[valid]))]).T
+    y = activity[valid]
+    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    return m, c
+
+
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
     fig = plt.figure(constrained_layout=True, figsize=[22, 16])
@@ -124,17 +149,36 @@ for neuron in np.arange(numNeurons):
 
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
-    #Randomize the axes order withour replacement
     #Actually Plot
-    ax[0].plot(velocity, activity[neuron, :], 'o', markersize=0.7, rasterized=True
+    ax[0].plot(velocity, activity[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(velocity, activity[neuron, :])
+    ax[0].plot(velocity, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax[0].legend()
 
     ax1b.plot(velocity, pos_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
-    ax1c.plot(velocity, neg_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(velocity, pos_deriv[neuron, :])
+    ax1b.plot(velocity, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax1b.legend()
 
-    # Randomize the axes order withour replacement
-    ax[1].plot(curv, activity[neuron, :],'o', markersize=0.7, rasterized=True)
-    ax2b.plot(curv, pos_deriv[neuron, :],'o', markersize=0.7, rasterized=True)
-    ax2c.plot(curv,  neg_deriv[neuron, :],'o', markersize=0.7, rasterized=True)
+    ax1c.plot(velocity, neg_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(velocity, neg_deriv[neuron, :])
+    ax1c.plot(velocity, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax1c.legend()
+
+    ax[1].plot(curv, activity[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(curv, activity[neuron, :])
+    ax[1].plot(curv, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax[1].legend()
+
+    ax2b.plot(curv, pos_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(curv, pos_deriv[neuron, :])
+    ax2b.plot(curv, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax2b.legend()
+
+    ax2c.plot(curv,  neg_deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
+    m, c =fit_line(curv, neg_deriv[neuron, :])
+    ax2c.plot(curv, m*velocity + c, 'r', label='Fit y= %.2fx+ %.2f' % (m, c), rasterized=True)
+    ax2c.legend()
 
 
 
@@ -146,6 +190,10 @@ for neuron in np.arange(numNeurons):
     #Add line for behavior = 0
     ax[0].axvline(linewidth=0.5, color='k')
     ax[1].axvline(linewidth=0.5, color='k')
+    ax1b.axvline(linewidth=0.5, color='k')
+    ax1c.axvline(linewidth=0.5, color='k')
+    ax2b.axvline(linewidth=0.5, color='k')
+    ax2c.axvline(linewidth=0.5, color='k')
 
     ax[0].set_xlabel(velName)
     ax1b.set_xlabel(velName)
