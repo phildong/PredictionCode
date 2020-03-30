@@ -48,8 +48,8 @@ print('Done reading data.')
 
 ### CHOOSE DATASET TO PLOT
 key = 'AKS297.51_moving'
-#idn = 'BrainScanner20200130_110803'
-idn = 'BrainScanner20200130_105254'
+idn = 'BrainScanner20200130_110803'
+#idn = 'BrainScanner20200130_105254'
 
 
 #key = 'AML32_moving'
