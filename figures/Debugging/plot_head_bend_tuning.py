@@ -144,6 +144,131 @@ phase = find_phase(peaks, time)
 neg_phase = find_phase(neg_peaks, time)
 
 
+#functions to fit a sine wave
+from skimage.util.shape import view_as_windows as viewW
+def strided_indexing_roll(a, r):
+    # Concatenate with sliced to cover all rolls
+    # This function will roll each row of a matrix a, a an amount specified by r.
+    # I got it here: https://stackoverflow.com/a/51613442/200688
+    a_ext = np.concatenate((a,a[:,:-1]),axis=1)
+
+    # Get sliding windows; use advanced-indexing to select appropriate ones
+    n = a.shape[1]
+    return viewW(a_ext, (1, n))[np.arange(len(r)), (n-r) % n, 0]
+
+
+
+def fit_sine_wave(activity, phase):
+    """"
+    Fit a sine wave to the neural activity tuning as a function of head bending phase.
+    y = A * sin( k*x + phi) + c
+    where k is fixed to be 1 / (2*pi)
+
+    """
+
+
+    #Mean subtract.
+    offset = np.nanmean(activity)
+    activity = activity - offset
+
+    #Scale activity to something around one
+    scaleFactor = np.nanmax(activity)
+    activity = activity / scaleFactor
+
+    #Now activity shoudl be mean zero amplitude 1
+
+    from scipy.optimize import curve_fit
+
+    # set up some bounds on our sinewave fitting parameters, y=A*sin(kx - phi) + c
+    c_guess = np.nanmean(activity)
+    c_max = np.nanmax(activity)
+    c_min = np.nanmin(activity)
+
+    A_guess = (np.nanmax(activity) - np.nanmin(activity)) / 2
+    A_max = np.nanmax(activity) - np.nanmin(activity)
+    A_min = 0
+
+    phi_guess = np.pi
+    phi_min = 0
+    phi_max = 2 * np.pi
+
+    # format A, phi, c
+    bounds = ([A_min, phi_min, c_min],  # lower bounds
+              [A_max, phi_max, c_max])  # upper bound
+
+    popt_guess = [A_guess, phi_guess, c_guess]
+    # Identify just the data that is not a NaN
+    nonNaNs = np.logical_not(np.isnan(activity))
+    popt, pcov = curve_fit(sine_wave, phase[nonNaNs], activity[nonNaNs], p0=popt_guess, bounds=bounds)
+
+
+    ## Now we want to inspect our fit, find values that are clear outliers, and refit while excluding those
+    residual = activity - sine_wave(phase, *popt) #its ok to have nans here
+    nSigmas = 3  # we want to exclude points that are three standard deviations away from the fit
+
+    # Make a new mask that excludes the outliers
+    excOutliers = np.copy(nonNaNs)
+    excOutliers[(np.abs(residual) > (nSigmas * np.nanstd(residual)))] = False
+
+    # Refit excluding the outliers, use the previous fit as initial guess
+    # note we relax the bounds here a bit
+    try:
+        popt, pcov = curve_fit(sine_wave, phase[excOutliers], activity[excOutliers], p0=popt, bounds=bounds)
+    except:
+        popt, pcov = curve_fit(sine_wave, phase[excOutliers], activity[excOutliers], p0=popt)
+
+
+    #rescale the amplitude, a, back to full size
+    popt[0] = scaleFactor*popt[0]
+
+    #rescale the c parameter
+    popt[2] = scaleFactor *popt[2] + offset
+    return popt, pcov
+
+
+def sine_wave(x, A, phi, c, k=1):
+    # type: (xVals, A, phi, c) -> yVals
+    return A * np.sin(k * x - phi) + c
+
+
+
+
+
+import numpy.matlib
+from inspectPerformance import calc_R2
+def check_sine_tuning(phase, activity, pval=False):
+    # examples from https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html#numpy.linalg.lstsq
+
+
+
+    popt, pcov = fit_sine_wave(activity,phase)
+
+    A = popt[0]
+    phi = popt[1]
+    c = popt[2]
+
+    p = None
+
+    r2 = calc_R2(activity, sine_wave(phase, A, phi, c))
+
+
+    print("Still need to implement shuffle")
+    if False:
+        numShuffles = 5000
+        shuff_y = np.matlib.repmat(y, numShuffles, 1)
+        roll = np.random.randint(len(y), size=numShuffles)
+        shuff_y = strided_indexing_roll(shuff_y, roll)
+        shuff_y = shuff_y.T
+
+        m_shuff, _ = np.linalg.lstsq(A, shuff_y, rcond=None)[0]
+        slopes_greater_then_m = len(np.array(np.where(np.abs(m_shuff) >= np.abs(m))).ravel())
+        p = np.true_divide(slopes_greater_then_m, numShuffles)
+        print("p-value = %0.3f" % p)
+
+
+    return A, phi, c, p, r2
+
+
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
 
@@ -162,14 +287,21 @@ for neuron in np.arange(numNeurons):
     ax0.set_xlabel('Head Bend (radians)')
     ax0.set_ylabel('F (motion rejected)')
 
+    theta = np.arange(0,1,.01)*2*np.pi
 
     ax1.plot(phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
+    A, phi, c, _, r2 = check_sine_tuning(phase, activity[neuron, :])
+    ax1.plot(theta, sine_wave(theta, A, phi, c), label="r2=%.2f" % r2)
     ax1.set_xlabel('Phase (radians)')
     ax1.set_ylabel('F (motion rejected)')
+    ax1.legend()
 
     ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
+    A, phi, c, _, r2 = check_sine_tuning(neg_phase, activity[neuron, :])
+    ax2.plot(theta, sine_wave(theta, A, phi, c), label="r2=%.2f" % r2)
     ax2.set_xlabel('Negative Peak Phase (radians)')
     ax2.set_ylabel('F (motion rejected)')
+    ax2.legend()
 
     ax3.plot(time, activity[neuron, :])
     ax3.set_xlabel('Time (s)')
