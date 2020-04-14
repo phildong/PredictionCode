@@ -268,6 +268,11 @@ def check_sine_tuning(phase, activity, pval=False):
 
     return A, phi, c, p, r2
 
+r2_phase = np.zeros(numNeurons)
+r2_negphase = r2_phase.copy()
+
+phi = np.zeros(numNeurons)
+phi_neg = np.zeros(numNeurons)
 
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
@@ -290,15 +295,15 @@ for neuron in np.arange(numNeurons):
     theta = np.arange(0,1,.01)*2*np.pi
 
     ax1.plot(phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi, c, _, r2 = check_sine_tuning(phase, activity[neuron, :])
-    ax1.plot(theta, sine_wave(theta, A, phi, c), label="r2=%.2f" % r2)
+    A, phi[neuron], c, _, r2_phase[neuron] = check_sine_tuning(phase, activity[neuron, :])
+    ax1.plot(theta, sine_wave(theta, A, phi[neuron], c), label="r2=%.2f" % r2_phase[neuron])
     ax1.set_xlabel('Phase (radians)')
     ax1.set_ylabel('F (motion rejected)')
     ax1.legend()
 
     ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi, c, _, r2 = check_sine_tuning(neg_phase, activity[neuron, :])
-    ax2.plot(theta, sine_wave(theta, A, phi, c), label="r2=%.2f" % r2)
+    A, phi_neg[neuron], c, _, r2_negphase[neuron] = check_sine_tuning(neg_phase, activity[neuron, :])
+    ax2.plot(theta, sine_wave(theta, A, phi_neg[neuron], c), label="r2=%.2f" % r2_negphase[neuron])
     ax2.set_xlabel('Negative Peak Phase (radians)')
     ax2.set_ylabel('F (motion rejected)')
     ax2.legend()
@@ -317,6 +322,43 @@ for neuron in np.arange(numNeurons):
 
     import prediction.provenance as prov
     prov.stamp(ax4, .55, .15)
+
+
+
+# Plot r2 as a function of phi for calcualting phase based on the positive peak
+fig_r2_phi = plt.figure(figsize=[24, 9])
+fig_r2_phi.suptitle(key + ' ' + idn)
+gs = gridspec.GridSpec(ncols=2, nrows=1, figure=fig_r2_phi)
+
+max_r2 = np.max(np.array([r2_phase, r2_negphase]).flatten())
+
+ax_r21 = fig_r2_phi.add_subplot(gs[0, 0])
+ax_r21.plot(phi, r2_phase, 'o', label="r2")
+ax_r21.set_title('Sine Wave Goodness of Fit')
+ax_r21.set_xlabel('Head Bend Phase')
+ax_r21.set_ylabel('coefficient of determination R2')
+ax_r21.set_ylim(0, max_r2)
+for i in np.arange(len(r2_phase)):
+    ax_r21.annotate(i, (phi[i], r2_phase[i]))
+ax_r21.legend()
+
+
+ax_r22 = fig_r2_phi.add_subplot(gs[0, 1])
+ax_r22.plot(phi_neg, r2_negphase, 'o', label="r2  (phase to negative headbend)")
+ax_r22.set_title('Sine Wave Goodness of Fit, to phase calculated on negative bends')
+ax_r22.set_xlabel('Head Bend Phase (calculated on negative bends)')
+ax_r22.set_ylabel('coefficient of determination R2')
+ax_r22.set_ylim(0, max_r2)
+for i in np.arange(len(r2_negphase)):
+    ax_r22.annotate(i, (phi_neg[i], r2_negphase[i]))
+ax_r22.legend()
+
+
+
+
+
+
+
 
 print("Saving head angle plots to PDF...")
 filename = key + "_" + idn + "head_tuning.pdf"
