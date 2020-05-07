@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """detect which user is using the machine and change the path to the data accordingly."""
-import getpass
+import socket
 
 def dataPath():
 	"""hardcoded or automatic detection of the users' data path."""
