@@ -29,10 +29,10 @@ with open('comparison_results.dat', 'rb') as handle:
 keys = list(data.keys())
 keys.sort()
 
-figtypes = ['bsn', 'bsn_deriv', 'pc', 'pc_deriv', 'slm', 'slm_with_derivs', 'slm_with_derivs_acc', 'slm_tree', 'slm_tree_with_derivs', 'slm_tree_with_derivs_acc']
+figtypes = ['bsn', 'bsn_deriv', 'pc', 'pc_deriv', 'slm', 'slm_with_derivs', 'slm_with_derivs_acc', 'slm_tree', 'slm_tree_with_derivs', 'slm_tree_with_derivs_acc', 'mars']
 
 fig = plt.figure(constrained_layout = True, figsize=(10*len(figtypes), 10*len(keys)+4))
-gs = gridspec.GridSpec(len(keys)+1, len(figtypes), figure=fig, width_ratios=tuple(1 for i in range(10)))
+gs = gridspec.GridSpec(len(keys)+1, len(figtypes), figure=fig, width_ratios=tuple(1 for i in range(len(figtypes))))
 
 for row, key in enumerate(keys):
     for col, figtype in enumerate(figtypes):
@@ -64,7 +64,7 @@ ax.grid(axis='y')
 fig.savefig('comparison_time_series.png')
 
 fig = plt.figure(constrained_layout = True, figsize=(10*len(figtypes), 10*len(keys)+4))
-gs = gridspec.GridSpec(len(keys)+1, len(figtypes), figure=fig, width_ratios=tuple(1 for i in range(10)))
+gs = gridspec.GridSpec(len(keys)+1, len(figtypes), figure=fig, width_ratios=tuple(1 for i in range(len(figtypes))))
 
 for row, key in enumerate(keys):
     for col, figtype in enumerate(figtypes):

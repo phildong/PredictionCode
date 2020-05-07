@@ -1,4 +1,5 @@
 import SLM
+import MARS
 from Classifier import rectified_derivative
 import userTracker
 import dataHandler as dh
@@ -44,36 +45,44 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         pcderiv_pos, pcderiv_neg = rectified_derivative(neurons_reduced)
         pcderivs = np.vstack((pcderiv_pos, pcderiv_neg))
 
+        pc_and_derivs = np.vstack((neurons_reduced, pcderivs))
+
         print('\tBest Neuron')
         bsn = SLM.optimize_slm(time, neurons, velocity, options = {'best_neuron': True})
-        bsn_deriv = SLM.optimize_slm(time, nderivs, velocity, options = {'best_neuron': True})
+        bsn_deriv = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'best_neuron': True})
+        bsn_deriv_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'best_neuron': True, 'derivative_penalty': True})
 
         print('\tBest PC')
         pc = SLM.optimize_slm(time, neurons_reduced, velocity, options = {'best_neuron': True})
-        pc_deriv = SLM.optimize_slm(time, pcderivs, velocity, options = {'best_neuron': True})
+        pc_deriv = SLM.optimize_slm(time, pc_and_derivs, velocity, options = {'best_neuron': True})
 
         print('\tLinear Model')
-        slm = SLM.optimize_slm(time, neurons, velocity)
-        slm_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity)
+        # slm = SLM.optimize_slm(time, neurons, velocity)
+        # slm_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity)
         slm_with_derivs_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'derivative_penalty': True})
 
-        print('\tLinear Model w/ Classifier')
-        slm_tree = SLM.optimize_slm(time, neurons, velocity, options={'decision_tree': True})
-        slm_tree_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity, options={'decision_tree': True})
-        slm_tree_with_derivs_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options={'decision_tree': True, 'derivative_penalty': True})
+        # print('\tLinear Model w/ Classifier')
+        # slm_tree = SLM.optimize_slm(time, neurons, velocity, options={'decision_tree': True})
+        # slm_tree_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity, options={'decision_tree': True})
+        # slm_tree_with_derivs_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options={'decision_tree': True, 'derivative_penalty': True})
+
+        # print('\tMARS')
+        # mars = MARS.optimize_mars(time, neurons, velocity, options={'max_terms': 5 if key[:3] == 'AML' else 2})
 
         results[key] = {'bsn': bsn, 
                         'bsn_deriv': bsn_deriv, 
+                        'bsn_deriv_acc': bsn_deriv_acc,
                         'pc': pc, 
                         'pc_deriv': pc_deriv, 
-                        'slm': slm, 
-                        'slm_with_derivs': slm_with_derivs, 
+                        # 'slm': slm, 
+                        # 'slm_with_derivs': slm_with_derivs, 
                         'slm_with_derivs_acc': slm_with_derivs_acc, 
-                        'slm_tree': slm_tree, 
-                        'slm_tree_with_derivs': slm_tree_with_derivs, 
-                        'slm_tree_with_derivs_acc': slm_tree_with_derivs_acc
+                        # 'slm_tree': slm_tree, 
+                        # 'slm_tree_with_derivs': slm_tree_with_derivs, 
+                        # 'slm_tree_with_derivs_acc': slm_tree_with_derivs_acc,
+                        # 'mars': mars
                         }
 
 import pickle
-with open('comparison_results.dat', 'wb') as handle:
+with open('comparison_results_favorite_shifted.dat', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
