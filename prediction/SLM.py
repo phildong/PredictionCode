@@ -269,10 +269,10 @@ def optimize_slm(time, Xfull, Yfull, options = None):
         prediction_full[decision_full < 0] = np.dot(Xfull[:,decision_full<0].T, res2['weights']) + res2['intercepts']
 
         r2_train = 1-shift_sqdiff(Y, prediction_train, width=options['time_shift'])/shift_sqdiff(Y, np.mean(Y), width=options['time_shift'])
-        r2_test = 1-shift_sqdiff(Y, prediction_test, width=options['time_shift'])/shift_sqdiff(Y, np.mean(Y), width=options['time_shift'])
+        r2_test = 1-shift_sqdiff(Ytest, prediction_test, width=options['time_shift'])/shift_sqdiff(Y, np.mean(Y), width=options['time_shift'])
         
         corr_train = np.corrcoef(Y, prediction_train)[0,1]
-        corr_test = np.corrcoef(Y, prediction_test)[0,1]
+        corr_test = np.corrcoef(Ytest, prediction_test)[0,1]
 
         return {'decision'       : decision_full,
                 'weights_pos'    : res1['weights'],
