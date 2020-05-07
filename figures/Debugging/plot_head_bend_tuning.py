@@ -144,7 +144,7 @@ phase = find_phase(peaks, time)
 neg_phase = find_phase(neg_peaks, time)
 
 
-#functions to fit a sine wave
+#functions to fit a cosine wave
 from skimage.util.shape import view_as_windows as viewW
 def strided_indexing_roll(a, r):
     # Concatenate with sliced to cover all rolls
@@ -158,11 +158,11 @@ def strided_indexing_roll(a, r):
 
 
 
-def fit_sine_wave(activity, phase):
+def fit_cos_wave(activity, phase):
     """"
-    Fit a sine wave to the neural activity tuning as a function of head bending phase.
-    y = A * sin( k*x + phi) + c
-    where k is fixed to be 1 / (2*pi)
+    Fit a cosine wave to the neural activity tuning as a function of head bending phase.
+    y = A * cos( k*x + phi) + c
+    where k is fixed to be 1
 
     """
 
@@ -179,7 +179,7 @@ def fit_sine_wave(activity, phase):
 
     from scipy.optimize import curve_fit
 
-    # set up some bounds on our sinewave fitting parameters, y=A*sin(kx - phi) + c
+    # set up some bounds on our cosine wave fitting parameters, y=A*sin(kx - phi) + c
     c_guess = np.nanmean(activity)
     c_max = np.nanmax(activity)
     c_min = np.nanmin(activity)
@@ -199,11 +199,11 @@ def fit_sine_wave(activity, phase):
     popt_guess = [A_guess, phi_guess, c_guess]
     # Identify just the data that is not a NaN
     nonNaNs = np.logical_not(np.isnan(activity))
-    popt, pcov = curve_fit(sine_wave, phase[nonNaNs], activity[nonNaNs], p0=popt_guess, bounds=bounds)
+    popt, pcov = curve_fit(cos_wave, phase[nonNaNs], activity[nonNaNs], p0=popt_guess, bounds=bounds)
 
 
     ## Now we want to inspect our fit, find values that are clear outliers, and refit while excluding those
-    residual = activity - sine_wave(phase, *popt) #its ok to have nans here
+    residual = activity - cos_wave(phase, *popt) #its ok to have nans here
     nSigmas = 3  # we want to exclude points that are three standard deviations away from the fit
 
     # Make a new mask that excludes the outliers
@@ -213,9 +213,9 @@ def fit_sine_wave(activity, phase):
     # Refit excluding the outliers, use the previous fit as initial guess
     # note we relax the bounds here a bit
     try:
-        popt, pcov = curve_fit(sine_wave, phase[excOutliers], activity[excOutliers], p0=popt, bounds=bounds)
+        popt, pcov = curve_fit(cos_wave, phase[excOutliers], activity[excOutliers], p0=popt, bounds=bounds)
     except:
-        popt, pcov = curve_fit(sine_wave, phase[excOutliers], activity[excOutliers], p0=popt)
+        popt, pcov = curve_fit(cos_wave, phase[excOutliers], activity[excOutliers], p0=popt)
 
 
     #rescale the amplitude, a, back to full size
@@ -226,9 +226,9 @@ def fit_sine_wave(activity, phase):
     return popt, pcov
 
 
-def sine_wave(x, A, phi, c, k=1):
+def cos_wave(x, A, phi, c, k=1):
     # type: (xVals, A, phi, c) -> yVals
-    return A * np.sin(k * x - phi) + c
+    return A * np.cos(k * x - phi) + c
 
 
 
@@ -236,12 +236,12 @@ def sine_wave(x, A, phi, c, k=1):
 
 import numpy.matlib
 from inspectPerformance import calc_R2
-def check_sine_tuning(phase, activity, pval=False):
+def check_cosine_tuning(phase, activity, pval=False):
     # examples from https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html#numpy.linalg.lstsq
 
 
 
-    popt, pcov = fit_sine_wave(activity,phase)
+    popt, pcov = fit_cos_wave(activity, phase)
 
     A = popt[0]
     phi = popt[1]
@@ -249,7 +249,7 @@ def check_sine_tuning(phase, activity, pval=False):
 
     p = None
 
-    r2 = calc_R2(activity, sine_wave(phase, A, phi, c))
+    r2 = calc_R2(activity, cos_wave(phase, A, phi, c))
 
 
     print("Still need to implement shuffle")
@@ -295,15 +295,15 @@ for neuron in np.arange(numNeurons):
     theta = np.arange(0,1,.01)*2*np.pi
 
     ax1.plot(phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi[neuron], c, _, r2_phase[neuron] = check_sine_tuning(phase, activity[neuron, :])
-    ax1.plot(theta, sine_wave(theta, A, phi[neuron], c), label="r2=%.2f" % r2_phase[neuron])
+    A, phi[neuron], c, _, r2_phase[neuron] = check_cosine_tuning(phase, activity[neuron, :])
+    ax1.plot(theta, cos_wave(theta, A, phi[neuron], c), label="r2=%.2f" % r2_phase[neuron])
     ax1.set_xlabel('Phase (radians)')
     ax1.set_ylabel('F (motion rejected)')
     ax1.legend()
 
     ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi_neg[neuron], c, _, r2_negphase[neuron] = check_sine_tuning(neg_phase, activity[neuron, :])
-    ax2.plot(theta, sine_wave(theta, A, phi_neg[neuron], c), label="r2=%.2f" % r2_negphase[neuron])
+    A, phi_neg[neuron], c, _, r2_negphase[neuron] = check_cosine_tuning(neg_phase, activity[neuron, :])
+    ax2.plot(theta, cos_wave(theta, A, phi_neg[neuron], c), label="r2=%.2f" % r2_negphase[neuron])
     ax2.set_xlabel('Negative Peak Phase (radians)')
     ax2.set_ylabel('F (motion rejected)')
     ax2.legend()
@@ -334,7 +334,7 @@ max_r2 = np.max(np.array([r2_phase, r2_negphase]).flatten())
 
 ax_r21 = fig_r2_phi.add_subplot(gs[0, 0])
 ax_r21.plot(phi, r2_phase, 'o', label="r2")
-ax_r21.set_title('Sine Wave Goodness of Fit')
+ax_r21.set_title('Cosine Wave Goodness of Fit')
 ax_r21.set_xlabel('Head Bend Phase')
 ax_r21.set_ylabel('coefficient of determination R2')
 ax_r21.set_ylim(0, max_r2)
@@ -345,15 +345,13 @@ ax_r21.legend()
 
 ax_r22 = fig_r2_phi.add_subplot(gs[0, 1])
 ax_r22.plot(phi_neg, r2_negphase, 'o', label="r2  (phase to negative headbend)")
-ax_r22.set_title('Sine Wave Goodness of Fit, to phase calculated on negative bends')
+ax_r22.set_title('Cosine Wave Goodness of Fit, to phase calculated on negative bends')
 ax_r22.set_xlabel('Head Bend Phase (calculated on negative bends)')
 ax_r22.set_ylabel('coefficient of determination R2')
 ax_r22.set_ylim(0, max_r2)
 for i in np.arange(len(r2_negphase)):
     ax_r22.annotate(i, (phi_neg[i], r2_negphase[i]))
 ax_r22.legend()
-
-
 
 
 
