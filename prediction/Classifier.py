@@ -29,7 +29,7 @@ def rectified_derivative(neurons):
     deriv_pos[deriv < 0] = 0
     deriv_neg[deriv > 0] = 0
 
-    return deriv_pos, deriv_neg
+    return deriv_pos, deriv_neg, deriv
 
 def score(predict, true):
     return 1-(np.count_nonzero(predict-true)+.0)/np.count_nonzero(mode(true).mode-true)
