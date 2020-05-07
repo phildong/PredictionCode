@@ -326,7 +326,7 @@ if __name__ == '__main__':
             velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
             curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
-            nderiv_pos, nderiv_neg = rectified_derivative(neurons)
+            nderiv_pos, nderiv_neg, _ = rectified_derivative(neurons)
             X = np.vstack((neurons, nderiv_pos, nderiv_neg))
 
             settings = [(j, k) for j in range(2) for k in range(2)]
