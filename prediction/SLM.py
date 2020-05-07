@@ -17,13 +17,23 @@ from Classifier import rectified_derivative
 import dataHandler as dh
 import userTracker
 
+def shift_sqdiff(a, b, width = 6):
+    sqdiffs = np.zeros((2*width+1, a.size))
+    for j in np.arange(-width, width+1):
+        sqdiffs[j+width,:] = np.power(np.roll(a, j)-b, 2)
+    
+    return np.sum(np.min(sqdiffs, axis=0))
+
 def train_tree(X, Y):
     clf = tree.DecisionTreeClassifier(max_depth=3, min_samples_split=.1)
     clf = clf.fit(X, np.sign(Y))
     return clf
 
-def R2(P, f, X, Y):
-    return 1-np.sum(np.power(Y-f(X,P),2))/np.sum(np.power(Y-np.mean(Y),2))
+def R2(P, f, X, Y, width = 6):
+    return 1-shift_sqdiff(Y, f(X, P))/shift_sqdiff(Y, np.mean(Y), width=width)
+
+def rho(P, f, X, Y):
+    return np.corrcoef(Y, f(X, P))
 
 def split_test(X, test):
     center_idx = np.abs((np.arange(X.shape[-1])-0.5*X.shape[-1])/X.shape[-1]) <= test/2
@@ -45,7 +55,8 @@ def optimize_slm(time, Xfull, Yfull, options = None):
     'sigma': 14,
     'derivative_weight': 10,
     'cv_fraction': 0.4,
-    'test_fraction': 0.4
+    'test_fraction': 0.4,
+    'time_shift': 0
     }
     for k in default_options:
         if k not in options:
@@ -61,9 +72,9 @@ def optimize_slm(time, Xfull, Yfull, options = None):
         f = lambda X, P: np.dot(X.T, P[1:]) + P[0]
     reg = lambda P, l1_ratio: l1_ratio*np.sum(np.abs(P[1:])) + 0.5*(1-l1_ratio)*np.sum(P[1:]*P[1:])
 
-    error_plain = lambda P, X, Y, alpha, l1_ratio: (1./(4*Y.size*np.var(Y)))*np.sum(np.power(Y-f(X,P),2)) + alpha*reg(P, l1_ratio)
+    error_plain = lambda P, X, Y, alpha, l1_ratio: (1./(4*Y.size*np.var(Y)))*shift_sqdiff(Y, f(X, P), width=options['time_shift']) + alpha*reg(P, l1_ratio)
     if options['derivative_penalty']:
-        error = lambda P, X, Y, X_deriv, Y_deriv, alpha, l1_ratio: error_plain(P, X, Y, alpha, l1_ratio) + options['derivative_weight']*(1/(4*Y.size*np.var(Y_deriv)))*np.sum(np.power(Y_deriv-f(X_deriv, P), 2))
+        error = lambda P, X, Y, X_deriv, Y_deriv, alpha, l1_ratio: error_plain(P, X, Y, alpha, l1_ratio) + options['derivative_weight']*(1/(4*Y.size*np.var(Y_deriv)))*shift_sqdiff(Y_deriv, f(X_deriv, P), width=options['time_shift'])
     else:
         error = error_plain
 
@@ -79,7 +90,7 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 for alpha in options['alphas']:
                     for l1_ratio in options['l1_ratios']:
                         result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, alpha, l1_ratio))
-                        r2 = R2(result.x, f, X_cv, Y_cv) 
+                        r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
                         if r2 > best_R2:
                             best_alpha = alpha
                             best_l1_ratio = l1_ratio
@@ -93,13 +104,16 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                         'error'          : result.fun,
                         'alpha'          : best_alpha,
                         'l1_ratio'       : best_l1_ratio,
-                        'score'          : R2(P, f, X, Y),
-                        'scorepredicted' : R2(P, f, Xtest, Ytest),
+                        'score'          : R2(P, f, X, Y, width=options['time_shift']),
+                        'scorepredicted' : R2(P, f, Xtest, Ytest, width=options['time_shift']),
+                        'corr'           : rho(P, f, X, Y)[0,1],
+                        'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
-                        'test_idx'       : test_idx
+                        'test_idx'       : test_idx,
+                        'variance'       : np.var(X, axis=1)
                         }
             
             else:
@@ -114,7 +128,7 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 for alpha in options['alphas']:
                     for l1_ratio in options['l1_ratios']:
                         result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, X_train_deriv, Y_train_deriv, alpha, l1_ratio))
-                        r2 = R2(result.x, f, X_cv, Y_cv) 
+                        r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
                         if r2 > best_R2:
                             best_alpha = alpha
                             best_l1_ratio = l1_ratio
@@ -128,13 +142,16 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                         'error'          : result.fun,
                         'alpha'          : best_alpha,
                         'l1_ratio'       : best_l1_ratio,
-                        'score'          : R2(P, f, X, Y),
-                        'scorepredicted' : R2(P, f, Xtest, Ytest),
+                        'score'          : R2(P, f, X, Y, width=options['time_shift']),
+                        'scorepredicted' : R2(P, f, Xtest, Ytest, width=options['time_shift']),
+                        'corr'           : rho(P, f, X, Y)[0,1],
+                        'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
-                        'test_idx'       : test_idx
+                        'test_idx'       : test_idx,
+                        'variance'       : np.var(X, axis=1)
                         }
 
         else:
@@ -147,7 +164,7 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 for i in np.arange(X.shape[0]):
                     neuron = X[i,:]
                     result = minimize(error, np.zeros(2), args = (neuron, Y, 0, 0))
-                    r2 = R2(result.x, f, neuron, Y)
+                    r2 = R2(result.x, f, neuron, Y, width=options['time_shift'])
                     if r2 > best_neuron_R2:
                         best_neuron_idx = i
                         best_neuron_params = result.x
@@ -167,12 +184,15 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                         'alpha'          : 0,
                         'l1_ratio'       : 0,
                         'score'          : best_neuron_R2,
-                        'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest),
+                        'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest, width=options['time_shift']),
+                        'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
+                        'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
-                        'test_idx'       : test_idx
+                        'test_idx'       : test_idx,
+                        'variance'       : np.var(X, axis=1)
                         }
             
             else:
@@ -187,8 +207,8 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 for i in np.arange(X.shape[0]):
                     neuron = X[i,:]
                     neuron_deriv = X_deriv[i,:]
-                    result = minimize(error, np.zeros(2), args = (neuron, Y, neuron_deriv, Y_deriv, 0))
-                    r2 = R2(result.x, f, neuron, Y)
+                    result = minimize(error, np.zeros(2), args = (neuron, Y, neuron_deriv, Y_deriv, 0, 0))
+                    r2 = R2(result.x, f, neuron, Y, width=options['time_shift'])
                     if r2 > best_neuron_R2:
                         best_neuron_idx = i
                         best_neuron_params = result.x
@@ -208,12 +228,15 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                         'alpha'          : 0,
                         'l1_ratio'       : 0,
                         'score'          : best_neuron_R2,
-                        'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest),
+                        'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest, width=options['time_shift']),
+                        'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
+                        'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
-                        'test_idx'       : test_idx
+                        'test_idx'       : test_idx,
+                        'variance'       : np.var(X, axis=1)
                         }
     
     else:
@@ -245,8 +268,11 @@ def optimize_slm(time, Xfull, Yfull, options = None):
         prediction_full[decision_full > 0] = np.dot(Xfull[:,decision_full>0].T, res1['weights']) + res1['intercepts']
         prediction_full[decision_full < 0] = np.dot(Xfull[:,decision_full<0].T, res2['weights']) + res2['intercepts']
 
-        r2_train = 1-np.sum(np.power(Y-prediction_train, 2))/np.sum(np.power(Y-np.mean(Y), 2))
-        r2_test = 1-np.sum(np.power(Ytest-prediction_test, 2))/np.sum(np.power(Ytest-np.mean(Ytest), 2))
+        r2_train = 1-shift_sqdiff(Y, prediction_train, width=options['time_shift'])/shift_sqdiff(Y, np.mean(Y), width=options['time_shift'])
+        r2_test = 1-shift_sqdiff(Y, prediction_test, width=options['time_shift'])/shift_sqdiff(Y, np.mean(Y), width=options['time_shift'])
+        
+        corr_train = np.corrcoef(Y, prediction_train)[0,1]
+        corr_test = np.corrcoef(Y, prediction_test)[0,1]
 
         return {'decision'       : decision_full,
                 'weights_pos'    : res1['weights'],
@@ -260,13 +286,16 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 'l1_ratio_neg'   : res2['l1_ratio'],
                 'score'          : r2_train,
                 'scorepredicted' : r2_test,
+                'corr'           : corr_train,
+                'corrpredicted'  : corr_test,
                 'signal'         : Yfull,
                 'output'         : prediction_full,
                 'res_pos'        : res1,
                 'res_neg'        : res2,
                 'time'           : time,
                 'train_idx'      : train_idx,
-                'test_idx'       : test_idx
+                'test_idx'       : test_idx,
+                'variance'       : np.var(X, axis=1)
                 }
 
 if __name__ == '__main__':
