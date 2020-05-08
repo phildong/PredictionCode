@@ -719,7 +719,7 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
         for lindex, sline in enumerate(lines):
             if sline.strip()[0] == '#':
                 continue
-            line = sline.split(' ')
+            line = sline.strip().split(' ')
             folder = ''.join([pathTemplate, line[0], '_MS'])
             if len(line) == 2: #cut volume indicated
                 datasets[line[0]] = loadData(folder, dataPars, cutVolume=int(line[1]))
