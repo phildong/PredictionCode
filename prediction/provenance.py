@@ -8,6 +8,8 @@ Andrew Leifer
 leifer@princeton.edu
 """
 
+import git
+
 def getStampString():
     """
 

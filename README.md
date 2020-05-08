@@ -11,6 +11,7 @@ numpy==1.11.0
 h5py==2.7.0  
 matplotlib==1.5.1  
 scikit_learn==0.19.1  
+gitpython==2.1.15
 
 ## Getting started
 To reproduce the figures and panels from 'Predicting natural behavior from whole-brain neural dynamics', download the data from the OSF repository. Each dataset is indentified by a strain name and condition eg. AML32_moving and contains two hdf5 files:
