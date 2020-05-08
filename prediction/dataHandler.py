@@ -714,12 +714,17 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
     return: dict of dictionaries with neuron and behavior data
     """
     datasets={}
-    for lindex, line in enumerate(np.loadtxt(dataLog, dtype=str, ndmin = 2)[:nDatasets]):
-        folder = ''.join([pathTemplate, line[0], '_MS'])
-        if len(line) == 2: #cut volume indicated
-            datasets[line[0]] = loadData(folder, dataPars, cutVolume=int(line[1]))
-        else:
-            datasets[line[0]] = loadData(folder, dataPars)
+    with open(dataLog, 'r') as f:
+        lines = f.readlines()
+        for lindex, sline in enumerate(lines):
+            if sline.strip()[0] == '#':
+                continue
+            line = sline.split(' ')
+            folder = ''.join([pathTemplate, line[0], '_MS'])
+            if len(line) == 2: #cut volume indicated
+                datasets[line[0]] = loadData(folder, dataPars, cutVolume=int(line[1]))
+            else:
+                datasets[line[0]] = loadData(folder, dataPars)
 
 
     return datasets
