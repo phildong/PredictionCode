@@ -718,7 +718,7 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
         lines = f.readlines()
         for lindex, sline in enumerate(lines):
             sline = sline.strip()
-            if sline[0] == '#':
+            if not sline or sline[0] == '#':
                 continue
             if '#' in sline:
                 sline = sline[:sline.index('#')]
