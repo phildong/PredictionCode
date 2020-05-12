@@ -26,26 +26,24 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
 
-    for key in filter(lambda x: x[-6:] in ('110803', '105254', '105620', '134800'), keyList):
+    for key in keyList:
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
-        nderiv_pos, nderiv_neg = rectified_derivative(neurons)
-        nderivs = np.vstack((nderiv_pos, nderiv_neg))
+        _, _, nderiv = rectified_derivative(neurons)
 
-        neurons_and_derivs = np.vstack((neurons, nderivs))
+        neurons_and_derivs = np.vstack((neurons, nderiv))
 
         pca = PCA(n_components=3)
         pca.fit(neurons.T)
         neurons_reduced = pca.transform(neurons.T).T
 
-        pcderiv_pos, pcderiv_neg = rectified_derivative(neurons_reduced)
-        pcderivs = np.vstack((pcderiv_pos, pcderiv_neg))
+        _, _, pcderiv = rectified_derivative(neurons_reduced)
 
-        pc_and_derivs = np.vstack((neurons_reduced, pcderivs))
+        pc_and_derivs = np.vstack((neurons_reduced, pcderiv))
 
         print('\tBest Neuron')
         bsn = SLM.optimize_slm(time, neurons, velocity, options = {'best_neuron': True})
@@ -84,5 +82,5 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
                         }
 
 import pickle
-with open('comparison_results_favorite_shifted.dat', 'wb') as handle:
+with open('comparison_results.dat', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
