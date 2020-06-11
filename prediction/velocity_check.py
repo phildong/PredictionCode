@@ -13,8 +13,11 @@ from sklearn.decomposition import PCA
 
 import os
 
-excludeSets = {'BrainScanner20200309_154704'}
-excludeInterval = {''}
+excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
+excludeInterval = {'BrainScanner20200309_145927': [[215, 225]], 
+                   'BrainScanner20200309_151024': [[125, 135], [30, 40]], 
+                   'BrainScanner20200309_153839': [[35, 45], [160, 170]], 
+                   'BrainScanner20200309_162140': [[300, 310], [0, 10]]}
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "velocity_check.pdf"))
 for typ_cond in ['AML32_moving', 'AKS297.51_moving']:
@@ -34,10 +37,19 @@ for typ_cond in ['AML32_moving', 'AKS297.51_moving']:
     keyList = np.sort(dataSets.keys())
 
     for key in keyList:
+        if key in excludeSets:
+            continue
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
         cmsvelocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
+
+        if key in excludeInterval.keys():
+            for interval in excludeInterval[key]:
+                idxs = np.where(np.logical_or(time < interval[0], time > interval[1]))[0]
+                time = time[idxs]
+                velocity = velocity[idxs]
+                cmsvelocity = cmsvelocity[idxs]
 
         fig = plt.figure(constrained_layout = True, figsize=(10,20))
         gs = gridspec.GridSpec(4, 2, figure=fig, width_ratios=(1, 1))
