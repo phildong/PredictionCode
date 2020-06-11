@@ -9,6 +9,12 @@ from sklearn.decomposition import PCA
 
 import os
 
+excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
+excludeInterval = {'BrainScanner20200309_145927': [[215, 225]], 
+                   'BrainScanner20200309_151024': [[125, 135], [30, 40]], 
+                   'BrainScanner20200309_153839': [[35, 45], [160, 170]], 
+                   'BrainScanner20200309_162140': [[300, 310], [0, 10]]}
+
 results = {}
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
@@ -27,11 +33,21 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     keyList = np.sort(dataSets.keys())
 
     for key in keyList:
+        if key in excludeSets:
+            continue
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
+
+        if key in excludeInterval.keys():
+            for interval in excludeInterval[key]:
+                idxs = np.where(np.logical_or(time < interval[0], time > interval[1]))[0]
+                time = time[idxs]
+                neurons = neurons[:,idxs]
+                velocity = velocity[idxs]
+                curvature = curvature[idxs]
 
         _, _, nderiv = rectified_derivative(neurons)
 

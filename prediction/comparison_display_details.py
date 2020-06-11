@@ -25,7 +25,7 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results_favorite_shifted.dat', 'rb') as handle:
+with open('comparison_results.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
