@@ -172,13 +172,25 @@ def find_phase_pos_and_neg(pospeaks, negpeaks, time):
                                         # that we can interpolate over later)
 
 
-    # Let's deal with some edge effects.
+    # Let's deal with some additioanl subtelties.
     # We tack on a zero because we skip one point when we take the diff
-    # and we add an offset of 2pi to the whole thing so that when we extropolate before the first peak or trough
-    # we don't endup with negative values. this is ok because we take the modulo later
-    cum_phase = np.append(0, cum_phase) + 2 * np.pi
+    cum_phase = np.append(0, cum_phase)
 
 
+    #Then we want to set the the first positive peak to have phase of zero
+    # so we subtract off phase value at the first positive peak  (depending on whether a positive or negative peak came first,
+    # this could have been assigned a pi value)
+    cum_phase = cum_phase - cum_phase[np.where(updown == 1)[0][0]]
+
+
+
+    # Then we need to deal with teh fact that the recording doesn't necessarily start with a peak,
+    # So we will be extrapolating whatever trend back towards zero as we go back in time from the first peak
+    # We would prefer that the phase never goes negative, so we will add some additional factors of 2 pi
+    cum_phase = cum_phase + 4 * np.pi
+    # this is ok because we take the modulo later
+
+    # Now we interpolate and extroplate to assign a phase value to every point in time
     from scipy import interpolate
     f = interpolate.interp1d(time[peak_phase_indices], cum_phase, fill_value="extrapolate")
 
@@ -190,9 +202,9 @@ def find_phase_pos_and_neg(pospeaks, negpeaks, time):
 
 
 
-phase = find_phase(peaks, time)
+pos_phase = find_phase(peaks, time)
 neg_phase = find_phase(neg_peaks, time)
-bi_phase = find_phase_pos_and_neg(peaks, neg_peaks, time)
+phase = find_phase_pos_and_neg(peaks, neg_peaks, time)
 
 
 #functions to fit a cosine wave
@@ -338,14 +350,18 @@ def check_cosine_tuning(phase, activity, pval=False):
 
 r2_phase = np.zeros(numNeurons)
 r2_negphase = r2_phase.copy()
+r2_posphase = r2_phase.copy()
 rho2_phase = r2_phase.copy()
 rho2_negphase = r2_phase.copy()
+rho2_posphase = r2_phase.copy()
 p_phase = r2_phase.copy()
 p_negphase = r2_phase.copy()
+p_posphase = r2_phase.copy()
 
 
 phi = np.zeros(numNeurons)
 phi_neg = np.zeros(numNeurons)
+phi_pos = np.zeros(numNeurons)
 
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
@@ -353,10 +369,11 @@ for neuron in np.arange(numNeurons):
     fig = plt.figure(constrained_layout=True, figsize=[22, 10])
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
-    gs = gridspec.GridSpec(ncols=3, nrows=3, figure=fig)
+    gs = gridspec.GridSpec(ncols=4, nrows=3, figure=fig)
     ax0 = fig.add_subplot(gs[0, 0])
     ax1 = fig.add_subplot(gs[0, 1])
-    ax2 = fig.add_subplot(gs[0, 2])
+    ax15 = fig.add_subplot(gs[0, 2])
+    ax2 = fig.add_subplot(gs[0, 3])
     ax3 = fig.add_subplot(gs[1, :])
     ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
 
@@ -374,6 +391,13 @@ for neuron in np.arange(numNeurons):
     ax1.set_ylabel('F (motion rejected)')
     ax1.legend()
 
+    ax15.plot(pos_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
+    A, phi_pos[neuron], c, p_posphase[neuron], r2_posphase[neuron], rho2_posphase[neuron] = check_cosine_tuning(pos_phase, activity[neuron, :], pval=False)
+    ax15.plot(theta, cos_wave(theta, A, phi_pos[neuron], c), label="r2=%.2f, rho2=%.2f" % (r2_posphase[neuron], rho2_posphase[neuron]))
+    ax15.set_xlabel('positive Peak Phase (radians)')
+    ax15.set_ylabel('F (motion rejected)')
+    ax15.legend()
+
     ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
     A, phi_neg[neuron], c, p_negphase[neuron], r2_negphase[neuron], rho2_negphase[neuron] = check_cosine_tuning(neg_phase, activity[neuron, :], pval=False)
     ax2.plot(theta, cos_wave(theta, A, phi_neg[neuron], c), label="r2=%.2f, rho2=%.2f" % (r2_negphase[neuron], rho2_negphase[neuron]))
@@ -381,16 +405,16 @@ for neuron in np.arange(numNeurons):
     ax2.set_ylabel('F (motion rejected)')
     ax2.legend()
 
-    ax3.plot(time, activity[neuron, :])
+    ax3.plot(time, activity[neuron, :], rasterized=True)
     ax3.set_xlabel('Time (s)')
     ax3.set_ylabel('F (motion rejected)')
     ax3.set_xlim(time[np.round(activity.shape[1] / 4)], time[3 * np.round(activity.shape[1] / 4)])
 
-    ax4.plot(time, head_angle)
-    ax4.plot(time[peaks], head_angle[peaks], "x", markersize=12, label="Positive peak")
-    ax4.plot(time[neg_peaks], head_angle[neg_peaks], "o", markersize=12, label="Negative peak")
-    ax4.plot(time, phase, label="Phase from positive peaks")
-    ax4.plot(time, bi_phase, label="Phase from pos and neg peaks")
+    ax4.plot(time, head_angle, rasterized=True)
+    ax4.plot(time[peaks], head_angle[peaks], "x", markersize=12, label="Positive peak", rasterized=True)
+    ax4.plot(time[neg_peaks], head_angle[neg_peaks], "o", markersize=12, label="Negative peak", rasterized=True)
+    ax4.plot(time, pos_phase, label="Phase from positive peaks", rasterized=True)
+    ax4.plot(time, phase, label="Phase from pos and neg peaks", rasterized=True)
     ax4.axhline(color='k')
     ax4.set_xlabel('Time (s)')
     ax4.set_ylabel('Head Bend (radians)')
@@ -405,12 +429,12 @@ for neuron in np.arange(numNeurons):
 # Plot r2 as a function of phi for calcualting phase based on the positive peak
 fig_r2_phi = plt.figure(figsize=[24, 9])
 fig_r2_phi.suptitle(key + ' ' + idn)
-gs = gridspec.GridSpec(ncols=2, nrows=1, figure=fig_r2_phi)
+gs = gridspec.GridSpec(ncols=3, nrows=1, figure=fig_r2_phi)
 
-max_r2 = np.max(np.array([rho2_phase, rho2_negphase]).flatten())
+max_r2 = np.max(np.array([rho2_phase, rho2_negphase, rho2_posphase]).flatten())
 
 ax_r21 = fig_r2_phi.add_subplot(gs[0, 0])
-ax_r21.plot(phi, r2_phase, 'o', label="r2")
+ax_r21.plot(phi, r2_phase, 'o', label="r2"),
 ax_r21.plot(phi, rho2_phase, '*', label="rho2")
 ax_r21.set_title('Cosine Wave Goodness of Fit')
 ax_r21.set_xlabel('Head Bend Phase')
@@ -420,7 +444,18 @@ for i in np.arange(len(rho2_phase)):
     ax_r21.annotate(i, (phi[i], rho2_phase[i]))
 ax_r21.legend()
 
-ax_r22 = fig_r2_phi.add_subplot(gs[0, 1])
+ax_r23 = fig_r2_phi.add_subplot(gs[0, 1])
+ax_r23.plot(phi_pos, r2_posphase, 'o', label="r2  (phase to negative headbend)")
+ax_r23.plot(phi_pos, rho2_posphase, '*', label="rho2  (phase to negative headbend)")
+ax_r23.set_title('Cosine Wave Goodness of Fit, to phase calculated on negative bends')
+ax_r23.set_xlabel('Head Bend Phase (calculated on positive bends)')
+ax_r23.set_ylabel('coefficient')
+ax_r23.set_ylim(0, max_r2*1.1)
+for i in np.arange(len(rho2_posphase)):
+    ax_r23.annotate(i, (phi_pos[i], rho2_posphase[i]))
+ax_r23.legend()
+
+ax_r22 = fig_r2_phi.add_subplot(gs[0, 2])
 ax_r22.plot(phi_neg, r2_negphase, 'o', label="r2  (phase to negative headbend)")
 ax_r22.plot(phi_neg, rho2_negphase, '*', label="rho2  (phase to negative headbend)")
 ax_r22.set_title('Cosine Wave Goodness of Fit, to phase calculated on negative bends')
@@ -430,6 +465,8 @@ ax_r22.set_ylim(0, max_r2*1.1)
 for i in np.arange(len(rho2_negphase)):
     ax_r22.annotate(i, (phi_neg[i], rho2_negphase[i]))
 ax_r22.legend()
+
+
 
 fig_pval_rho = plt.figure(figsize=[24, 9])
 fig_pval_rho.suptitle(key + ' ' + idn)
