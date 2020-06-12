@@ -13,8 +13,6 @@ import prediction.dataHandler as dh
 print("Loading data..")
 
 
-print("Loading data..")
-
 codePath = userTracker.codePath()
 outputFolder = os.path.join(codePath,'figures/Debugging')
 
@@ -309,6 +307,21 @@ def nancorrcoef(A, B):
     return ma.corrcoef(a[msk], b[msk])
 
 
+
+
+def amplitude_of_fit_to_shuffle(y, seed):
+    # Give the random number  generator a unique seed
+    np.random.seed(seed)
+
+    # roll the matrix a random amount to shuffle
+    lag = np.random.randint(0, len(y))
+    shuff_y = np.roll(y, lag)  # Note we are using the variablye y from the parent scope
+
+    # perfurm the fit
+    popt, pcov = fit_cos_wave(shuff_y, phase)
+    a = popt[0]  # get the amplitude
+    return a
+
 import numpy.matlib
 from inspectPerformance import calc_R2
 def check_cosine_tuning(phase, activity, pval=False):
@@ -327,25 +340,34 @@ def check_cosine_tuning(phase, activity, pval=False):
     r2 = calc_R2(activity, cos_wave(phase, A, phi, c))
     rho2 = nancorrcoef(activity, cos_wave(phase, A, phi, c))[0, 1] ** 2
 
+    parallelize = False
+    print("Calculating shuffle based p-value")
+    import time
+    t = time.time()
+    y = np.copy(activity)
+    numShuffles = 1000
 
     if pval:
-        #Shuffle the activity by adding an arbitrary lag in time between neural activity and behavior
-        print("Calculating shuffle based p-value")
-        y = np.copy(activity)
-        numShuffles = 1000
-        shuff_y = np.matlib.repmat(y, numShuffles, 1)
-        roll = np.random.randint(len(y), size=numShuffles)
-        shuff_y = strided_indexing_roll(shuff_y, roll)
-        shuff_y = shuff_y.T
+        if parallelize:
+            import multiprocessing as mp
+            pool = mp.Pool(processes=8)
+            a_shuff = [pool.apply(amplitude_of_fit_to_shuffle, args=(y, x)) for x in np.arange(numShuffles)]
 
-        a_shuff =np.zeros(numShuffles)
-        for each in np.arange(numShuffles):
-                [a_shuff[each], _, _], _ = fit_cos_wave(shuff_y[:, each], phase)
+        else:
+            #Shuffle the activity by adding an arbitrary lag in time between neural activity and behavior
+            shuff_y = np.matlib.repmat(y, numShuffles, 1)
+            roll = np.random.randint(len(y), size=numShuffles)
+            shuff_y = strided_indexing_roll(shuff_y, roll)
+            shuff_y = shuff_y.T
+
+            a_shuff =np.zeros(numShuffles)
+            for each in np.arange(numShuffles):
+                    [a_shuff[each], _, _], _ = fit_cos_wave(shuff_y[:, each], phase)
+
         amplitudes_greater_than_a_greater_then_a = len(np.array(np.where(np.abs(a_shuff) >= np.abs(A))).ravel())
         p = np.true_divide(amplitudes_greater_than_a_greater_then_a, numShuffles)
-        #print("p-value = %0.3f" % p)
 
-
+        print("Shuffle complete p-value = %0.3f, elapsed time %d s" % (p, time.time() - t ))
     return A, phi, c, p, r2, rho2
 
 r2_phase = np.zeros(numNeurons)
@@ -385,21 +407,21 @@ for neuron in np.arange(numNeurons):
     theta = np.arange(0,1,.01)*2*np.pi
 
     ax1.plot(phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi[neuron], c, p_phase[neuron], r2_phase[neuron], rho2_phase[neuron] = check_cosine_tuning(phase, activity[neuron, :], pval=False)
+    A, phi[neuron], c, p_phase[neuron], r2_phase[neuron], rho2_phase[neuron] = check_cosine_tuning(phase, activity[neuron, :], pval=True)
     ax1.plot(theta, cos_wave(theta, A, phi[neuron], c), label="r2=%.2f, rho2=%.2f" % (r2_phase[neuron], rho2_phase[neuron]))
     ax1.set_xlabel('Phase (radians)')
     ax1.set_ylabel('F (motion rejected)')
     ax1.legend()
 
     ax15.plot(pos_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi_pos[neuron], c, p_posphase[neuron], r2_posphase[neuron], rho2_posphase[neuron] = check_cosine_tuning(pos_phase, activity[neuron, :], pval=False)
+    A, phi_pos[neuron], c, p_posphase[neuron], r2_posphase[neuron], rho2_posphase[neuron] = check_cosine_tuning(pos_phase, activity[neuron, :], pval=True)
     ax15.plot(theta, cos_wave(theta, A, phi_pos[neuron], c), label="r2=%.2f, rho2=%.2f" % (r2_posphase[neuron], rho2_posphase[neuron]))
     ax15.set_xlabel('positive Peak Phase (radians)')
     ax15.set_ylabel('F (motion rejected)')
     ax15.legend()
 
     ax2.plot(neg_phase, activity[neuron , :], 'o', markersize=0.7, rasterized=True)
-    A, phi_neg[neuron], c, p_negphase[neuron], r2_negphase[neuron], rho2_negphase[neuron] = check_cosine_tuning(neg_phase, activity[neuron, :], pval=False)
+    A, phi_neg[neuron], c, p_negphase[neuron], r2_negphase[neuron], rho2_negphase[neuron] = check_cosine_tuning(neg_phase, activity[neuron, :], pval=True)
     ax2.plot(theta, cos_wave(theta, A, phi_neg[neuron], c), label="r2=%.2f, rho2=%.2f" % (r2_negphase[neuron], rho2_negphase[neuron]))
     ax2.set_xlabel('Negative Peak Phase (radians)')
     ax2.set_ylabel('F (motion rejected)')
@@ -431,7 +453,7 @@ fig_r2_phi = plt.figure(figsize=[24, 9])
 fig_r2_phi.suptitle(key + ' ' + idn)
 gs = gridspec.GridSpec(ncols=3, nrows=1, figure=fig_r2_phi)
 
-max_r2 = np.max(np.array([rho2_phase, rho2_negphase, rho2_posphase]).flatten())
+max_rho2 = np.max(np.array([rho2_phase, rho2_negphase, rho2_posphase]).flatten())
 
 ax_r21 = fig_r2_phi.add_subplot(gs[0, 0])
 ax_r21.plot(phi, r2_phase, 'o', label="r2"),
@@ -439,7 +461,7 @@ ax_r21.plot(phi, rho2_phase, '*', label="rho2")
 ax_r21.set_title('Cosine Wave Goodness of Fit')
 ax_r21.set_xlabel('Head Bend Phase')
 ax_r21.set_ylabel('coefficient')
-ax_r21.set_ylim(0, max_r2*1.1)
+ax_r21.set_ylim(0, max_rho2 * 1.1)
 for i in np.arange(len(rho2_phase)):
     ax_r21.annotate(i, (phi[i], rho2_phase[i]))
 ax_r21.legend()
@@ -450,7 +472,7 @@ ax_r23.plot(phi_pos, rho2_posphase, '*', label="rho2  (phase to negative headben
 ax_r23.set_title('Cosine Wave Goodness of Fit, to phase calculated on negative bends')
 ax_r23.set_xlabel('Head Bend Phase (calculated on positive bends)')
 ax_r23.set_ylabel('coefficient')
-ax_r23.set_ylim(0, max_r2*1.1)
+ax_r23.set_ylim(0, max_rho2 * 1.1)
 for i in np.arange(len(rho2_posphase)):
     ax_r23.annotate(i, (phi_pos[i], rho2_posphase[i]))
 ax_r23.legend()
@@ -461,7 +483,7 @@ ax_r22.plot(phi_neg, rho2_negphase, '*', label="rho2  (phase to negative headben
 ax_r22.set_title('Cosine Wave Goodness of Fit, to phase calculated on negative bends')
 ax_r22.set_xlabel('Head Bend Phase (calculated on negative bends)')
 ax_r22.set_ylabel('coefficient')
-ax_r22.set_ylim(0, max_r2*1.1)
+ax_r22.set_ylim(0, max_rho2 * 1.1)
 for i in np.arange(len(rho2_negphase)):
     ax_r22.annotate(i, (phi_neg[i], rho2_negphase[i]))
 ax_r22.legend()
@@ -470,23 +492,33 @@ ax_r22.legend()
 
 fig_pval_rho = plt.figure(figsize=[24, 9])
 fig_pval_rho.suptitle(key + ' ' + idn)
-gs = gridspec.GridSpec(ncols=2, nrows=1, figure=fig_pval_rho)
+gs = gridspec.GridSpec(ncols=3, nrows=1, figure=fig_pval_rho)
 
 ax_pval_rho = fig_pval_rho.add_subplot(gs[0, 0])
 ax_pval_rho.plot(p_phase, rho2_phase, '*')
 ax_pval_rho.set_title('Neurons fit and significance')
 ax_pval_rho.set_xlabel('p-value (fraction of time-lag shuffles with cosine fit of greater amplitude')
-ax_pval_rho.set_ylabel('rho^2 (correlation coefficient)')
-ax_pval_rho.set_ylim(0, max_r2*1.1)
+ax_pval_rho.set_ylabel('rho^2 (correslation coefficient)')
+ax_pval_rho.set_ylim(0, max_rho2 * 1.1)
 for i in np.arange(len(rho2_phase)):
-    ax_pval_rho.annotate(i, (p_negphase[i], rho2_phase[i]))
+    ax_pval_rho.annotate(i, (p_phase[i], rho2_phase[i]))
 
-ax2_pval_rho = fig_pval_rho.add_subplot(gs[0, 1])
+
+ax1_pval_rho = fig_pval_rho.add_subplot(gs[0, 1])
+ax1_pval_rho.plot(p_posphase, rho2_posphase, '*')
+ax1_pval_rho.set_title('Neurons fit and significance for positive phase')
+ax1_pval_rho.set_xlabel('p-value (fraction of time-lag shuffles with cosine fit of greater amplitude')
+ax1_pval_rho.set_ylabel('rho^2 (correlation coefficient)')
+ax1_pval_rho.set_ylim(0, max_rho2 * 1.1)
+for i in np.arange(len(rho2_posphase)):
+    ax1_pval_rho.annotate(i, (p_posphase[i], rho2_posphase[i]))
+
+ax2_pval_rho = fig_pval_rho.add_subplot(gs[0, 2])
 ax2_pval_rho.plot(p_negphase, rho2_negphase, '*')
 ax2_pval_rho.set_title('Neurons fit and significance for negative phase')
 ax2_pval_rho.set_xlabel('p-value (fraction of time-lag shuffles with cosine fit of greater amplitude')
 ax2_pval_rho.set_ylabel('rho^2 (correlation coefficient)')
-ax2_pval_rho.set_ylim(0, max_r2*1.1)
+ax2_pval_rho.set_ylim(0, max_rho2 * 1.1)
 for i in np.arange(len(rho2_negphase)):
     ax2_pval_rho.annotate(i, (p_negphase[i], rho2_negphase[i]))
 prov.stamp(ax2_pval_rho, .55, .15)
