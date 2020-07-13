@@ -1,5 +1,4 @@
 import SLM
-import MARS
 from Classifier import rectified_derivative
 import userTracker
 import dataHandler as dh
@@ -7,13 +6,17 @@ import dataHandler as dh
 import numpy as np
 from sklearn.decomposition import PCA
 
+from scipy.ndimage import gaussian_filter1d
+
 import os
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
-excludeInterval = {'BrainScanner20200309_145927': [[215, 225]], 
+excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]], 
                    'BrainScanner20200309_151024': [[125, 135], [30, 40]], 
                    'BrainScanner20200309_153839': [[35, 45], [160, 170]], 
-                   'BrainScanner20200309_162140': [[300, 310], [0, 10]]}
+                   'BrainScanner20200309_162140': [[300, 310], [0, 10]],
+                   'BrainScanner20200130_105254': [[65, 75]],
+                   'BrainScanner20200310_141211': [[200, 210], [240, 250]]}
 
 results = {}
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
@@ -38,7 +41,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-        velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
+        velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
 
         if key in excludeInterval.keys():
@@ -47,6 +50,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
                 time = time[idxs]
                 neurons = neurons[:,idxs]
                 velocity = velocity[idxs]
+                # cmsvelocity = cmsvelocity[idxs]
                 curvature = curvature[idxs]
 
         _, _, nderiv = rectified_derivative(neurons)
@@ -61,16 +65,17 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
 
         pc_and_derivs = np.vstack((neurons_reduced, pcderiv))
 
-        print('\tBest Neuron')
+        print('\tCenterline Velocity')
+        print('\t\tBest Neuron')
         bsn = SLM.optimize_slm(time, neurons, velocity, options = {'best_neuron': True})
         bsn_deriv = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'best_neuron': True})
         bsn_deriv_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'best_neuron': True, 'derivative_penalty': True})
 
-        print('\tBest PC')
+        print('\t\tBest PC')
         pc = SLM.optimize_slm(time, neurons_reduced, velocity, options = {'best_neuron': True})
         pc_deriv = SLM.optimize_slm(time, pc_and_derivs, velocity, options = {'best_neuron': True})
 
-        print('\tLinear Model')
+        print('\t\tLinear Model')
         # slm = SLM.optimize_slm(time, neurons, velocity)
         # slm_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity)
         slm_with_derivs_acc = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {'derivative_penalty': True})
@@ -97,6 +102,37 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
                         # 'mars': mars
                         }
 
+        # print('\tCMS Velocity')
+        # print('\t\tBest Neuron')
+        # bsn = SLM.optimize_slm(time, neurons, cmsvelocity, options = {'best_neuron': True})
+        # bsn_deriv = SLM.optimize_slm(time, neurons_and_derivs, cmsvelocity, options = {'best_neuron': True})
+        # bsn_deriv_acc = SLM.optimize_slm(time, neurons_and_derivs, cmsvelocity, options = {'best_neuron': True, 'derivative_penalty': True})
+
+        # print('\t\tBest PC')
+        # pc = SLM.optimize_slm(time, neurons_reduced, cmsvelocity, options = {'best_neuron': True})
+        # pc_deriv = SLM.optimize_slm(time, pc_and_derivs, cmsvelocity, options = {'best_neuron': True})
+
+        # print('\t\tLinear Model')
+        # # slm = SLM.optimize_slm(time, neurons, velocity)
+        # # slm_with_derivs = SLM.optimize_slm(time, neurons_and_derivs, velocity)
+        # slm_with_derivs_acc = SLM.optimize_slm(time, neurons_and_derivs, cmsvelocity, options = {'derivative_penalty': True})
+
+        # cmsresults[key] = { 'bsn': bsn, 
+        #                     'bsn_deriv': bsn_deriv, 
+        #                     'bsn_deriv_acc': bsn_deriv_acc,
+        #                     'pc': pc, 
+        #                     'pc_deriv': pc_deriv, 
+        #                     # 'slm': slm, 
+        #                     # 'slm_with_derivs': slm_with_derivs, 
+        #                     'slm_with_derivs_acc': slm_with_derivs_acc, 
+        #                     # 'slm_tree': slm_tree, 
+        #                     # 'slm_tree_with_derivs': slm_tree_with_derivs, 
+        #                     # 'slm_tree_with_derivs_acc': slm_tree_with_derivs_acc,
+        #                     # 'mars': mars
+        #                     }
+
 import pickle
-with open('comparison_results.dat', 'wb') as handle:
+with open('comparison_results_aml18.dat', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('comparison_results_cms_smooth.dat', 'wb') as handle:
+#     pickle.dump(cmsresults, handle, protocol=pickle.HIGHEST_PROTOCOL)

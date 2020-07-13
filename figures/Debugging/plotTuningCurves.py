@@ -117,6 +117,15 @@ def strided_indexing_roll(a, r):
     return viewW(a_ext,(1,n))[np.arange(len(r)), (n-r)%n,0]
 
 
+import numpy.ma as ma
+def nancorrcoef(A, B):
+    a = ma.masked_invalid(A)
+    b = ma.masked_invalid(B)
+
+    msk = (~a.mask & ~b.mask)
+
+    return ma.corrcoef(a[msk], b[msk])
+
 import numpy.matlib
 from inspectPerformance import calc_R2
 def fit_line(behavior, activity, ignore_0_activity=False, range=None, pval=False):
@@ -144,7 +153,7 @@ def fit_line(behavior, activity, ignore_0_activity=False, range=None, pval=False
     p = None
 
     r2 = calc_R2(y, m * behavior[valid] + c)
-
+    rho2 = nancorrcoef(y, m * behavior[valid] + c)[0, 1] ** 2
 
     if pval:
         numShuffles = 5000
@@ -160,7 +169,7 @@ def fit_line(behavior, activity, ignore_0_activity=False, range=None, pval=False
 
 
 
-    return m, c, p, r2
+    return m, c, p, r2, rho2
 
 
 m_vel = np.zeros((1, numNeurons)).flatten()
@@ -200,11 +209,21 @@ r2_p_vel = np.copy(p_vel)
 r2_n_vel = np.copy(p_vel)
 r2_dfdt_vel = np.copy(p_vel) #  df/dt
 
+rho2_vel = np.copy(p_vel)
+rho2_p_vel = np.copy(p_vel)
+rho2_n_vel = np.copy(p_vel)
+rho2_dfdt_vel = np.copy(p_vel) #  df/dt
+
+
 r2_curv = np.copy(p_vel)
 r2_p_curv = np.copy(p_vel)
 r2_n_curv = np.copy(p_vel)
 r2_dfdt_curv = np.copy(p_vel) # df/dt
 
+rho2_curv = np.copy(p_vel)
+rho2_p_curv = np.copy(p_vel)
+rho2_n_curv = np.copy(p_vel)
+rho2_dfdt_curv = np.copy(p_vel) # df/dt
 
 #Loop through each neuron
 for neuron in np.arange(numNeurons):
@@ -226,50 +245,50 @@ for neuron in np.arange(numNeurons):
 
     #Actually Plot
     ax[0].plot(velocity, activity[neuron, :], 'o', markersize=0.7, rasterized=True)
-    m_vel[neuron], c_vel[neuron], p_vel[neuron], r2_vel[neuron] = fit_line(velocity, activity[neuron, :], pval=True)
-    ax[0].plot(velocity, m_vel[neuron]*velocity + c_vel[neuron], 'r', label='p=%.3f, r2=%.2f' % (p_vel[neuron], r2_vel[neuron]), rasterized=True)
-    m, c, p, r2 =fit_line(velocity, activity[neuron, :], range='Positive', pval=True)
+    m_vel[neuron], c_vel[neuron], p_vel[neuron], r2_vel[neuron], rho2_vel[neuron] = fit_line(velocity, activity[neuron, :], pval=True)
+    ax[0].plot(velocity, m_vel[neuron]*velocity + c_vel[neuron], 'r', label='p=%.3f, rho2=%.2f' % (p_vel[neuron], rho2_vel[neuron]), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(velocity, activity[neuron, :], range='Positive', pval=True)
     ax[0].plot(velocity[np.where(velocity>0)], m*velocity[np.where(velocity > 0)] + c,
-              color='orange', label='(x>0)  p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
-    m, c, p, r2 =fit_line(velocity, activity[neuron, :], range='Negative', pval=True)
+              color='orange', label='(x>0)  p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(velocity, activity[neuron, :], range='Negative', pval=True)
     ax[0].plot(velocity[np.where(velocity < 0)], m*velocity[np.where(velocity < 0)] + c,
-              color='orange', label='(x<0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
+              color='orange', label='(x<0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
     ax[0].legend()
 
 
     #do the full derivative (not rectified)
     ax1d.plot(velocity, deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
-    m_dfdt_vel[neuron], c_dfdt_vel[neuron], p_dfdt_vel[neuron], r2_dfdt_vel[neuron] = fit_line(velocity, deriv[neuron, :], pval=True)
-    ax1d.plot(velocity, m_dfdt_vel[neuron]*velocity + c_dfdt_vel[neuron], 'r', label='p=%.3f, r2=%.2f' % (p_dfdt_vel[neuron], r2_dfdt_vel[neuron]), rasterized=True)
-    m, c, p, r2 =fit_line(velocity, deriv[neuron, :], range='Positive', pval=True)
+    m_dfdt_vel[neuron], c_dfdt_vel[neuron], p_dfdt_vel[neuron], r2_dfdt_vel[neuron], rho2_dfdt_vel[neuron] = fit_line(velocity, deriv[neuron, :], pval=True)
+    ax1d.plot(velocity, m_dfdt_vel[neuron]*velocity + c_dfdt_vel[neuron], 'r', label='p=%.3f, rho2=%.2f' % (p_dfdt_vel[neuron], rho2_dfdt_vel[neuron]), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(velocity, deriv[neuron, :], range='Positive', pval=True)
     ax1d.plot(velocity[np.where(velocity>0)], m*velocity[np.where(velocity>0)] + c,
-              color='orange', label='(x>0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
-    m, c, p, r2 =fit_line(velocity, deriv[neuron, :], range='Negative', pval=True)
+              color='orange', label='(x>0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(velocity, deriv[neuron, :], range='Negative', pval=True)
     ax1d.plot(velocity[np.where(velocity < 0)], m*velocity[np.where(velocity < 0)] + c,
-              color='orange', label='(x<0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
+              color='orange', label='(x<0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
     ax1d.legend()
 
     ax[1].plot(curv, activity[neuron, :], 'o', markersize=0.7, rasterized=True)
-    m_curv[neuron], c_curv[neuron], p_curv[neuron], r2_curv[neuron] = fit_line(curv, activity[neuron, :], pval=True)
-    ax[1].plot(curv, m_curv[neuron]*curv + c_curv[neuron], 'r', label='p=%.3f, r2=%.2f' % (p_curv[neuron], r2_curv[neuron]), rasterized=True)
-    m, c, p, r2 =fit_line(curv, activity[neuron, :], range='Positive', pval=True)
+    m_curv[neuron], c_curv[neuron], p_curv[neuron], r2_curv[neuron], rho2_curv[neuron] = fit_line(curv, activity[neuron, :], pval=True)
+    ax[1].plot(curv, m_curv[neuron]*curv + c_curv[neuron], 'r', label='p=%.3f, rho2=%.2f' % (p_curv[neuron], rho2_curv[neuron]), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(curv, activity[neuron, :], range='Positive', pval=True)
     ax[1].plot(curv[np.where(curv>0)], m*curv[np.where(curv > 0)] + c,
-              color='orange', label='(x>0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
-    m, c, p, r2 =fit_line(curv, activity[neuron, :], range='Negative', pval=True)
+              color='orange', label='(x>0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
+    m, c, p, r2, rho2 =fit_line(curv, activity[neuron, :], range='Negative', pval=True)
     ax[1].plot(curv[np.where(curv < 0)], m*curv[np.where(curv < 0)] + c,
-              color='orange', label='(x<0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
+              color='orange', label='(x<0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
     ax[1].legend()
 
 
     ax2d.plot(curv,  deriv[neuron, :], 'o', markersize=0.7, rasterized=True)
-    m_dfdt_curv[neuron], c_dfdt_curv[neuron], p_dfdt_curv[neuron], r2_dfdt_curv[neuron] = fit_line(curv, deriv[neuron, :], pval=True)
-    ax2d.plot(curv, m_dfdt_curv[neuron]*velocity + c_dfdt_curv[neuron], 'r', label='p=%.3f, r2=%.2f' % (p_dfdt_curv[neuron], r2_dfdt_curv[neuron]), rasterized=True)
-    m, c, p, r2 = fit_line(curv, deriv[neuron, :], range='Positive', pval=True)
+    m_dfdt_curv[neuron], c_dfdt_curv[neuron], p_dfdt_curv[neuron], r2_dfdt_curv[neuron], rho2_dfdt_curv[neuron] = fit_line(curv, deriv[neuron, :], pval=True)
+    ax2d.plot(curv, m_dfdt_curv[neuron]*velocity + c_dfdt_curv[neuron], 'r', label='p=%.3f, rho2=%.2f' % (p_dfdt_curv[neuron], rho2_dfdt_curv[neuron]), rasterized=True)
+    m, c, p, r2, rho2 = fit_line(curv, deriv[neuron, :], range='Positive', pval=True)
     ax2d.plot(curv[np.where(curv > 0)], m * curv[np.where(curv > 0)] + c,
-               color='orange', label='(x>0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
-    m, c, p, r2 = fit_line(curv, deriv[neuron, :], range='Negative', pval=True)
+               color='orange', label='(x>0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
+    m, c, p, r2, rho2 = fit_line(curv, deriv[neuron, :], range='Negative', pval=True)
     ax2d.plot(curv[np.where(curv < 0)], m * curv[np.where(curv < 0)] + c,
-               color='orange', label='(x<0) p=%.3f, r2=%.2f' % (p, r2), rasterized=True)
+               color='orange', label='(x<0) p=%.3f, rho2=%.2f' % (p, rho2), rasterized=True)
     ax2d.legend()
 
 
@@ -495,76 +514,45 @@ vel_fig2.tight_layout()
 
 
 
-##### Plot R2 and p-values together (STILL VELOCITY)
+##### Plot rho2 and p-values together (STILL VELOCITY)
 ####
 ###
-# but does the comparison for the overall velocity, as well as the rectified derivitive velocities.
+# but do the comparison for the overall velocity
 vel_fig3 = plt.figure(figsize=[24, 9])
 vel_fig3.suptitle(key + ' ' + idn )
-gs3 = gridspec.GridSpec(ncols=4, nrows=1, figure=vel_fig3)
+gs3 = gridspec.GridSpec(ncols=2, nrows=1, figure=vel_fig3)
 
-max_r2 = np.max(np.array([r2_vel, r2_n_vel, r2_p_vel, r2_dfdt_vel]).flatten())
+max_rho2 = np.max(np.array([rho2_vel, rho2_n_vel, rho2_p_vel, rho2_dfdt_vel]).flatten())
 
 vax = vel_fig3.add_subplot(gs3[0, 0])
-vax.plot(p_vel[np.where(m_vel > 0)], r2_vel[np.where(m_vel > 0)], 'bo', label="positive slope")
-vax.plot(p_vel[np.where(m_vel <= 0)], r2_vel[np.where(m_vel <= 0)], 'ro', label="negative slope")
+vax.plot(p_vel[np.where(m_vel > 0)], rho2_vel[np.where(m_vel > 0)], 'bo', label="positive slope")
+vax.plot(p_vel[np.where(m_vel <= 0)], rho2_vel[np.where(m_vel <= 0)], 'ro', label="negative slope")
 vax.set_title('slope to velocity')
 vax.set_xlabel('p-value')
-vax.set_ylabel('coefficient of determination R2')
+vax.set_ylabel('correlation coefficient rho2')
 vax.set_xscale('log')
-vax.set_ylim(0, max_r2)
+vax.set_ylim(0, max_rho2*1.2)
 vax.axvline(0.05, linestyle='--', color='r')
 vax.axvline(0.01, linestyle='-.', color='orange')
 vax.axhline(0.15, linestyle='--', color='magenta')
 for i in np.arange(len(p_vel)):
-    vax.annotate(i, (p_vel[i], r2_vel[i]))
+    vax.annotate(i, (p_vel[i], rho2_vel[i]))
 vax.legend()
-
 
 
 vax = vel_fig3.add_subplot(gs3[0, 1])
-vax.plot(p_p_vel[np.where(m_p_vel > 0)], r2_p_vel[np.where(m_p_vel > 0)], 'bo', label="positive slope")
-vax.plot(p_p_vel[np.where(m_p_vel <= 0)], r2_p_vel[np.where(m_p_vel <= 0)], 'ro', label="negative slope")
-vax.set_title('slope to positive rectified df/dt')
-vax.set_xlabel('p-value')
-vax.set_ylabel('coefficient of determination R2')
-vax.set_xscale('log')
-vax.axvline(0.05, linestyle='--', color='r')
-vax.axvline(0.01, linestyle='-.', color='orange')
-vax.axhline(0.15, linestyle='--', color='magenta')
-for i in np.arange(len(p_vel)):
-    vax.annotate(i, (p_p_vel[i], r2_p_vel[i]))
-vax.set_ylim(0, max_r2)
-vax.legend()
-
-vax = vel_fig3.add_subplot(gs3[0, 2])
-vax.plot(p_n_vel[np.where(m_n_vel > 0)], r2_n_vel[np.where(m_n_vel > 0)], 'bo', label="positive slope")
-vax.plot(p_n_vel[np.where(m_n_vel <= 0)], r2_n_vel[np.where(m_n_vel <= 0)], 'ro', label="negative slope")
-vax.set_title('slope to positive rectified df/dt')
-vax.set_xlabel('p-value')
-vax.set_ylabel('coefficient of determination R2')
-vax.set_xscale('log')
-vax.axvline(0.05, linestyle='--', color='r')
-vax.axvline(0.01, linestyle='-.', color='orange')
-vax.axhline(0.15, linestyle='--', color='magenta')
-for i in np.arange(len(p_vel)):
-    vax.annotate(i, (p_n_vel[i], r2_n_vel[i]))
-vax.set_ylim(0, max_r2)
-vax.legend()
-
-vax = vel_fig3.add_subplot(gs3[0, 3])
-vax.plot(p_dfdt_vel[np.where(m_dfdt_vel > 0)], r2_dfdt_vel[np.where(m_dfdt_vel > 0)], 'bo', label="positive slope")
-vax.plot(p_dfdt_vel[np.where(m_dfdt_vel <= 0)], r2_dfdt_vel[np.where(m_dfdt_vel <= 0)], 'ro', label="negative slope")
+vax.plot(p_dfdt_vel[np.where(m_dfdt_vel > 0)], rho2_dfdt_vel[np.where(m_dfdt_vel > 0)], 'bo', label="positive slope")
+vax.plot(p_dfdt_vel[np.where(m_dfdt_vel <= 0)], rho2_dfdt_vel[np.where(m_dfdt_vel <= 0)], 'ro', label="negative slope")
 vax.set_title('slope to  df/dt')
 vax.set_xlabel('p-value')
-vax.set_ylabel('coefficient of determination R2')
+vax.set_ylabel('correlation coefficient rho2')
 vax.set_xscale('log')
 vax.axvline(0.05, linestyle='--', color='r')
 vax.axvline(0.01, linestyle='-.', color='orange')
 vax.axhline(0.15, linestyle='--', color='magenta')
 for i in np.arange(len(p_vel)):
-    vax.annotate(i, (p_dfdt_vel[i], r2_dfdt_vel[i]))
-vax.set_ylim(0, max_r2)
+    vax.annotate(i, (p_dfdt_vel[i], rho2_dfdt_vel[i]))
+vax.set_ylim(0, max_rho2*1.2)
 vax.legend()
 
 
@@ -574,61 +562,48 @@ vel_fig3.tight_layout()
 
 
 
-##### Plot R2 and p-values together (NOW CURVATURE)
+##### Plot rho2 and p-values together (NOW CURVATURE)
 ####
 ###
 curv_fig4 = plt.figure(figsize=[24, 9])
 curv_fig4.suptitle(key + ' ' + idn)
-gs4 = gridspec.GridSpec(ncols=3, nrows=1, figure=curv_fig4)
+gs4 = gridspec.GridSpec(ncols=2, nrows=1, figure=curv_fig4)
 
-max_r2 = np.max(np.array([r2_curv, r2_n_curv, r2_p_curv]).flatten())
+max_rho2 = np.max(np.array([rho2_curv, rho2_n_curv, rho2_p_curv]).flatten())
 
 cax = curv_fig4.add_subplot(gs4[0, 0])
-cax.plot(p_curv[np.where(m_curv > 0)], r2_curv[np.where(m_curv > 0)], 'bo', label="positive slope")
-cax.plot(p_curv[np.where(m_curv <= 0)], r2_curv[np.where(m_curv <= 0)], 'ro', label="negative slope")
+cax.plot(p_curv[np.where(m_curv > 0)], rho2_curv[np.where(m_curv > 0)], 'bo', label="positive slope")
+cax.plot(p_curv[np.where(m_curv <= 0)], rho2_curv[np.where(m_curv <= 0)], 'ro', label="negative slope")
 cax.set_title('slope to curvature')
 cax.set_xlabel('p-value')
-cax.set_ylabel('coefficient of determination R2')
+cax.set_ylabel('correlation coefficient rho2')
 cax.set_xscale('log')
-cax.set_ylim(0, max_r2)
+cax.set_ylim(0, max_rho2*1.2)
 cax.axvline(0.05, linestyle='--', color='r')
 cax.axvline(0.01, linestyle='-.', color='orange')
 cax.axhline(0.15, linestyle='--', color='magenta')
 for i in np.arange(len(p_curv)):
-    cax.annotate(i, (p_curv[i], r2_curv[i]))
+    cax.annotate(i, (p_curv[i], rho2_curv[i]))
 cax.legend()
-
-
 
 cax = curv_fig4.add_subplot(gs4[0, 1])
-cax.plot(p_p_curv[np.where(m_p_curv > 0)], r2_p_curv[np.where(m_p_curv > 0)], 'bo', label="positive slope")
-cax.plot(p_p_curv[np.where(m_p_curv <= 0)], r2_p_curv[np.where(m_p_curv <= 0)], 'ro', label="negative slope")
-cax.set_title('slope to positive rectified d curv/dt')
+cax.plot(p_dfdt_curv[np.where(m_dfdt_curv > 0)], rho2_dfdt_curv[np.where(m_dfdt_curv > 0)], 'bo', label="positive slope")
+cax.plot(p_dfdt_curv[np.where(m_dfdt_curv <= 0)], rho2_dfdt_curv[np.where(m_dfdt_curv <= 0)], 'ro', label="negative slope")
+cax.set_title('slope of df/dft to curvature')
 cax.set_xlabel('p-value')
-cax.set_ylabel('coefficient of determination R2')
+cax.set_ylabel('correlation coefficient rho2')
 cax.set_xscale('log')
+cax.set_ylim(0, max_rho2*1.2)
 cax.axvline(0.05, linestyle='--', color='r')
 cax.axvline(0.01, linestyle='-.', color='orange')
 cax.axhline(0.15, linestyle='--', color='magenta')
-for i in np.arange(len(p_curv)):
-    cax.annotate(i, (p_p_curv[i], r2_p_curv[i]))
-cax.set_ylim(0, max_r2)
+for i in np.arange(len(p_dfdt_curv)):
+    cax.annotate(i, (p_dfdt_curv[i], rho2_dfdt_curv[i]))
 cax.legend()
 
-cax = curv_fig4.add_subplot(gs4[0, 2])
-cax.plot(p_n_curv[np.where(m_n_curv > 0)], r2_n_curv[np.where(m_n_curv > 0)], 'bo', label="positive slope")
-cax.plot(p_n_curv[np.where(m_n_curv <= 0)], r2_n_curv[np.where(m_n_curv <= 0)], 'ro', label="negative slope")
-cax.set_title('slope to positive rectified d curv/dt')
-cax.set_xlabel('p-value')
-cax.set_ylabel('coefficient of determination R2')
-cax.set_xscale('log')
-cax.axvline(0.05, linestyle='--', color='r')
-cax.axvline(0.01, linestyle='-.', color='orange')
-cax.axhline(0.15, linestyle='--', color='magenta')
-for i in np.arange(len(p_curv)):
-    cax.annotate(i, (p_n_curv[i], r2_n_curv[i]))
-cax.set_ylim(0, max_r2)
-cax.legend()
+
+
+
 
 import prediction.provenance as prov
 prov.stamp(cax, .55, .15)
