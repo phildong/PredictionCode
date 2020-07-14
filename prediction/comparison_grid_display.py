@@ -23,7 +23,7 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results.dat', 'rb') as handle:
+with open('comparison_results_aml18.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
@@ -114,5 +114,5 @@ ax.grid(axis='y')
 
 print('saving')
 # fig.tight_layout()
-fig.savefig('comparison_all_4col.pdf')
+fig.savefig('comparison_all_aml18_4col.pdf')
 print('saved')
