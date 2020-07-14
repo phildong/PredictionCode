@@ -308,9 +308,9 @@ def main():
 
     ### CHOOSE DATASET TO PLOT
     key = 'AKS297.51_moving'
-    idn = 'BrainScanner20200130_110803'
     idn = 'BrainScanner20200310_141211'
     idn = 'BrainScanner20200310_142022'
+    idn = 'BrainScanner20200130_110803'
     #idn = 'BrainScanner20200130_105254'
 
 
@@ -540,6 +540,8 @@ def main():
     return None
 
 print("Running main.")
+
+
 main()
 
 

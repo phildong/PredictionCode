@@ -47,8 +47,6 @@ print('Done reading data.')
 key = 'AKS297.51_moving'
 idn = 'BrainScanner20200130_110803'
 #idn = 'BrainScanner20200130_105254'
-
-
 #key = 'AML32_moving'
 #idn = 'BrainScanner20170424_105620'
 
@@ -90,8 +88,8 @@ if False:
     plt.figure(figsize=[10,10])
     plt.plot(vel, comVel)
 
-UseCOM = False
-if UseCOM:
+UseEigVol = True
+if UseEigVol:
     velName = 'Eigenworm Velocity'
     velocity = vel
 else:
@@ -610,10 +608,13 @@ prov.stamp(cax, .55, .15)
 curv_fig4.tight_layout()
 
 
-
+if UseEigVol:
+    velStyle = "eig"
+else:
+    velStyle = "com"
 
 print("Saving tuning curve plots to PDF...")
-filename = key + "_" + idn + "_tuning.pdf"
+filename = key + "_" + idn + "_tuning_" + velStyle + ".pdf"
 print(filename)
 import matplotlib.backends.backend_pdf
 pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
