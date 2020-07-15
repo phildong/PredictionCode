@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from prediction import userTracker
 import prediction.dataHandler as dh
+from seaborn import clustermap
 
 
 def get_data(start_frame, end_frame, neurons, time, time_contig):
@@ -48,6 +49,12 @@ def do_residual(moving_worm, immobile_worm):
     return residual
 
 
+def do_clustering(matrix):
+    cg = clustermap(matrix)
+    cgIdx = np.array(cg.data2d.columns)
+    return cgIdx
+
+
 for typ_cond in ['AKS297.51_moving']: #, 'AML32_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
@@ -73,8 +80,14 @@ for typ_cond in ['AKS297.51_moving']: #, 'AML32_moving']:
 
     moving_data, neuron_number = get_data(1, 1465, neurons, time, time_contig)
     moving_corr, moving_r_square = do_correlation_all(moving_data)
-    AVA_corr, AVA_r_square  = do_correlation_AVA(moving_corr,moving_r_square, 33)
-    # need a list of the number of neurons
+    AVA_corr, AVA_r_square  = do_correlation_AVA(moving_corr,moving_r_square, 32)
+    cgIdx = do_clustering(moving_corr)
+    clustered_corr1 = moving_corr[:, cgIdx]
+    clustered_corr = clustered_corr1[cgIdx, :] # Why can't I do this in one line? or is there a better way to do this?
+    cgIdx_r_square = do_clustering(moving_r_square)
+    clustered_r1 = moving_r_square[:, cgIdx_r_square]
+    clustered_r= clustered_r1[cgIdx_r_square, :] # Why can't I do this in one line? or is there a better way to do this?
+
 
     plot1 = plt.figure(1)
     plt.subplot(1,2,1)
@@ -98,13 +111,30 @@ for typ_cond in ['AKS297.51_moving']: #, 'AML32_moving']:
     plt.title('AVA Correlation_110803')
     plt.xlabel('Neuron')
     plt.ylabel('Correlation')
+    plt.grid()
 
     plt.subplot(1,2,2)
     plt.bar(neuron_number, AVA_r_square)
     plt.title('AVA R^2_110803')
     plt.xlabel('Neuron')
     plt.ylabel('R^2')
+    plt.grid()
 
+    plot3 = plt.figure(3)
+    plt.subplot(1,2,1)
+    plt.imshow(clustered_corr)
+    plt.title('Clustered Correlation_110803')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
+    plt.colorbar()
+
+
+    plt.subplot(1,2,2)
+    plt.imshow(clustered_r)
+    plt.title('Clustered R^2_110803')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
+    plt.colorbar()
 
     plt.show()
 
