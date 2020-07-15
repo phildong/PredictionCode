@@ -578,16 +578,24 @@ def main():
 
 
 
-    raise Exception('Stopping here for now..')
 
     ### Plot Heatmap for each recording
 
 
-    ### Plot Neural State Space Trajectories
+
+
 
     import matplotlib.pyplot as plt
     from sklearn.decomposition import PCA
     from sklearn.preprocessing import StandardScaler
+
+    import matplotlib.pylab as pylab
+    params = {'legend.fontsize': 'x-large',
+              'axes.labelsize': 'x-large',
+              'axes.titlesize': 'x-large',
+              'xtick.labelsize': 'x-large',
+              'ytick.labelsize': 'x-large'}
+    pylab.rcParams.update(params)
 
     print("Plotting heatmaps.....")
     for key in ['AKS297.51_moving', 'AML32_moving', 'AML32_immobilized', 'AML18_moving', 'AML18_immobilized']:
@@ -610,7 +618,7 @@ def main():
             time = dset['Neurons']['I_Time']
 
             prcntile = 99.7
-            fig = plt.figure(figsize=(22,12))
+            fig = plt.figure(figsize=(18,20))
             plt.suptitle('data[' + key + '][' + idn + ']')
 
 
@@ -668,6 +676,9 @@ def main():
 
 
 
+
+
+
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
     pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps.pdf"))
@@ -681,6 +692,7 @@ def main():
 
 
 
+    #raise Exception('Stopping here for now..')
 
 
 
