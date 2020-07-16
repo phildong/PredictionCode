@@ -23,6 +23,7 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
 neuron_data = {}
 X_data = {}
 Y_data = {}
+max_time = np.array(0.0)
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
@@ -47,6 +48,8 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
 
         X = dataSets[key]['BehaviorFull']['X'] #Get the X position
         Y = dataSets[key]['BehaviorFull']['Y'] #Get they Y position
+        X = X - X[0] #center the beginning of each recording at the origin
+        Y = Y - Y[0] #center the beginning of each recording at the origin
 
 
         if key in excludeInterval.keys():
@@ -60,6 +63,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         neuron_data[key] = neurons
         X_data[key] = X
         Y_data[key] = Y
+        max_time = np.max(np.append(time, max_time)) #time of longest recording seen so far
 
 keys = list(data.keys())
 keys.sort()
@@ -104,6 +108,7 @@ for key in keys:
         ts.set_xlabel('Time (s)')
         ts.set_ylabel('Velocity')
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
+        ts.set_xlim(0, max_time)
 
         sc = fig.add_subplot(gs[row, 1])
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
@@ -117,11 +122,15 @@ for key in keys:
     #Translocation goes here (this was formerly where the scatter plots of weights went)
     ax = fig.add_subplot(gs[:, 2:])
 
-
     #Work on sharing axes here
     ax.plot(X_data[key], Y_data[key], label="position", marker='o')
     ax.set_xlabel('X', fontsize=14)
     ax.set_ylabel('Y', fontsize=14)
+    all_X = np.vstack(tuple(X_data.values()))
+    all_Y = np.vstack(tuple(Y_data.values()))
+    ax.set_xlim(-13, 13)
+    ax.set_ylim(-13, 13)
+
 
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
