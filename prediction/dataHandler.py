@@ -690,12 +690,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['I_Time'] = time[idx_data] #corresponding time axis
-    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, no nans, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, has nans, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
     dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
 
-    dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
     dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
