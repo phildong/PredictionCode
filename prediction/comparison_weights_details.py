@@ -107,9 +107,11 @@ for key in keys:
     ax = fig.add_subplot(gs[:, 2:])
 
     slm_weights = data[key]['slm']['weights']*np.sqrt(data[key]['slm']['variance'])
+    slm_weights_raw = data[key]['slm']['weights']
     correlations = [np.corrcoef(x, data[key]['slm']['signal'])[0,1] for x in neuron_data[key]]
 
-    ax.scatter(correlations, slm_weights)
+    ax.scatter(correlations, slm_weights, label="scaled by variance")
+    ax.scatter(correlations, slm_weights_raw*100, label="Raw", marker="x", color="red")
     ax.axvline(0, linestyle='dashed')
     ax.axhline(0, linestyle='dashed')
     ax.set_xlabel(r'$\rho$', fontsize=14)
