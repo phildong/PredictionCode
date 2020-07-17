@@ -431,7 +431,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     idx_identities = idx[idx > cutVolume]
 
 
-    assert np.true_divide(np.sum(np.isnan(rRaw)), rRaw.shape[0]*rRaw.shape[1]) < .3, ["the Red channel is over 1/3rd NaNs. This dataset should be removed from consideration: " + folder ]
+#    assert np.true_divide(np.sum(np.isnan(rRaw)), rRaw.shape[0]*rRaw.shape[1]) < .3, ["the Red channel is over 1/3rd NaNs. This dataset should be removed from consideration: " + folder ]
     rphotocorr = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
     gphotocorr = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
 
