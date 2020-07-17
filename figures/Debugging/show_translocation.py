@@ -72,6 +72,20 @@ figtypes = ['bsn', 'slm']
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "translocation.pdf"))
 
+def furthest_distance(X, Y, num_exclude=3):
+    ''' find the furthest distances between any two points, excluding a few of the largest distancess which may be artifactss'''
+    XX = np.tile(X, len(X)) - np.tile(X, len(X)).T
+    YY = np.tile(Y, len(Y)) - np.tile(Y, len(Y)).T
+    all_distances = np.sqrt(np.square(XX) +np.square(YY)) #create a matrix of all possible distances (with some duplicaiotn
+    all_distances_original = np.copy(all_distances)
+    for k in np.arange(num_exclude): #exclude the top few  pairs of distant points to get rid of outliers
+        ind = np.unravel_index(np.argmax(all_distances), all_distances.shape)
+        all_distances = np.delete(all_distances, ind, 0)
+        all_distances = np.delete(all_distances, ind, 1) #(its a symmetric matrix so we want to delete two ros and two columns to remove the pair of points
+    largest_distance = np.max(all_distances)
+    pair_indices = np.where(all_distances_original == largest_distance)[0]
+    return largest_distance, pair_indices
+
 for key in keys:
 
     fig = plt.figure(constrained_layout=True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
@@ -120,21 +134,22 @@ for key in keys:
         sc.legend()
 
     #Translocation goes here (this was formerly where the scatter plots of weights went)
-    ax = fig.add_subplot(gs[:, 2:])
+    (dist, ind) = furthest_distance(X_data[key], Y_data[key])
 
-    #Work on sharing axes here
+    ax = fig.add_subplot(gs[:, 2:])
     ax.plot(X_data[key], Y_data[key], label="position", marker='o')
+    ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
     ax.set_xlabel('X', fontsize=14)
     ax.set_ylabel('Y', fontsize=14)
-    all_X = np.vstack(tuple(X_data.values()))
-    all_Y = np.vstack(tuple(Y_data.values()))
     ax.set_xlim(-13, 13)
     ax.set_ylim(-13, 13)
+    ax.set_title(r'$\bar{v}$ = %0.2f, $\mathrm{std}(v)$ = %0.3f, max_d = %0.1f' % (np.nanmean(res['signal']), np.nanstd(res['signal']), dist))
 
+    import prediction.provenance as prov
+    prov.stamp(ax,.55,.15)
 
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
-
     pdf.savefig(fig)
 
 pdf.close()
