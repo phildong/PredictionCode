@@ -67,6 +67,11 @@ def do_correlation_AVA(r, r_square, AVA_neuron):
     AVA_r_square = r_square[AVA_neuron,:]
     return AVA_correlation, AVA_r_square
 
+def replace_Nan_AVA(AVA_list, index_list):
+    for i in index_list:
+        AVA_list[i] = 0
+    return AVA_list
+
 
 def do_residual(moving_worm, immobile_worm):
     # this function should take the residual of whatever we give it (should work for whole matrix correlation as well
@@ -80,6 +85,18 @@ def do_clustering(matrix):
     cgIdx = np.array(cg.data2d.columns)
     return cgIdx
 
+
+def cluster_matrix(matrix, cgIdx):
+    clustered_1 = matrix[:, cgIdx]
+    clustered_matrix = clustered_1[cgIdx, :]
+    return clustered_matrix
+
+
+# Want to cluster the calcium signal- use correlation clustering?
+# sort the NaN data?
+def cluster_calcium(neurons_NaN, cgIdx):
+    cluster_neuron = neurons_NaN[cgIdx, :]
+    return cluster_neuron
 
 for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     path = userTracker.dataPath()
@@ -108,7 +125,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     moving_data, moving_withNaN, neuron_number = get_data(1, 1590, neurons, neurons_withNaN, time, time_contig)
     moving_corr, moving_r_square = do_correlation_all(moving_data)
-    AVA_corr, AVA_r_square = do_correlation_AVA(moving_corr,moving_r_square, 29)
+    AVA_corr_noNan, AVA_r_square_noNan = do_correlation_AVA(moving_corr,moving_r_square, 29)
+
     # cgIdx = do_clustering(moving_corr_NaN) cluster based on immobile
 
     immobile_data, data_withNaN, neuron_number_im = get_data(1700, 4016, neurons, neurons_withNaN, time, time_contig)
@@ -117,22 +135,48 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     nan_index = find_NaN_neurons(data_withNaN, neuron_number)
     immobile_corr_NaN = replace_NaN_neurons(immobile_corr, nan_index, neuron_number)
     immobile_r_NaN = replace_NaN_neurons(immobile_r_square, nan_index, neuron_number)
-    cgIdx = do_clustering(immobile_corr_NaN)
-    clustered_corr1 = immobile_corr_NaN[:, cgIdx]
-    clustered_immobile_corr = clustered_corr1[cgIdx, :]  # Why can't I do this in one line? or is there a better way to do this?
-    clustered_r1 = immobile_r_NaN[:, cgIdx]  # _r_square]
-    clustered_immobile_r = clustered_r1[cgIdx, :]  # Why can't I do this in one line? or is there a better way to do this?
 
-    clustered_moving_corr1 = moving_corr[:, cgIdx]
-    clustered_moving_corr = clustered_moving_corr1[cgIdx, :]
-    clustered_moving_r1 = moving_r_square[:, cgIdx]
-    clustered_moving_r = clustered_moving_r1[cgIdx, :]
+    moving_corr_NaN = replace_NaN_neurons(moving_corr, nan_index, neuron_number)
+    moving_r_square_NaN = replace_NaN_neurons(moving_r_square, nan_index, neuron_number)
+
+    #Put NaN/0s into the AVA measurements as well
+    AVA_corr = replace_Nan_AVA(AVA_corr_noNan, nan_index)
+    AVA_r_square = replace_Nan_AVA(AVA_r_square_noNan, nan_index)
+
+
+
+    cgIdx_immobile = do_clustering(immobile_corr_NaN)
+    clustered_immobile_corr = cluster_matrix(immobile_corr_NaN, cgIdx_immobile)  # Why can't I do this in one line? or is there a better way to do this?
+    clustered_immobile_r = cluster_matrix(immobile_r_NaN, cgIdx_immobile)  # Why can't I do this in one line? or is there a better way to do this?
+
+    clustered_moving_corr = cluster_matrix(moving_corr_NaN, cgIdx_immobile)
+    clustered_moving_r = cluster_matrix(moving_r_square_NaN, cgIdx_immobile)
+
+    # cluster the neuron signal
+    cluster_immobile_neuron = cluster_calcium(data_withNaN, cgIdx_immobile)
+    cluster_moving_neuron = cluster_calcium(moving_withNaN, cgIdx_immobile)
 
     # calculate residuals
     corr_residual = do_residual(clustered_moving_corr, clustered_immobile_corr)
     r_square_residual = do_residual(clustered_moving_r, clustered_immobile_r)
     ava_corr_residual = do_residual(AVA_corr, AVA_corr_im)
     ava_r_residual = do_residual(AVA_r_square, AVA_r_square_im)
+
+
+
+
+# do the clustering on moving data
+    cgIdx_moving = do_clustering(moving_corr_NaN)
+    moving_cluster_moving_corr = cluster_matrix(moving_corr_NaN, cgIdx_moving)
+    moving_cluster_immobile_corr = cluster_matrix(immobile_corr_NaN, cgIdx_moving)
+    moving_cluster_moving_r = cluster_matrix(moving_r_square_NaN, cgIdx_moving)
+    moving_cluster_immobile_r = cluster_matrix(immobile_r_NaN, cgIdx_moving)
+
+    moving_corr_residual = do_residual(moving_cluster_moving_corr, moving_cluster_immobile_corr)
+    moving_r_residual = do_residual(moving_cluster_moving_r, moving_cluster_immobile_r)
+
+    moving_cluster_immobile_neuron = cluster_calcium(data_withNaN, cgIdx_moving)
+    moving_cluster_moving_neuron = cluster_calcium(moving_withNaN, cgIdx_moving)
 
     plot1 = plt.figure(1)
     plt.subplot(1,3,1)
@@ -152,7 +196,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.subplot(1,3,3)
     plt.imshow(corr_residual, vmin=-1, vmax=1)
     plt.colorbar()
-    plt.title('Residual_102246')
+    plt.title('Residual_moving-immobile_111126')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
 
@@ -174,66 +218,140 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.subplot(1,3,3)
     plt.imshow(r_square_residual, vmin=-1, vmax=1)
     plt.colorbar()
-    plt.title('Residual_102246')
+    plt.title('Residual_moving-immobile_111126')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
 
+#    plot3 = plt.figure(3)
+#   plt.subplot(1,3,1)
+#    plt.bar(neuron_number, AVA_corr)
+#    plt.title('AVA Correlation_111126_moving')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('Correlation')
+#    plt.ylim(-0.8, 1)
+#    plt.grid()
 
-    plot3 = plt.figure(3)
+#    plt.subplot(1,3,2)
+#    plt.bar(neuron_number, AVA_corr_im)
+#    plt.title('AVA Correlation_111126_immobile')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('Correlation')
+#    plt.ylim(-0.8, 1)
+#    plt.grid()
+
+#    plt.subplot(1,3,3)
+#    plt.bar(neuron_number, ava_corr_residual)
+#    plt.title('Residual_moving-immobile_111126')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('Residual')
+#    #plt.ylim(-0.6, 1)
+#    plt.grid()
+
+
+#   plot4 = plt.figure(4)
+#    plt.subplot(1,3,1)
+#    plt.bar(neuron_number, AVA_r_square)
+#    plt.title('AVA R^2_111126_moving')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('R^2')
+#    plt.ylim(0, 1)
+#    plt.grid()
+
+#    plt.subplot(1,3,2)
+#    plt.bar(neuron_number, AVA_r_square_im)
+#    plt.title('AVA R^2_111126_immobile')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('R^2')
+#    plt.ylim(0, 1)
+#    plt.grid()
+
+#    plt.subplot(1,3,3)
+#    plt.bar(neuron_number, ava_r_residual)
+#    plt.title('Residual_moving-immobile_111126')
+#    plt.xlabel('Neuron')
+#    plt.ylabel('Residual')
+#    #plt.ylim(0, 1)
+#    plt.grid()
+    #######
+
+
+    plot5 = plt.figure(5)
     plt.subplot(1,3,1)
-    plt.bar(neuron_number, AVA_corr)
-    plt.title('AVA Correlation_102246_moving')
-    plt.xlabel('Neuron')
-    plt.ylabel('Correlation')
-    plt.ylim(-0.8, 1)
-    plt.grid()
+    plt.imshow(moving_cluster_moving_corr, vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.title('Correlation_102246_moving')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
 
     plt.subplot(1,3,2)
-    plt.bar(neuron_number, AVA_corr_im)
-    plt.title('AVA Correlation_102246_immobile')
-    plt.xlabel('Neuron')
-    plt.ylabel('Correlation')
-    plt.ylim(-0.8, 1)
-    plt.grid()
+    plt.imshow(moving_cluster_immobile_corr,vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.title('Correlation_102246_immobile')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
 
     plt.subplot(1,3,3)
-    plt.bar(neuron_number, ava_corr_residual)
-    plt.title('Residual_102246')
-    plt.xlabel('Neuron')
-    plt.ylabel('Residual')
-    #plt.ylim(-0.6, 1)
-    plt.grid()
+    plt.imshow(moving_corr_residual, vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.title('Residual_moving-immobile_102246')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
 
-
-
-    plot4 = plt.figure(4)
+    plot6 = plt.figure(6)
     plt.subplot(1,3,1)
-    plt.bar(neuron_number, AVA_r_square)
-    plt.title('AVA R^2_102246_moving')
-    plt.xlabel('Neuron')
-    plt.ylabel('R^2')
-    plt.ylim(0, 1)
-    plt.grid()
+    plt.imshow(moving_cluster_moving_r, vmin=0, vmax=1)
+    plt.colorbar()
+    plt.title('R_Square_102246_moving')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
 
     plt.subplot(1,3,2)
-    plt.bar(neuron_number, AVA_r_square_im)
-    plt.title('AVA R^2_102246_immobile')
-    plt.xlabel('Neuron')
-    plt.ylabel('R^2')
-    plt.ylim(0, 1)
-    plt.grid()
+    plt.imshow(moving_cluster_immobile_r,vmin=0, vmax=1)
+    plt.colorbar()
+    plt.title('R_Square_102246_immobile')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
 
     plt.subplot(1,3,3)
-    plt.bar(neuron_number, ava_r_residual)
-    plt.title('Residual_102246')
-    plt.xlabel('Neuron')
-    plt.ylabel('Residual')
-    #plt.ylim(0, 1)
-    plt.grid()
+    plt.imshow(moving_r_residual, vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.title('Residual_moving-immobile_102246')
+    plt.xlabel('Sorted Neuron')
+    plt.ylabel('Sorted Neuron')
+
+    plot7 = plt.figure(7)
+    plt.subplot(2,1,1)
+    plt.imshow(cluster_moving_neuron)
+    #plt.colorbar()
+    plt.title('Moving_102246_Immobile Cluster')
+    plt.xlabel('Time (units?)')
+    plt.ylabel('Sorted Neuron')
+
+    plt.subplot(2,1,2)
+    plt.imshow(cluster_immobile_neuron)
+    #plt.colorbar()
+    plt.title('Immobile_102246_Immobile Cluster')
+    plt.xlabel('Time (units?)')
+    plt.ylabel('Sorted Neuron')
+
+    plot8 = plt.figure(8)
+    plt.subplot(2,1, 1)
+    plt.imshow(moving_cluster_moving_neuron)
+    #plt.colorbar()
+    plt.title('Moving_102246_Moving Cluster')
+    plt.xlabel('Time (units?)')
+    plt.ylabel('Sorted Neuron')
+
+    plt.subplot(2,1, 2)
+    plt.imshow(moving_cluster_immobile_neuron)
+    #plt.colorbar()
+    plt.title('Immobile_102246_Moving Cluster')
+    plt.xlabel('Time (units?)')
+    plt.ylabel('Sorted Neuron')
+
 
     plt.show()
 
-# add residual plots too
 
 
 
