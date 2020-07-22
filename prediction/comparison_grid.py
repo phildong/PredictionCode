@@ -132,7 +132,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         #                     }
 
 import pickle
-with open('comparison_results_aml18.dat', 'wb') as handle:
+with open('comparison_results_zscore.dat', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 # with open('comparison_results_cms_smooth.dat', 'wb') as handle:
 #     pickle.dump(cmsresults, handle, protocol=pickle.HIGHEST_PROTOCOL)

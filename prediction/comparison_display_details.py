@@ -25,15 +25,15 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results.dat', 'rb') as handle:
+with open('comparison_results_aml18_zscore.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
 keys.sort()
 
-figtypes = ['bsn_deriv_acc', 'slm_with_derivs_acc', 'slm_acc']
+figtypes = ['bsn', 'slm']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_results.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_results_aml18_zscore.pdf"))
 
 for key in keys:
 
@@ -84,8 +84,8 @@ for key in keys:
 
     ax = fig.add_subplot(gs[0, :])
 
-    slm_weights = data[key]['slm_acc']['weights']*np.sqrt(data[key]['slm_acc']['variance'])
-    bsn_weights = data[key]['bsn_deriv_acc']['weights'][:len(data[key]['slm_acc']['weights'])]*np.sqrt(data[key]['slm_acc']['variance'])
+    slm_weights = data[key]['slm']['weights']
+    bsn_weights = data[key]['bsn']['weights']
 
     n = slm_weights.size
 

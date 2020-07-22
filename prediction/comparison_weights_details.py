@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('comparison_results.dat', 'rb') as handle:
+with open('comparison_results_zscore.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
@@ -56,7 +56,7 @@ keys.sort()
 
 figtypes = ['bsn', 'slm']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_weight_results.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_weight_results_zscore.pdf"))
 
 for key in keys:
 
