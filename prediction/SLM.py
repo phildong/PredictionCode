@@ -17,6 +17,8 @@ from Classifier import rectified_derivative
 import dataHandler as dh
 import userTracker
 
+from pathos.multiprocessing import ProcessingPool as Pool
+
 def shift_sqdiff(a, b, width = 6):
     sqdiffs = np.zeros((2*width+1, a.size))
     for j in np.arange(-width, width+1):
@@ -42,13 +44,15 @@ def split_test(X, test):
     X_test = X.T[center_idx].T
     return (X_train, X_test)
 
-def optimize_slm(time, Xfull, Yfull, options = None):
+def optimize_slm(time, Xfullunn, Yfull, options = None):
     if options is None:
         options = dict()
     default_options = {
     'derivative_penalty': False,
     'decision_tree': False,
     'best_neuron': False,
+    'normalize': True,
+    'parallelize': True,
     'max_depth': 1,
     'alphas': np.logspace(-1.5, 2.5, 7),
     'l1_ratios': np.linspace(0, 1, 5),
@@ -61,6 +65,13 @@ def optimize_slm(time, Xfull, Yfull, options = None):
     for k in default_options:
         if k not in options:
             options[k] = default_options[k]
+
+    if options['normalize']:
+        Xmean = np.mean(Xfullunn, axis = 1)[:, np.newaxis]
+        Xstd = np.std(Xfullunn, axis = 1)[:, np.newaxis]
+        Xfull = (Xfullunn-Xmean)/Xstd
+    else:
+        Xfull = Xfullunn
 
     X, Xtest = split_test(Xfull, options['test_fraction'])
     Y, Ytest = split_test(Yfull, options['test_fraction'])
@@ -84,20 +95,44 @@ def optimize_slm(time, Xfull, Yfull, options = None):
     if not options['decision_tree']:
         if not options['best_neuron']:
             if not options['derivative_penalty']:
-                best_alpha = 0
-                best_l1_ratio = 0
-                best_R2 = -np.inf
-                for alpha in options['alphas']:
-                    for l1_ratio in options['l1_ratios']:
+
+                if options['parallelize']:
+                    def crossval(alpha, l1_ratio):
                         result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, alpha, l1_ratio))
                         r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
-                        if r2 > best_R2:
-                            best_alpha = alpha
-                            best_l1_ratio = l1_ratio
-                            best_R2 = r2
+                        return (r2, alpha, l1_ratio)
+
+                    def crossval_unpack(args):
+                        return crossval(*args)
+                    
+                    params = [(alpha, l1_ratio) for alpha in options['alphas'] for l1_ratio in options['l1_ratios']]
+
+                    p = Pool(processes = len(options['alphas'])*len(options['l1_ratios']))
+                    r2s = p.map(crossval_unpack, params)
+
+                    r2s.sort(key = lambda x: -x[0])
+
+                    best_alpha = r2s[0][1]
+                    best_l1_ratio = r2s[0][2]
+                    result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, best_alpha, best_l1_ratio))
+                    P = result.x
+
+                else: 
+                    best_alpha = 0
+                    best_l1_ratio = 0
+                    best_R2 = -np.inf
+                    for alpha in options['alphas']:
+                        for l1_ratio in options['l1_ratios']:
+                            result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, alpha, l1_ratio))
+                            r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
+                            if r2 > best_R2:
+                                best_alpha = alpha
+                                best_l1_ratio = l1_ratio
+                                best_R2 = r2
+                    
+                    result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, best_alpha, best_l1_ratio))
+                    P = result.x
                 
-                result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, best_alpha, best_l1_ratio))
-                P = result.x
                 return {'weights'        : P[1:],
                         'intercepts'     : P[0],
                         'params'         : P,
@@ -122,20 +157,43 @@ def optimize_slm(time, Xfull, Yfull, options = None):
                 X_train_deriv = gaussian_filter(X_train, sigma = (0, options['sigma']), order = 1)
                 Y_train_deriv = gaussian_filter(Y_train, sigma = options['sigma'], order = 1)
 
-                best_alpha = 0
-                best_l1_ratio = 0
-                best_R2 = -np.inf
-                for alpha in options['alphas']:
-                    for l1_ratio in options['l1_ratios']:
+                if options['parallelize']:
+                    def crossval(alpha, l1_ratio):
                         result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, X_train_deriv, Y_train_deriv, alpha, l1_ratio))
                         r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
-                        if r2 > best_R2:
-                            best_alpha = alpha
-                            best_l1_ratio = l1_ratio
-                            best_R2 = r2
+                        return (r2, alpha, l1_ratio)
 
-                result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, X_deriv, Y_deriv, best_alpha, best_l1_ratio))
-                P = result.x
+                    def crossval_unpack(args):
+                        return crossval(*args)
+                    
+                    params = [(alpha, l1_ratio) for alpha in options['alphas'] for l1_ratio in options['l1_ratios']]
+
+                    p = Pool(processes = len(options['alphas'])*len(options['l1_ratios']))
+                    r2s = p.map(crossval_unpack, params)
+
+                    r2s.sort(key = lambda x: -x[0])
+
+                    best_alpha = r2s[0][1]
+                    best_l1_ratio = r2s[0][2]
+                    result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, X_deriv, Y_deriv, best_alpha, best_l1_ratio))
+                    P = result.x
+
+                else:
+                    best_alpha = 0
+                    best_l1_ratio = 0
+                    best_R2 = -np.inf
+                    for alpha in options['alphas']:
+                        for l1_ratio in options['l1_ratios']:
+                            result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, X_train_deriv, Y_train_deriv, alpha, l1_ratio))
+                            r2 = R2(result.x, f, X_cv, Y_cv, width=options['time_shift']) 
+                            if r2 > best_R2:
+                                best_alpha = alpha
+                                best_l1_ratio = l1_ratio
+                                best_R2 = r2
+
+                    result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, X_deriv, Y_deriv, best_alpha, best_l1_ratio))
+                    P = result.x
+
                 return {'weights'        : P[1:],
                         'intercepts'     : P[0],
                         'params'         : P,
