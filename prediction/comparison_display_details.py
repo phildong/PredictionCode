@@ -25,15 +25,15 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results_aml18_zscore.dat', 'rb') as handle:
+with open('comparison_results.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
 keys.sort()
 
-figtypes = ['bsn', 'slm']
+figtypes = ['bsn_deriv', 'slm_with_derivs']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_results_aml18_zscore.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_results.pdf"))
 
 for key in keys:
 
@@ -84,10 +84,10 @@ for key in keys:
 
     ax = fig.add_subplot(gs[0, :])
 
-    slm_weights = data[key]['slm']['weights']
-    bsn_weights = data[key]['bsn']['weights']
+    slm_weights = data[key]['slm_with_derivs']['weights']
+    bsn_weights = data[key]['bsn_deriv']['weights']
 
-    n = slm_weights.size
+    n = slm_weights.size/2
 
     xs = np.argsort(slm_weights[:n])
 
@@ -99,27 +99,27 @@ for key in keys:
 
     # scaler.fit(np.array([slm_weights[xs+n]]).T)
 
-    # ax.plot(scaler.transform(np.array([slm_weights[xs+n]]).T)+2, 'k.')
-    # ax.plot(scaler.transform(np.zeros(xs.size).reshape(1,-1)).T+2, 'b', linestyle='dashed')
+    ax.plot(scaler.transform(np.array([slm_weights[xs+n]]).T)+2, 'k.')
+    ax.plot(scaler.transform(np.zeros(xs.size).reshape(1,-1)).T+2, 'b', linestyle='dashed')
 
     # scaler.fit(np.array([slm_weights[xs+2*n]]).T)
 
     # ax.plot(scaler.transform(np.array([slm_weights[xs+2*n]]).T), 'k.')
     # ax.plot(scaler.transform(np.zeros(xs.size).reshape(1,-1)).T, 'b', linestyle='dashed')
 
-    for i in range(1):
+    for i in range(2):
         bn = np.array([bsn_weights[xs+i*n]]).T
         bn_idx = np.nonzero(bn)[0]
         if bn_idx.size > 0:
-            scaler.fit(np.array([slm_weights[xs+i*n]]).T)
+            # scaler.fit(np.array([slm_weights[xs+i*n]]).T)
             ax.bar(bn_idx[0], scaler.transform(bn)[bn_idx[0]] - scaler.transform([[0]])[0,0], bottom = scaler.transform([[0]])[0,0]+4-2*i, color='g', label = 'Best Neuron')
 
     ax.axhline(1.5)
     ax.axhline(3.5)
-    ax.set_ylim(3.5, 5.5)
+    ax.set_ylim(1.5, 5.5)
 
     ax.text(-2, 3.8, '$F$', fontsize=16)
-    # ax.text(-2, 1.8, r'$\left.\frac{dF}{dt}\right.$', fontsize=16)
+    ax.text(-2, 1.8, r'$\left.\frac{dF}{dt}\right.$', fontsize=16)
     # ax.text(-2, -0.2, r'$\left.\frac{dF}{dt}\right|_-$', fontsize=16)
 
     ax.set_xticks(np.arange(n))
