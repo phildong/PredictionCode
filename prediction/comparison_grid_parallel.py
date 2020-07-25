@@ -20,7 +20,7 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
                    'BrainScanner20200310_141211': [[200, 210], [240, 250]]}
 
 results = {}
-data = {}
+neuron_data = {}
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
@@ -52,7 +52,11 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
                 neurons = neurons[:,idxs]
                 velocity = velocity[idxs]
         
-        data[key] = {'time': time, 'neurons': neurons, 'velocity': velocity}
+        neuron_data[key] = {'time': time, 'neurons': neurons, 'velocity': velocity}
+
+import pickle
+with open('neuron_data.dat', 'wb') as handle:
+    pickle.dump(neuron_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 keyList = np.sort(data.keys())
 key = keyList[int(sys.argv[1])]

@@ -29,8 +29,8 @@ with open('comparison_results_aml18.dat', 'rb') as handle:
 keys = list(data.keys())
 keys.sort()
 
-#figtypes = ['bsn', 'slm', 'bsn_acc', 'slm_acc', 'bsn_deriv', 'slm_with_derivs', 'bsn_deriv_acc', 'slm_with_derivs_acc', 'pc', 'pc_deriv']
-figtypes = ['bsn', 'bsn_deriv', 'slm', 'slm_with_derivs']
+figtypes = ['bsn', 'slm', 'bsn_acc', 'slm_acc', 'bsn_deriv', 'slm_with_derivs', 'bsn_deriv_acc', 'slm_with_derivs_acc', 'pc', 'pc_deriv']
+#figtypes = ['bsn', 'bsn_deriv', 'slm', 'slm_with_derivs']
 
 score_R2 = [[0 for figtype in figtypes] for key in keys]
 score_rhoadj1 = [[0 for figtype in figtypes] for key in keys]
@@ -114,5 +114,5 @@ ax.grid(axis='y')
 
 print('saving')
 # fig.tight_layout()
-fig.savefig('comparison_all_aml18_4col.pdf')
+fig.savefig('comparison_all_aml18.pdf')
 print('saved')
