@@ -72,6 +72,12 @@ figtypes = ['bsn', 'slm']
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "translocation.pdf"))
 
+def powerspectra(x, time_step):
+    ps = np.abs(np.fft.fft(x)) ** 2
+    freqs = np.fft.fftfreq(x.size, time_step)
+    idx = np.argsort(freqs)
+    return freqs[idx], ps[idx]
+
 def furthest_distance(X, Y, num_exclude=3):
     ''' find the furthest distances between any two points, excluding a few of the largest distancess which may be artifactss'''
     XX = np.tile(X, len(X)) - np.tile(X, len(X)).T
@@ -136,7 +142,7 @@ for key in keys:
     #Translocation goes here (this was formerly where the scatter plots of weights went)
     (dist, ind) = furthest_distance(X_data[key], Y_data[key])
 
-    ax = fig.add_subplot(gs[:, 2:])
+    ax = fig.add_subplot(gs[1:, 2:])
     ax.plot(X_data[key], Y_data[key], label="position", marker='o')
     ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
     ax.set_xlabel('X', fontsize=14)
@@ -147,6 +153,19 @@ for key in keys:
 
     import prediction.provenance as prov
     prov.stamp(ax,.55,.15)
+
+
+    #Plot the power spectra of the velocity
+    time_step = np.true_divide(1, 6)
+    freqs, ps = powerspectra(res['signal'], time_step)
+    ax = fig.add_subplot(gs[0:1, 2:])
+    ax.plot(freqs, ps)
+    ax.set_xlabel('Hz', fontsize=14)
+    ax.set_ylabel('Power?',fontsize=14)
+    ax.set_xlim(0, 0.3)
+    ax.set_yscale('log')
+    ax.set_ylim(10,10**7)
+
 
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
