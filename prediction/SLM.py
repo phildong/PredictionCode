@@ -81,7 +81,7 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
         f = lambda X, P: P[1]*X + P[0]
     else:
         f = lambda X, P: np.dot(X.T, P[1:]) + P[0]
-    reg = lambda P, l1_ratio: l1_ratio*np.sum(np.abs(P[1:])) + 0.5*(1-l1_ratio)*np.sum(P[1:]*P[1:])
+    reg = lambda P, l1_ratio: l1_ratio*np.sum(np.abs(P[1:])) + 0.5*(1-l1_ratio)*np.sqrt(np.sum(P[1:]*P[1:]))
 
     error_plain = lambda P, X, Y, alpha, l1_ratio: (1./(4*Y.size*np.var(Y)))*shift_sqdiff(Y, f(X, P), width=options['time_shift']) + alpha*reg(P, l1_ratio)
     if options['derivative_penalty']:
