@@ -139,11 +139,26 @@ for key in keys:
         sc.set_ylabel('Predicted Velocity')
         sc.legend()
 
-    #Translocation goes here (this was formerly where the scatter plots of weights went)
+    #Translocation goes here
     (dist, ind) = furthest_distance(X_data[key], Y_data[key])
-
     ax = fig.add_subplot(gs[1:, 2:])
-    ax.plot(X_data[key], Y_data[key], label="position", marker='o')
+ #   ax.plot(X_data[key], Y_data[key], label="position", marker='o')
+
+    ### Plot the lines to that they chang ecolor
+    points = np.array([X_data[key], Y_data[key]]).transpose().reshape(-1, 1, 2)
+    # set up a list of segments
+    segs = np.concatenate([points[:-1], points[1:]], axis=1)
+    # see what we've done here -- we've mapped our (x,y)
+    # points to an array of segment start/end coordinates.
+    # segs[i,0,:] == segs[i-1,1,:]
+    # make the collection of segments
+    from matplotlib.collections import LineCollection
+    lc = LineCollection(segs, cmap=plt.get_cmap('gist_rainbow'))
+    lc.set_array(res['time'])  # color the segments by our parameter
+    # plot the collection
+    ax.add_collection(lc)  # add the collection to the plot
+
+
     ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
     ax.set_xlabel('X', fontsize=14)
     ax.set_ylabel('Y', fontsize=14)
@@ -153,7 +168,7 @@ for key in keys:
 
     import prediction.provenance as prov
     prov.stamp(ax,.55,.15)
-
+    fig.colorbar(lc, cax=ax) #, orientation='horizontal')
 
     #Plot the power spectra of the velocity
     time_step = np.true_divide(1, 6)

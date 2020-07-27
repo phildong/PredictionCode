@@ -31,6 +31,10 @@ R_mean = []
 R_mean_fano_factor = []
 G_mean = []
 G_mean_fano_factor = []
+mean_vel = []
+vel_std = []
+std_test_train_ratio = []
+std_vel_test = []
 
 
 
@@ -59,6 +63,10 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         neurons_raw = dataSets[key]['Neurons']['I_smooth']
         R = dataSets[key]['Neurons']['R']
         G = dataSets[key]['Neurons']['G']
+        vel = dataSets[key]['BehaviorFull']['AngleVelocity']
+        res = data[key]['slm_with_derivs']
+        vel_train = res['signal'][res['train_idx']]
+        vel_test = res['signal'][res['test_idx']]
 
 
         if key in excludeInterval.keys():
@@ -79,26 +87,48 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         R_mean_fano_factor.append(np.nanmedian((np.nanstd(G, 1)**2 / np.nanmean(G, 1) )) )
         G_mean.append(np.nanmean(R))
         G_mean_fano_factor.append(np.nanmedian((np.nanstd(G, 1)**2 / np.nanmean(G, 1) )) )
+        mean_vel.append(np.nanmean(vel))
+        vel_std.append(np.nanstd(vel))
+        std_test_train_ratio.append(np.nanstd(vel_test) / np.nanstd(vel_train))
+        std_vel_test.append(np.nanstd(vel_test))
         label.append(key)
 
 
 
 
-def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2', labels=label):
-    fig, ax = plt.subplots()
+import matplotlib.backends.backend_pdf
+
+def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2', labels=label, PDF=None):
+    fig, ax = plt.subplots(figsize=(10,10))
     ax.scatter(x, rho2)
     ax.set_xlabel(x_name)
     ax.set_ylabel(metric_name)
     for i, txt in enumerate(labels):
-        ax.annotate(txt, (mean_intensity[i], rho2[i]))
+        ax.annotate(txt, (x[i], rho2[i]))
 
+    import prediction.provenance as prov
+    prov.stamp(ax,.55,.35)
 
+    if PDF is not None:
+        pdf.savefig(fig)
+    ax = None
+    fig = None
+    return
 
-plot_candidate(mean_intensity, 'mean intensity', labels=label)
-plot_candidate(percentile_intensity, '75th percentile intensity', labels=label)
-plot_candidate(frac_nan, 'fraction nan', labels=label)
-plot_candidate(R_mean, 'R mean', labels=label)
-plot_candidate(R_mean_fano_factor, 'R mean fano factor', labels=label)
-plot_candidate(G_mean_fano_factor, 'G mean fano factor', labels=label)
-plot_candidate(G_mean, 'G mean ', labels=label)
-plt.show()
+filename = 'correlates_of_performance.pdf'
+print("Plotting")
+pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+plot_candidate(mean_intensity, 'mean intensity', labels=label, PDF=pdf)
+plot_candidate(percentile_intensity, '75th percentile intensity', labels=label, PDF=pdf)
+plot_candidate(frac_nan, 'fraction nan', labels=label, PDF=pdf)
+plot_candidate(R_mean, 'R mean', labels=label, PDF=pdf)
+plot_candidate(R_mean_fano_factor, 'R mean fano factor', labels=label, PDF=pdf)
+plot_candidate(G_mean_fano_factor, 'G mean fano factor', labels=label, PDF=pdf)
+plot_candidate(G_mean, 'G mean ', labels=label, PDF=pdf)
+plot_candidate(mean_vel, 'Mean Velocity', labels=label, PDF=pdf)
+plot_candidate(vel_std, 'std(vel)', labels=label, PDF=pdf)
+plot_candidate(std_test_train_ratio, 'std(vel_test) / std(vel_train)', labels=label, PDF=pdf)
+plot_candidate(std_vel_test, 'std(vel_test)', labels=label, PDF=pdf)
+
+pdf.close()
+print("Finished: " + filename)
