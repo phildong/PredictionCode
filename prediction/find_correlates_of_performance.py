@@ -35,9 +35,51 @@ mean_vel = []
 vel_std = []
 std_test_train_ratio = []
 std_vel_test = []
+vel_pdf_mse = []
+vel_pdf_kl =  []
+
+def calc_pdf(x, low_lim, high_lim, nbins):
+    counts, bin_edges = np.histogram(x, np.linspace(low_lim, high_lim, nbins))
+    bin_centers = bin_edges[:-1] + np.diff(bin_edges) / 2
+    density = np.true_divide(counts, np.sum(counts))
+    return density, bin_centers, bin_edges
+
+from scipy.special import kl_div
+def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PDF=None, suplabel=""):
+    a_hist, a_bin_centers, a_bin_edges = calc_pdf(a, low_lim, high_lim, nbins)
+    b_hist, bin_centers, bin_edges = calc_pdf(b, low_lim, high_lim, nbins)
+    assert np.all(a_bin_edges==bin_edges), 'Andy screwed up the code.'
+
+    hfig = plt.figure()
+    gs = gridspec.GridSpec(3, 1, figure=hfig)
+    ha = hfig.add_subplot(gs[0, 0])
+    ha.bar(bin_centers, a_hist)
+    hb = hfig.add_subplot(gs[1, 0])
+    hb.bar(bin_centers, b_hist)
+    hc = hfig.add_subplot(gs[2, 0])
+    hc.bar(bin_centers, a_hist - b_hist)
+
+    hb.set_title(blabel)
+    ha.set_title(alabel)
+    hc.set_title('Residual (top-bottom)')
+
+    ha.set_ylabel('Probability Density')
+    hb.set_ylabel('Probability Density')
+    hc.set_ylabel('Probability Density')
+
+    MSE = np.sum((a_hist - b_hist)**2)/a_hist.size
+    #KL = kl_div(a_hist, b_hist)
 
 
 
+    hfig.suptitle(suplabel + ' MSE = %.4f' % MSE)
+
+    if PDF is not None:
+        pdf.savefig(hfig)
+    return MSE#, KL
+
+filename = 'correlates_of_performance.pdf'
+pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
 
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
@@ -69,6 +111,8 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         vel_test = res['signal'][res['test_idx']]
 
 
+
+
         if key in excludeInterval.keys():
             for interval in excludeInterval[key]:
                 idxs = np.where(np.logical_or(time < interval[0], time > interval[1]))[0]
@@ -91,6 +135,10 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         vel_std.append(np.nanstd(vel))
         std_test_train_ratio.append(np.nanstd(vel_test) / np.nanstd(vel_train))
         std_vel_test.append(np.nanstd(vel_test))
+        mse = compare_pdf(vel_test, vel_train, alabel="test", blabel="train", suplabel=key + "rho2 = %.2f " % rho2[-1], PDF=pdf)
+        vel_pdf_mse.append(mse)
+        #vel_pdf_kl.append(kl)
+
         label.append(key)
 
 
@@ -103,6 +151,7 @@ def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2', labels=la
     ax.scatter(x, rho2)
     ax.set_xlabel(x_name)
     ax.set_ylabel(metric_name)
+    ax.set_xlim(np.min(x)*.9, np.max(x)*1.4)
     for i, txt in enumerate(labels):
         ax.annotate(txt, (x[i], rho2[i]))
 
@@ -115,9 +164,8 @@ def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2', labels=la
     fig = None
     return
 
-filename = 'correlates_of_performance.pdf'
-print("Plotting")
-pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+
+
 plot_candidate(mean_intensity, 'mean intensity', labels=label, PDF=pdf)
 plot_candidate(percentile_intensity, '75th percentile intensity', labels=label, PDF=pdf)
 plot_candidate(frac_nan, 'fraction nan', labels=label, PDF=pdf)
@@ -129,6 +177,8 @@ plot_candidate(mean_vel, 'Mean Velocity', labels=label, PDF=pdf)
 plot_candidate(vel_std, 'std(vel)', labels=label, PDF=pdf)
 plot_candidate(std_test_train_ratio, 'std(vel_test) / std(vel_train)', labels=label, PDF=pdf)
 plot_candidate(std_vel_test, 'std(vel_test)', labels=label, PDF=pdf)
+plot_candidate(vel_pdf_mse, 'MSE of Train vs Test Velocity PDF', labels=label, PDF=pdf)
+#plot_candidate(vel_pdf_kl, 'KL divergence of Train vs Test Velocity PDF', labels=label, PDF=pdf)
 
 pdf.close()
 print("Finished: " + filename)
