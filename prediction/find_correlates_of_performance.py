@@ -51,28 +51,32 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     assert np.all(a_bin_edges==bin_edges), 'Andy screwed up the code.'
 
     hfig = plt.figure()
-    gs = gridspec.GridSpec(3, 1, figure=hfig)
+    gs = gridspec.GridSpec(2, 1, figure=hfig)
     ha = hfig.add_subplot(gs[0, 0])
-    ha.bar(bin_centers, a_hist)
+    ha.step(bin_centers, a_hist, where='mid', label=alabel)
+    ha.step(bin_centers, b_hist, where='mid', label=blabel)
+    ha.legend()
     hb = hfig.add_subplot(gs[1, 0])
-    hb.bar(bin_centers, b_hist)
-    hc = hfig.add_subplot(gs[2, 0])
-    hc.bar(bin_centers, a_hist - b_hist)
+    hb.step(bin_centers, a_hist - b_hist, where='mid', label="A-B")
+    hb.axhline()
 
-    hb.set_title(blabel)
-    ha.set_title(alabel)
-    hc.set_title('Residual (top-bottom)')
+    ha.set_title(alabel + " " + blabel)
+    hb.set_title('Residual: ' + alabel + " - " + blabel)
+
+    ylim_high = np.max([a_hist, b_hist])
+    ylim_low = np.min(a_hist-b_hist)
+    ha.set_ylim(ylim_low, ylim_high)
+    hb.set_ylim(ylim_low, ylim_high)
 
     ha.set_ylabel('Probability Density')
     hb.set_ylabel('Probability Density')
-    hc.set_ylabel('Probability Density')
 
     MSE = np.sum((a_hist - b_hist)**2)/a_hist.size
     #KL = kl_div(a_hist, b_hist)
 
 
 
-    hfig.suptitle(suplabel + ' MSE = %.4f' % MSE)
+    hfig.suptitle(suplabel + ' MSE = %.4f ' % MSE)
 
     if PDF is not None:
         pdf.savefig(hfig)
