@@ -210,11 +210,11 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
                 corrs = [np.corrcoef(x, Y)[0,1]**2 for x in X]
                 best_neuron_idx = np.argmax(corrs)
 
-                
-                result = minimize(error, np.zeros(2), args = (X[best_neuron_idx], Y, 0, 0))
-                best_neuron_params = result.x
-                best_neuron_error = result.fun
-                best_neuron_R2 = R2(result.x, f, X[best_neuron_idx], Y, width=options['time_shift'])
+                A = np.vstack([X[best_neuron_idx], np.ones(X.shape[1])]).T
+                m, b = np.linalg.lstsq(A, Y, rcond=None)[0]
+                best_neuron_params = np.array([b, m])
+                best_neuron_error = error(best_neuron_params, X[best_neuron_idx], Y, 0, 0)
+                best_neuron_R2 = R2(best_neuron_params, f, X[best_neuron_idx], Y, width=options['time_shift'])
                 
                 weights = np.zeros(X.shape[0])
                 weights[best_neuron_idx] = best_neuron_params[1]
