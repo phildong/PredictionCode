@@ -207,7 +207,7 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
 
         else:
             if not options['derivative_penalty']:
-                corrs = [np.corrcoef(x, Y)**2 for x in X]
+                corrs = [np.corrcoef(x, Y)[0,1]**2 for x in X]
                 best_neuron_idx = np.argmax(corrs)
 
                 
