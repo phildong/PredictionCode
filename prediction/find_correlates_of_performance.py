@@ -31,6 +31,9 @@ R_mean = []
 R_mean_fano_factor = []
 G_mean = []
 G_mean_fano_factor = []
+G_R_ratio = []
+G_R_percentile_ratio = []
+G_R_percentile_ratio_percentile_neuron = []
 mean_vel = []
 vel_std = []
 std_test_train_ratio = []
@@ -133,8 +136,11 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         recording_length.append(neurons.shape[1])
         R_mean.append(np.nanmean(R))
         R_mean_fano_factor.append(np.nanmedian((np.nanstd(G, 1)**2 / np.nanmean(G, 1) )) )
-        G_mean.append(np.nanmean(R))
+        G_mean.append(np.nanmean(G))
         G_mean_fano_factor.append(np.nanmedian((np.nanstd(G, 1)**2 / np.nanmean(G, 1) )) )
+        G_R_ratio.append(np.nanmean(np.nanmean(np.true_divide(G, R), 1)))
+        G_R_percentile_ratio.append(np.true_divide(np.nanpercentile(G, 90),  np.nanpercentile(R, 90)))
+        G_R_percentile_ratio_percentile_neuron.append(np.nanpercentile(np.true_divide(np.nanpercentile(G, 90, axis=1), np.nanpercentile(R, 90, axis=1)), 90))
         mean_vel.append(np.nanmean(vel))
         vel_std.append(np.nanstd(vel))
         std_test_train_ratio.append(np.nanstd(vel_test) / np.nanstd(vel_train))
@@ -182,6 +188,12 @@ plot_candidate(vel_std, 'std(vel)', labels=label, PDF=pdf)
 plot_candidate(std_test_train_ratio, 'std(vel_test) / std(vel_train)', labels=label, PDF=pdf)
 plot_candidate(std_vel_test, 'std(vel_test)', labels=label, PDF=pdf)
 plot_candidate(vel_pdf_mse, 'MSE of Train vs Test Velocity PDF', labels=label, PDF=pdf)
+plot_candidate(G_R_ratio, " mean of per neuron mean of G/R", labels=label, PDF=pdf)
+plot_candidate(G_R_percentile_ratio, " 90th all G / 90th perecentile all R", labels=label, PDF=pdf)
+plot_candidate(G_R_percentile_ratio_percentile_neuron, " 90th percentile neuron of 90th percentile G / 90th perecentile R", labels=label, PDF=pdf)
+
+
+
 #plot_candidate(vel_pdf_kl, 'KL divergence of Train vs Test Velocity PDF', labels=label, PDF=pdf)
 
 pdf.close()
