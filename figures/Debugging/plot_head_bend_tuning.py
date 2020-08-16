@@ -308,8 +308,8 @@ def main():
 
     ### CHOOSE DATASET TO PLOT
     key = 'AKS297.51_moving'
-    idn = 'BrainScanner20200310_141211'
-    idn = 'BrainScanner20200310_142022'
+    #idn = 'BrainScanner20200310_141211'
+    #idn = 'BrainScanner20200310_142022'
     idn = 'BrainScanner20200130_110803'
     #idn = 'BrainScanner20200130_105254'
 
@@ -356,7 +356,7 @@ def main():
     ## Find peaks of head swings
     import matplotlib.pyplot as plt
     from scipy.signal import find_peaks
-    prominence=0.4
+    prominence = 0.5 * np.std(smooth_head_angle)
     peaks, _ = find_peaks(smooth_head_angle, height=-.3, prominence=prominence)
     neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=-.3, prominence=prominence)
 
