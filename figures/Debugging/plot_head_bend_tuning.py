@@ -6,8 +6,9 @@
 ################################################
 import os
 import numpy as np
-
+import matplotlib
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import matplotlib.gridspec as gridspec
 
 def calc_head_angle(centerlines):
@@ -113,6 +114,96 @@ def strided_indexing_roll(a, r):
     n = a.shape[1]
     return viewW(a_ext, (1, n))[np.arange(len(r)), (n-r) % n, 0]
 
+
+def find_phase_4pt(pospeaks, negpeaks, zero_crossings, time):
+    '''Find the phase  by taking into account  positive and negative peaks and zero crosisngs.
+    '''
+    #Get arrays that have the time points (although they aren't ordered)
+    keypt_phase_indices = np.concatenate((pospeaks, negpeaks), axis=0)
+    ind = np.argsort(keypt_phase_indices) #sort them by index
+    keypt_phase_indices =  keypt_phase_indices[ind]
+
+    #Now we want to get the up and down peaks onto a single timeline, so that we can detect weird cases where there are \
+    # two peaks and no trough in between
+
+    # Define an array that specifies whether the peak is positive or negative
+    updown = np.concatenate((np.ones(pospeaks.size), np.zeros(negpeaks.size)),
+                            axis=0)
+    updown = updown[ind] # sort them also by time
+
+
+    # First lets get the phase going and allow it to go linearly beyond 2pi. we'll take the modulo later.
+    cum_phase = np.cumsum(np.abs(np.diff(updown))) * np.pi
+                                        # (whats going on here is that the diff will be +/-1 everytime
+                                        # there is a  peak to trough or trough to peak transition
+                                        # it will be zero if there are two peaks or two troughs in a row
+                                        # so if we take the cumsum and multiply by pi we get the phases
+                                        # that we can interpolate over later)
+
+
+    # Let's deal with some additioanl subtelties.
+    # We tack on a zero because we skip one point when we take the diff
+    cum_phase = np.append(0, cum_phase)
+
+
+    #Then we want to set the the first positive peak to have phase of zero
+    # so we subtract off phase value at the first positive peak  (depending on whether a positive or negative peak came first,
+    # this could have been assigned a pi value)
+    cum_phase = cum_phase - cum_phase[np.where(updown == 1)[0][0]]
+
+    # Then we need to deal with the fact that the recording doesn't necessarily start with a peak,
+    # So we will be extrapolating whatever trend back towards zero as we go back in time from the first peak
+    # We would prefer that the phase never goes negative, so we will add some additional factors of 2 pi
+    cum_phase = cum_phase + 4 * np.pi
+    # this is ok because we take the modulo later
+
+
+
+    # Now we interpolate and extroplate to assign a phase value to every point in time
+    from scipy import interpolate
+    f = interpolate.interp1d(time[keypt_phase_indices], cum_phase, fill_value="extrapolate")
+    cum_phase_interp = f(time)
+
+
+    # ANDYS IDEA FOR ZERO CROSSINGS: to get the zero crossings, what we want to do is force the phase to be  
+    # pi/2 or 3pi / 2 at each zero crossings.
+    # we can acheive this by simply rounding to the nearest of those two options. Then we would re-interpolate
+
+
+    # To force roundign to only pi/2 or 3pi/2 here is a little recipe:
+    #divide by pi  (one cycle runs 0 to 2)
+    #then add 1/2 (one cycle now runs .5 to 2.5)
+    #round (lock to 1 or 2)
+    #then subtract 1/2
+    #then multiply by pi again
+    cum_phase_zero_cross =  ( np.around( np.true_divide(cum_phase_interp[zero_crossings], np.pi) + 0.5 ) - 0.5 ) * np.pi
+
+    # Now combine the zero corssing phases  with the peak and trough phases, and do the same for the time indices
+    cum_phase2 = np.concatenate((cum_phase, cum_phase_zero_cross), axis=0)
+    keypt_phase_indices = np.concatenate((keypt_phase_indices, zero_crossings), axis=0)
+    
+    ind = np.argsort(keypt_phase_indices) #sort them by index
+    cum_phase = cum_phase2[ind]
+
+    # Now repeat the interpolation
+    f2 = interpolate.interp1d(time[keypt_phase_indices[ind]], cum_phase, fill_value="extrapolate")
+    cum_phase_interp = f2(time)
+
+    # now chop it into range 0 to 2pi
+    phase = np.mod(cum_phase_interp, 2*np.pi)
+    return phase
+
+#functions to fit a cosine wave
+from skimage.util.shape import view_as_windows as viewW
+def strided_indexing_roll(a, r):
+    # Concatenate with sliced to cover all rolls
+    # This function will roll each row of a matrix a, a an amount specified by r.
+    # I got it here: https://stackoverflow.com/a/51613442/200688
+    a_ext = np.concatenate((a,a[:,:-1]),axis=1)
+
+    # Get sliding windows; use advanced-indexing to select appropriate ones
+    n = a.shape[1]
+    return viewW(a_ext, (1, n))[np.arange(len(r)), (n-r) % n, 0]
 
 
 def fit_cos_wave(activity, phase):
@@ -348,10 +439,7 @@ def main():
     smooth_head_angle = dh.gauss_filterNaN(head_angle, sigma)
 
 
-    if idn == 'BrainScanner20200130_105254':
-        prominence = 0.2
-    else:
-        prominence = 0.4
+
 
     ## Find peaks of head swings
     import matplotlib.pyplot as plt
@@ -360,11 +448,15 @@ def main():
     peaks, _ = find_peaks(smooth_head_angle, height=-.3, prominence=prominence)
     neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=-.3, prominence=prominence)
 
+    # Find zero crossings, from https://gist.github.com/sixtenbe/1178136/d52dfaaf987c56bec20bb64d35f3fb35d39e1f80#file-peakdetect-py-L249
+    zero_crossings = np.where(np.diff(np.sign(smooth_head_angle)))[0]
+    zero_cross_times = [time[indice] for indice in zero_crossings]
+
     # Define a phase between peaks in the same direction
     pos_phase = find_phase(peaks, time)
     neg_phase = find_phase(neg_peaks, time)
-    phase = find_phase_pos_and_neg(peaks, neg_peaks, time)
-
+    #phase = find_phase_pos_and_neg(peaks, neg_peaks, time)
+    phase = find_phase_4pt(peaks, neg_peaks, zero_crossings, time)
 
 
 
@@ -433,8 +525,9 @@ def main():
         ax4.plot(time, head_angle, rasterized=True)
         ax4.plot(time[peaks], head_angle[peaks], "x", markersize=12, label="Positive peak", rasterized=True)
         ax4.plot(time[neg_peaks], head_angle[neg_peaks], "o", markersize=12, label="Negative peak", rasterized=True)
-        ax4.plot(time, pos_phase, label="Phase from positive peaks", rasterized=True)
+        #ax4.plot(time, pos_phase, label="Phase from positive peaks", rasterized=True)
         ax4.plot(time, phase, label="Phase from pos and neg peaks", rasterized=True)
+        ax4.plot(time, smooth_head_angle, label="Smoothed head angle", rasterized=True)
         ax4.axhline(color='k')
         ax4.set_xlabel('Time (s)')
         ax4.set_ylabel('Head Bend (radians)')
