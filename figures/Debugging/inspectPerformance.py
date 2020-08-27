@@ -130,6 +130,7 @@ def main():
             except IOError:
                 print typ, condition, 'not found.'
                 pass
+
     print 'Done reading data.'
 
 
@@ -242,11 +243,15 @@ def main():
     # because I assume its a lot of plots
 
     #Actually plot each prediction
-    print("Plotting behavior predictions..")
     # For each type of recording
+    SKIP_PERFORMANCE = True
 
     #for key in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
-    for key in ['AKS297.51_moving']:
+    for key in ['AML32_moving', 'AKS297.51_moving']:
+        if SKIP_PERFORMANCE:
+            break
+
+        print("Plotting behavior predictions..")
     #for key in ['AML32_moving', 'AML70_chip', 'AML70_moving', 'AML18_moving']:
         dset = data[key]['input']
 
@@ -691,12 +696,6 @@ def main():
 
 
 
-
-    #raise Exception('Stopping here for now..')
-
-
-
-
     ### Plot Neural State Space Trajectories
 
     import matplotlib.pyplot as plt
@@ -761,4 +760,5 @@ def main():
     print("Saved state space trajectories.")
 
 if __name__ == '__main__':
+    print("about to run main()")
     main()
