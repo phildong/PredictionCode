@@ -9,10 +9,10 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results.dat', 'rb') as handle:
+with open('/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_cv.dat', 'rb') as handle:
     data = pickle.load(handle)
 
-excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
+excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008', 'BrainScanner20200309_145927'] #exclude 145927 because it is L4
 excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]], 
                    'BrainScanner20200309_151024': [[125, 135], [30, 40]], 
                    'BrainScanner20200309_153839': [[35, 45], [160, 170]], 
@@ -23,6 +23,7 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
 neuron_data = {}
 X_data = {}
 Y_data = {}
+time_data = {}
 max_time = np.array(0.0)
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
@@ -63,14 +64,21 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         neuron_data[key] = neurons
         X_data[key] = X
         Y_data[key] = Y
+        time_data[key] = time
         max_time = np.max(np.append(time, max_time)) #time of longest recording seen so far
 
-keys = list(data.keys())
+keys = list(X_data.keys())
 keys.sort()
 
 figtypes = ['bsn', 'slm']
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "translocation.pdf"))
+
+def powerspectra(x, time_step):
+    ps = np.abs(np.fft.fft(x)) ** 2
+    freqs = np.fft.fftfreq(x.size, time_step)
+    idx = np.argsort(freqs)
+    return freqs[idx], ps[idx]
 
 def furthest_distance(X, Y, num_exclude=3):
     ''' find the furthest distances between any two points, excluding a few of the largest distancess which may be artifactss'''
@@ -133,12 +141,27 @@ for key in keys:
         sc.set_ylabel('Predicted Velocity')
         sc.legend()
 
-    #Translocation goes here (this was formerly where the scatter plots of weights went)
+    #Translocation goes here
     (dist, ind) = furthest_distance(X_data[key], Y_data[key])
+    ax = fig.add_subplot(gs[0:, 2:])
+ #   ax.plot(X_data[key], Y_data[key], label="position", marker='o')
 
-    ax = fig.add_subplot(gs[:, 2:])
-    ax.plot(X_data[key], Y_data[key], label="position", marker='o')
-    ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
+    ### Plot the lines to that they chang ecolor
+    points = np.array([X_data[key], Y_data[key]]).transpose().reshape(-1, 1, 2)
+    # set up a list of segments
+    segs = np.concatenate([points[:-1], points[1:]], axis=1)
+    # see what we've done here -- we've mapped our (x,y)
+    # points to an array of segment start/end coordinates.
+    # segs[i,0,:] == segs[i-1,1,:]
+    # make the collection of segments
+    from matplotlib.collections import LineCollection
+    lc = LineCollection(segs, cmap=plt.get_cmap('gist_rainbow'))
+    lc.set_array(res['time'])  # color the segments by our parameter
+    # plot the collection
+    ax.add_collection(lc)  # add the collection to the plot
+
+
+#    ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
     ax.set_xlabel('X', fontsize=14)
     ax.set_ylabel('Y', fontsize=14)
     ax.set_xlim(-13, 13)
@@ -147,6 +170,22 @@ for key in keys:
 
     import prediction.provenance as prov
     prov.stamp(ax,.55,.15)
+    fig.colorbar(lc)  # , cax=ax)  # , orientation='horizontal')
+    ax.set_xlim(-13, 13)
+    ax.set_ylim(-13, 13)
+
+    if False:
+        #Plot the power spectra of the velocity
+        time_step = np.true_divide(1, 6)
+        freqs, ps = powerspectra(res['signal'], time_step)
+        ax = fig.add_subplot(gs[0:1, 2:])
+        ax.plot(freqs, ps)
+        ax.set_xlabel('Hz', fontsize=14)
+        ax.set_ylabel('Power?',fontsize=14)
+        ax.set_xlim(0, 0.3)
+        ax.set_yscale('log')
+        ax.set_ylim(10,10**7)
+
 
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
