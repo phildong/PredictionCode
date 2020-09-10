@@ -389,6 +389,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # Jan 2020: andy suspects this "vel" variable comes from the COM of the centerline +
     # the stage position, as Jeff calculates (and smooths) here:
     # https://github.com/leiferlab/3dbrain/blob/e38908c6dd5a4ae2829946ab91b9a00af9516f2e/fiducialCropper3.m#L57
+    #
+    # for the contents of the MATLAB behavior struct, see https://github.com/leiferlab/3dbrain/blob/9a5a8d6b071c1c9e49a86e66e2064e9ebe69224d/rerunDataCollectionMS.m#L142
 
     if cutVolume is None:
         cutVolume = np.max(vel.size)
