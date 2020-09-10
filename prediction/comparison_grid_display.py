@@ -23,7 +23,10 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_l10.dat', 'rb') as handle:
+
+
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_velocity_cv.dat'
+with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
@@ -110,9 +113,12 @@ ax.set_xticks(np.array([[x+.2, x+.4, x+.6, x+.8] for x in ind]).flatten())
 ax.set_xticklabels([r'$R^2$', r'$\rho^2_{\mathrm{adj},1}$', r'$\rho^2_{\mathrm{adj},2}$', r'$\rho^2$']*len(figtypes))
 ax.grid(axis='y')
 
-
+import prediction.provenance as prov
+prov.stamp(ax, .55, .15)
 
 print('saving')
 # fig.tight_layout()
-fig.savefig('comparison_all_l10.pdf')
-print('saved')
+import os
+outfilename = os.path.splitext(os.path.basename(pickled_data))[0] + '.pdf'
+fig.savefig(outfilename)
+print('saved ' + outfilename )
