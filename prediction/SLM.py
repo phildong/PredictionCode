@@ -60,7 +60,7 @@ def split_test(X, test):
     X_test = X.T[center_idx].T
     return (X_train, X_test)
 
-def optimize_slm(time, Xfullunn, Yfull, options = None):
+def optimize_slm(time, Xfullunn, Yfullunn, options = None):
     if options is None:
         options = dict()
     default_options = {
@@ -70,8 +70,8 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
     'normalize': True,
     'parallelize': True,
     'max_depth': 1,
-    'alphas': np.logspace(-1.5, 2.5, 7),
-    'l1_ratios': [0.03],
+    'alphas': np.logspace(-2.5, 0.5, 7),
+    'l1_ratios': [.001, .003, .01, 0.03, .1],
     'sigma': 14,
     'derivative_weight': 10,
     'cv_fraction': 0.4,
@@ -86,8 +86,10 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
         Xmean = np.mean(Xfullunn, axis = 1)[:, np.newaxis]
         Xstd = np.std(Xfullunn, axis = 1)[:, np.newaxis]
         Xfull = (Xfullunn-Xmean)/Xstd
+        Yfull = (Yfullunn-np.mean(Yfullunn))/np.std(Yfullunn)
     else:
         Xfull = Xfullunn
+        Yfull = Yfullunn
 
     X, Xtest = split_test(Xfull, options['test_fraction'])
     Y, Ytest = split_test(Yfull, options['test_fraction'])
@@ -228,8 +230,8 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
                         'error'          : best_neuron_error,
                         'alpha'          : 0,
                         'l1_ratio'       : 0,
-                        'scores'         : scores(P, f, X, Y),
-                        'scorespredicted': scores(P, f, Xtest, Ytest),
+                        'scores'         : scores(best_neuron_params, f, X, Y),
+                        'scorespredicted': scores(best_neuron_params, f, Xtest, Ytest),
                         'score'          : best_neuron_R2,
                         'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest, width=options['time_shift']),
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
@@ -274,8 +276,8 @@ def optimize_slm(time, Xfullunn, Yfull, options = None):
                         'error'          : best_neuron_error,
                         'alpha'          : 0,
                         'l1_ratio'       : 0,
-                        'scores'         : scores(P, f, X, Y),
-                        'scorespredicted': scores(P, f, Xtest, Ytest),
+                        'scores'         : scores(P, best_neuron_params, X, Y),
+                        'scorespredicted': scores(P, best_neuron_params, Xtest, Ytest),
                         'score'          : best_neuron_R2,
                         'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest, width=options['time_shift']),
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
