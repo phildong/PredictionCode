@@ -34,6 +34,7 @@ G_mean = []
 G_mean_fano_factor = []
 G_max_fano_factor = []
 G_std_G_mean_largest_neuron = []
+G_std_G_mean_95_neuron = []
 G_R_ratio = []
 G_R_percentile_ratio = []
 G_R_percentile_ratio_percentile_neuron = []
@@ -164,6 +165,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         G_mean_fano_factor.append(np.nanmedian((np.nanstd(G, 1)**2 / np.nanmean(G, 1) )) )
         G_max_fano_factor.append(np.max(np.nanstd(G, 1)**2/np.nanmean(G,1)) )
         G_std_G_mean_largest_neuron.append(np.max(np.nanstd(G, 1)/np.nanmean(G,1)))
+        G_std_G_mean_95_neuron.append(np.nanpercentile(np.nanstd(G, 1) / np.nanmean(G, 1), 95))
         G_R_ratio.append(np.nanmean(np.nanmean(np.true_divide(G, R), 1)))
         G_R_percentile_ratio.append(np.true_divide(np.nanpercentile(G, 90),  np.nanpercentile(R, 90)))
         G_R_percentile_ratio_percentile_neuron.append(np.nanpercentile(np.true_divide(np.nanpercentile(G, 90, axis=1), np.nanpercentile(R, 90, axis=1)), 90))
@@ -225,6 +227,7 @@ plot_candidate(G_R_mean_ratio_percentile2_neuron, " mean across neurons of 95th 
 plot_candidate(bsn_rho2_adj, " Best Single Neuron rho2_adj",
                    labels=label, PDF=pdf)
 plot_candidate(G_std_G_mean_largest_neuron, " value for Green neuron with highest std/mean", labels=label, PDF=pdf)
+plot_candidate(G_std_G_mean_95_neuron, " value for Green neuron with 95th percentile highest std/mean", labels=label, PDF=pdf)
 plot_candidate(G_max_fano_factor, " Fano Factor for Green Neuron with highest Fano Factor", labels=label, PDF=pdf)
 
 #plot_candidate(vel_pdf_kl, 'KL divergence of Train vs Test Velocity PDF', labels=label, PDF=pdf)

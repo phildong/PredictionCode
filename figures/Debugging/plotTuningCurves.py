@@ -88,7 +88,7 @@ if False:
     plt.figure(figsize=[10,10])
     plt.plot(vel, comVel)
 
-UseEigVol = True
+UseEigVol = False
 if UseEigVol:
     velName = 'Eigenworm Velocity'
     velocity = vel
