@@ -23,14 +23,14 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results_aml18.dat', 'rb') as handle:
+with open('comparison_results_head_bend_sin_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
 keys.sort()
 
-figtypes = ['bsn', 'slm', 'bsn_acc', 'slm_acc', 'bsn_deriv', 'slm_with_derivs', 'bsn_deriv_acc', 'slm_with_derivs_acc', 'pc', 'pc_deriv']
-#figtypes = ['bsn', 'bsn_deriv', 'slm', 'slm_with_derivs']
+#figtypes = ['bsn', 'slm', 'bsn_acc', 'slm_acc', 'bsn_deriv', 'slm_with_derivs', 'bsn_deriv_acc', 'slm_with_derivs_acc', 'pc', 'pc_deriv']
+figtypes = ['bsn_deriv', 'slm_with_derivs']
 
 score_R2 = [[0 for figtype in figtypes] for key in keys]
 score_rhoadj1 = [[0 for figtype in figtypes] for key in keys]
@@ -65,7 +65,7 @@ for row, key in enumerate(keys):
         ax.plot(res['time'], res['output'], 'b', lw=1)
         ax.set_title(figtype+r' scores: (%0.2f, %0.2f, %0.2f, %0.2f)' % (score_R2[row][col], score_rhoadj1[row][col], score_rhoadj2[row][col], score_rho[row][col]))
         ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Velocity')
+        ax.set_ylabel('Curvature')
         ax.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
         if row == 0:
@@ -79,8 +79,8 @@ for row, key in enumerate(keys):
         ax.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', rasterized = True)
         ax.set_title(figtype)
         ax.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        ax.set_xlabel('Measured Velocity')
-        ax.set_ylabel('Predicted Velocity')
+        ax.set_xlabel('Measured Curvature')
+        ax.set_ylabel('Predicted Curvature')
 
 
 ax = fig.add_subplot(gs[-1, :])
@@ -114,5 +114,5 @@ ax.grid(axis='y')
 
 print('saving')
 # fig.tight_layout()
-fig.savefig('comparison_all_aml18.pdf')
+fig.savefig('comparison_grid_head_bend_sin_l10.pdf')
 print('saved')

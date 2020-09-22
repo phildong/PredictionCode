@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('comparison_results.dat', 'rb') as handle:
+with open('comparison_results_curvature_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 with open('neuron_data.dat', 'rb') as handle:
@@ -20,7 +20,7 @@ keys.sort()
 
 figtypes = ['bsn_deriv', 'slm_with_derivs']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_weight_results.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_curvature_l10_weight_results.pdf"))
 
 for key in keys:
 
@@ -63,7 +63,7 @@ for key in keys:
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % (res['corrpredicted']**2 - (alpha)**2/((truesigma*predsigma)**2)))
+        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % (res['corrpredicted']**2 - (alpha)**2/((truesigma*predsigma)**2)))
         sc.set_xlabel('Measured Velocity')
         sc.set_ylabel('Predicted Velocity')
         sc.legend()

@@ -25,7 +25,7 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results.dat', 'rb') as handle:
+with open('comparison_results_curvature_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
@@ -33,7 +33,7 @@ keys.sort()
 
 figtypes = ['bsn_deriv', 'slm_with_derivs']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_results.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_results_curvature_l10.pdf"))
 
 for key in keys:
 
@@ -55,12 +55,6 @@ for key in keys:
         predsigma = np.std(yhat)
         R2 = 1-np.sum(np.power(y-yhat, 2))/np.sum(np.power(y-truemean, 2))
 
-        print(beta**2, alpha)
-        print(res['corrpredicted']**2, (beta/truesigma)**2, ((alpha+beta**2)**2/(truesigma*predsigma)**2))
-        print("Actual R^2:  ",R2)
-        print("Formula R^2: ",res['corrpredicted']**2 - (beta/truesigma)**2 - (alpha+beta**2)**2/((truesigma*predsigma)**2))
-
-
         ts = fig.add_subplot(gs[row+1, 0])
         ts.plot(res['time'], res['signal'], 'k', lw=1)
         ts.plot(res['time'], res['output'], 'b', lw=1)
@@ -68,7 +62,7 @@ for key in keys:
         # w[:6] = 0
         # w[-6:] = 0
         # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
-        ts.set_title(figtype+r' $R^2_\mathrm{test}(\mathrm{velocity})$ = %0.3f, $R^2_\mathrm{test}(\mathrm{acceleration})$ = %0.3f' % (R2, deriv_r2(data[key][figtype]['signal'], data[key][figtype]['output'], data[key][figtype]['test_idx'])))
+        # ts.set_title(figtype+r' $R^2_\mathrm{test}(\mathrm{velocity})$ = %0.3f, $R^2_\mathrm{test}(\mathrm{acceleration})$ = %0.3f' % (R2, deriv_r2(data[key][figtype]['signal'], data[key][figtype]['output'], data[key][figtype]['test_idx'])))
         ts.set_xlabel('Time (s)')
         ts.set_ylabel('Velocity')
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
@@ -77,7 +71,7 @@ for key in keys:
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        sc.set_title(figtype+r' $\rho^2_{\mathrm{test},\mathrm{adj}}(\mathrm{velocity})$ = %0.3f' % (res['corrpredicted']**2 - (alpha+beta**2)**2/((truesigma*predsigma)**2)))
+        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % (res['corrpredicted']**2 - (alpha)**2/((truesigma*predsigma)**2)))
         sc.set_xlabel('Measured Velocity')
         sc.set_ylabel('Predicted Velocity')
         sc.legend()
@@ -123,7 +117,7 @@ for key in keys:
     # ax.text(-2, -0.2, r'$\left.\frac{dF}{dt}\right|_-$', fontsize=16)
 
     ax.set_xticks(np.arange(n))
-    ax.set_xticklabels(xs)
+    ax.set_xticklabels(xs, fontsize=2)
     ax.set_yticks([])
     ax.legend()
 
