@@ -23,7 +23,8 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-with open('comparison_results_head_bend_sin_l10.dat', 'rb') as handle:
+pickled_data = 'comparison_results_head_bend_sin_l10.dat'
+with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())
@@ -110,9 +111,12 @@ ax.set_xticks(np.array([[x+.2, x+.4, x+.6, x+.8] for x in ind]).flatten())
 ax.set_xticklabels([r'$R^2$', r'$\rho^2_{\mathrm{adj},1}$', r'$\rho^2_{\mathrm{adj},2}$', r'$\rho^2$']*len(figtypes))
 ax.grid(axis='y')
 
-
+import prediction.provenance as prov
+prov.stamp(ax, .55, .15)
 
 print('saving')
 # fig.tight_layout()
-fig.savefig('comparison_grid_head_bend_sin_l10.pdf')
-print('saved')
+import os
+outfilename = os.path.splitext(os.path.basename(pickled_data))[0] + '.pdf'
+fig.savefig(outfilename)
+print('saved ' + outfilename )
