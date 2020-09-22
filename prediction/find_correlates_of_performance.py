@@ -9,7 +9,8 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_velocity_cv.dat', 'rb') as handle:
+filename = 'correlates_of_performance_velocity_l10.pdf'
+with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
@@ -106,7 +107,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
         pdf.savefig(hfig)
     return MSE#, KL
 
-filename = 'correlates_of_performance.pdf'
+
 pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
 
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
@@ -190,14 +191,24 @@ import matplotlib.backends.backend_pdf
 def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2_adj', labels=label, PDF=None):
     fig, ax = plt.subplots(figsize=(10,10))
     ax.scatter(x, rho2_adj)
+
+    #adapted from: https://stackoverflow.com/questions/18767523/fitting-data-with-numpy
+    import numpy.polynomial.polynomial as poly
+    coefs = poly.polyfit(x, rho2_adj, 1)
+    x_new = np.linspace(np.min(x), np.max(x), num=len(x))
+    ffit = poly.polyval(x_new, coefs)
+    plt.plot(x_new, ffit,'r--')
+
+
     ax.set_xlabel(x_name)
     ax.set_ylabel(metric_name)
     ax.set_xlim(np.min(x)*.9, np.max(x)*1.4)
+    ax.set_title('Corrcoef =%.2f' %np.corrcoef(x, rho2_adj)[0,1] )
     for i, txt in enumerate(labels):
         ax.annotate(txt, (x[i], rho2_adj[i]))
 
     import prediction.provenance as prov
-    prov.stamp(ax,.55,.35)
+    prov.stamp(ax,.55,.35,__file__)
 
     if PDF is not None:
         pdf.savefig(fig)
