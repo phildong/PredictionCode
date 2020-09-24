@@ -9,8 +9,8 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-filename = 'correlates_of_performance_velocity_l10.pdf'
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat', 'rb') as handle:
+filename = 'correlates_of_performance_head_bend_cos_l10.pdf'
+with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_head_bend_cos_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
@@ -194,15 +194,17 @@ def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2_adj', label
 
     #adapted from: https://stackoverflow.com/questions/18767523/fitting-data-with-numpy
     import numpy.polynomial.polynomial as poly
-    coefs = poly.polyfit(x, rho2_adj, 1)
-    x_new = np.linspace(np.min(x), np.max(x), num=len(x))
-    ffit = poly.polyval(x_new, coefs)
-    plt.plot(x_new, ffit,'r--')
-
+    try:
+        coefs = poly.polyfit(x, rho2_adj, 1)
+        x_new = np.linspace(np.min(x), np.max(x), num=len(x))
+        ffit = poly.polyval(x_new, coefs)
+        plt.plot(x_new, ffit,'r--')
+    except:
+        None
 
     ax.set_xlabel(x_name)
     ax.set_ylabel(metric_name)
-    ax.set_xlim(np.min(x)*.9, np.max(x)*1.4)
+    ax.set_xlim(np.nanmin(x)*.9, np.nanmax(x)*1.4)
     ax.set_title('Corrcoef =%.2f' %np.corrcoef(x, rho2_adj)[0,1] )
     for i, txt in enumerate(labels):
         ax.annotate(txt, (x[i], rho2_adj[i]))

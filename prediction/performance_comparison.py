@@ -1,15 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-outfile = 'performance_comparison_deriv_rho2_l10.pdf'
+outfile = 'performance_comparison_deriv_rho2_curvature_l10.pdf'
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_velocity_l10.dat'
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
-pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_aml18_l10.dat'
-with open(pickled_data_GFP, 'rb') as handle:
-    dataGFP = pickle.load(handle)
+SHOW_GFP = True
+if SHOW_GFP:
+    pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_curvature_l10.dat'
+    with open(pickled_data_GFP, 'rb') as handle:
+        dataGFP = pickle.load(handle)
 
 fig, ax = plt.subplots(1, 1, figsize = (10, 10))
 
@@ -30,7 +32,9 @@ def calc_rho2_adj2(data, key, type='slm_with_derivs'):
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
-    return (res['corrpredicted'] ** 2 - alpha ** 2 / (truesigma * predsigma) ** 2)
+    rho2_adj = (res['corrpredicted'] ** 2 - alpha ** 2 / (truesigma * predsigma) ** 2)
+    print(key + ': %.2f' % rho2_adj)
+    return rho2_adj
 
 for key in data.keys():
     bsn_rho = calc_rho2_adj2(data, key, 'bsn_deriv')
@@ -39,10 +43,12 @@ for key in data.keys():
 
 ax.axvline(1.5, linestyle='dashed')
 
-for key in dataGFP.keys():
-    bsn_rho = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
-    slm_rho = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
-    ax.plot([2, 3], [bsn_rho, slm_rho], markersize=5, color='k')
+if SHOW_GFP:
+    print("GFP:")
+    for key in dataGFP.keys():
+        bsn_rho = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
+        slm_rho = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
+        ax.plot([2, 3], [bsn_rho, slm_rho], markersize=5, color='k')
 
 
 import prediction.provenance as prov

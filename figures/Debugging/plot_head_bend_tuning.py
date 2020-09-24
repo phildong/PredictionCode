@@ -370,8 +370,8 @@ def main():
     outputFolder = os.path.join(codePath,'figures/Debugging')
 
     data = {}
-    for typ in ['AKS297.51', 'AML32', 'AML18']:
-        for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
+    for typ in ['AML18', 'AML32']: #['AKS297.51', 'AML32', 'AML18']:
+        for condition in ['moving']: #, 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
             path = userTracker.dataPath()
             folder = os.path.join(path, '{}_{}/'.format(typ, condition))
             dataLog = os.path.join(path, '{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition))
@@ -398,15 +398,18 @@ def main():
 
 
     ### CHOOSE DATASET TO PLOT
-    key = 'AKS297.51_moving'
+    #key = 'AKS297.51_moving'
     #idn = 'BrainScanner20200310_141211'
     #idn = 'BrainScanner20200310_142022'
-    idn = 'BrainScanner20200130_110803'
+    #idn = 'BrainScanner20200130_110803'
     #idn = 'BrainScanner20200130_105254'
 
 
     #key = 'AML32_moving'
     #idn = 'BrainScanner20170424_105620'
+
+    key = 'AML18_moving'
+    idn = 'BrainScanner20200204_102136'
 
     ### Get the relevant data.
     dset = data[key]['input'][idn]
