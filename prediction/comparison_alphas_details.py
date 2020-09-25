@@ -9,7 +9,8 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('comparison_results.dat', 'rb') as handle:
+behavior = 'curvature'
+with open('comparison_results_%s.dat' % behavior, 'rb') as handle:
     data = pickle.load(handle)
 
 with open('neuron_data.dat', 'rb') as handle:
@@ -20,7 +21,7 @@ keys.sort()
 
 figtypes = ['bsn_deriv', 'slm_with_derivs']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "slm_deriv_alpha_results.pdf"))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "%s_cross_val.pdf" % behavior))
 
 for key in keys:
 
@@ -56,16 +57,16 @@ for key in keys:
         # w[-6:] = 0
         # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
         ts.set_xlabel('Time (s)')
-        ts.set_ylabel('Velocity')
+        ts.set_ylabel('%s' % behavior)
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
         sc = fig.add_subplot(gs[row, 1])
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % (res['corrpredicted']**2 - (alpha)**2/((truesigma*predsigma)**2)))
-        sc.set_xlabel('Measured Velocity')
-        sc.set_ylabel('Predicted Velocity')
+        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % (res['corrpredicted']**2 - (alpha)**2/(truesigma*predsigma)**2))
+        sc.set_xlabel('Measured %s' % behavior)
+        sc.set_ylabel('Predicted %s' % behavior)
         sc.legend()
 
     ax = fig.add_subplot(gs[:, 2:])
@@ -74,11 +75,11 @@ for key in keys:
     l1s = sorted(list(set(map(lambda x: x[2], r2s))))
 
     for l1 in l1s:
-        pts = np.array(list(map(lambda x: [x[1],x[0]], filter(lambda x: abs(x[2] - l1) < 1e-3, r2s))))
-        ax.plot(pts[:,0], pts[:,1], label = 'l1_ratio = %0.1f' % l1)
+        pts = np.array(sorted(list(map(lambda x: [x[1],x[0]], filter(lambda x: abs(x[2] - l1) < 1e-3, r2s))),key = lambda x: x[0]))
+        ax.plot(pts[:,0], pts[:,1], label = 'l1_ratio = %f' % l1)
         ax.set_xlabel(r'$\alpha$', fontsize=14)
         ax.set_xscale('log')
-        ax.set_ylabel(r'$R^2$', fontsize=14)
+        ax.set_ylabel(r'Cross-validation $R^2$ (Chose: $\alpha = %f$, l1_ratio = %f)' % (data[key]['slm_with_derivs']['alpha'], data[key]['slm_with_derivs']['l1_ratio']), fontsize=14)
     ax.legend()
 
     fig.suptitle(key)
