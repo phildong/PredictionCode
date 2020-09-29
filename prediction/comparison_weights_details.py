@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat'
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
@@ -42,7 +42,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     b_hist, bin_centers, bin_edges = calc_pdf(b, low_lim, high_lim, nbins)
     assert np.all(a_bin_edges==bin_edges), 'Andy screwed up the code.'
 
-    hfig = plt.figure(figsize=[20,20])
+    hfig = plt.figure(figsize=[10,10])
     gs = gridspec.GridSpec(2, 1, figure=hfig)
     ha = hfig.add_subplot(gs[0, 0])
     ha.step(bin_centers, a_hist, where='mid', label=alabel)
@@ -156,16 +156,14 @@ for i, key in enumerate(keys):
         ts.set_ylabel('Velocity')
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
-        sc = fig.add_subplot(gs[row, 1])
+        sc = fig.add_subplot(gs[row, 1], xlabel='Measured Velocity', ylabel='Predicted Velocity')
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
         sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % rho2_adj2[row, i])
-        sc.set_xlabel('Measured Velocity')
-        sc.set_ylabel('Predicted Velocity')
         sc.legend()
 
-    ax = fig.add_subplot(gs[:, 2:])
+    ax = fig.add_subplot(gs[:, 2:], xlabel=r'$\rho$', ylabel='Weight')
 
     slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size/2]
     slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size/2:]
@@ -174,12 +172,10 @@ for i, key in enumerate(keys):
 
     Frac_dFdt[i] = np.sum(np.abs(slm_weights_raw_deriv)) /  (np.sum( np.abs(slm_weights_raw)) + np.sum(np.abs(slm_weights_raw_deriv) ))
 
-    ax.scatter(correlations, slm_weights_raw, label='F')
-    ax.scatter(deriv_correlations, slm_weights_raw_deriv, color='orange', label='dF/dt')
+    ax.plot(correlations, slm_weights_raw, 'o', label='F',  markersize=20 )
+    ax.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize=20, color='orange', label='dF/dt')
     ax.axvline(0, linestyle='dashed')
     ax.axhline(0, linestyle='dashed')
-    ax.set_xlabel(r'$\rho$', fontsize=14)
-    ax.set_ylabel('Weight', fontsize=14)
     ax.set_title('  %.2f Percent of Weights come from derivatives' % Frac_dFdt[i])
     ax.legend()
     fig.suptitle(key)
@@ -203,14 +199,13 @@ for i, key in enumerate(keys):
 
 
 figsummary = plt.figure()
-axs = figsummary.add_subplot(1, 1, 1)
+axs = figsummary.add_subplot(1, 1, 1, xlabel='Decoder Performance (rho2_adj2)',
+                             ylabel='Percentage of magnitude of weights allocated to F',
+                             title='Balance of weights allocated to F vs dF/dt for population decoder')
 axs.scatter(rho2_adj2[1, :], 1-Frac_dFdt)
 axs.axhline(0.5)
-axs.set_xlabel('Decoder Performance (rho2_adj2)')
-axs.set_ylabel('Percentage of magnitude of weights allocated to F')
-axs.set_title('Balance of weights allocated to F vs dF/dt for population decoder')
 axs.set_ylim(0, 1)
-prov.stamp(ax, .55, .35, __file__ + '\n'+ pickled_data)
+prov.stamp(axs, .55, .35, __file__ + '\n'+ pickled_data)
 pdf.savefig(figsummary)
 
 pdf.close()
