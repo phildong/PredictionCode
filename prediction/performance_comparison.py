@@ -13,12 +13,12 @@ if SHOW_GFP:
     with open(pickled_data_GFP, 'rb') as handle:
         dataGFP = pickle.load(handle)
 
-fig, ax = plt.subplots(1, 1, figsize = (10, 10))
+fig, ax = plt.subplots(1, 1, figsize = (4, 10))
 
 ax.set_xticks([0, 1, 2, 3])
 ax.set_xticklabels(['BSNd', 'SLMd', 'BSNd (GFP control)', 'SLMd (GFP control)'], fontsize=16)
 ax.set_ylabel(r'$\rho^2_{\mathrm{adj},2}$', fontsize=16)
-ax.set_ylim(-2, 1)
+ax.set_ylim(-0.8, 1)
 
 def calc_rho2_adj2(data, key, type='slm_with_derivs'):
     # Calculate rho2adj  (code snippet from comparison_grid_display.py)
@@ -36,20 +36,24 @@ def calc_rho2_adj2(data, key, type='slm_with_derivs'):
     print(key + ': %.2f' % rho2_adj)
     return rho2_adj
 
-for key in data.keys():
-    bsn_rho = calc_rho2_adj2(data, key, 'bsn_deriv')
-    slm_rho = calc_rho2_adj2(data, key, 'slm_with_derivs')
-    ax.plot([0, 1], [bsn_rho, slm_rho], markersize=5)
+bsn_rho=np.zeros(len(data.keys()))
+slm_rho=np.zeros(len(data.keys()))
+for k, key in enumerate(data.keys()): #Comparison line plot
+    bsn_rho[k] = calc_rho2_adj2(data, key, 'bsn_deriv')
+    slm_rho[k] = calc_rho2_adj2(data, key, 'slm_with_derivs')
+    ax.plot([0, 1], [bsn_rho[k], slm_rho[k]], markersize=5)
+ax.boxplot([bsn_rho, slm_rho], positions=[0, 1], manage_xticks=False, medianprops=dict(linewidth=4))
 
-ax.axvline(1.5, linestyle='dashed')
 
+bsn_rho_g = np.zeros(len(data.keys()))
+slm_rho_g = np.zeros(len(data.keys()))
 if SHOW_GFP:
     print("GFP:")
-    for key in dataGFP.keys():
-        bsn_rho = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
-        slm_rho = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
-        ax.plot([2, 3], [bsn_rho, slm_rho], markersize=5, color='k')
-
+    for k, key in enumerate(dataGFP.keys()):
+        bsn_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
+        slm_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
+        ax.plot([2, 3], [bsn_rho_g[k], slm_rho_g[k]], markersize=5, color='k')
+    ax.boxplot([bsn_rho_g, slm_rho_g], positions=[2, 3], manage_xticks=False, medianprops=dict(linewidth=4))
 
 import prediction.provenance as prov
 prov.stamp(ax,.55,.35,__file__)

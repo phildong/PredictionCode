@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat'
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_curvature_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
@@ -78,7 +78,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
 
 neuron_data = {}
 deriv_neuron_data = {}
-for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
+for typ_cond in ['AML18_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
