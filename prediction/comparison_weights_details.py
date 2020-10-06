@@ -9,7 +9,10 @@ import os
 from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_curvature_l10.dat'
+#conditions = ['AML18_moving']
+conditions = ['AKS297.51_moving', 'AML32_moving']
+behavior = 'velocity'
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
@@ -22,14 +25,9 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
                    'BrainScanner20200310_141211': [[200, 210], [240, 250]]}
 
 def take_deriv(neurons):
-    nan_zero = np.copy(neurons)
-    nan_zero[np.isnan(neurons)] = 0
-    nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 7))
-    flat = 0*neurons.copy()+1
-    flat[np.isnan(neurons)] = 0
-    flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 7))
-    deriv = nan_zero_filtered/flat_filtered
-    return deriv
+    from prediction.Classifier import rectified_derivative
+    _, _, nderiv = rectified_derivative(neurons)
+    return nderiv
 
 def calc_pdf(x, low_lim, high_lim, nbins):
     counts, bin_edges = np.histogram(x, np.linspace(low_lim, high_lim, nbins))
@@ -78,7 +76,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
 
 neuron_data = {}
 deriv_neuron_data = {}
-for typ_cond in ['AML18_moving']:
+for typ_cond in conditions:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -174,6 +172,14 @@ for i, key in enumerate(keys):
 
     ax.plot(correlations, slm_weights_raw, 'o', label='F',  markersize=20 )
     ax.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize=20, color='orange', label='dF/dt')
+    if key == 'BrainScanner20200130_110803':
+        AVAR = 32
+        AVAL = 15
+        ax.text(correlations[AVAR], slm_weights_raw[AVAR], 'AVAR')
+        ax.text(deriv_correlations[AVAR], slm_weights_raw_deriv[AVAR], 'AVAR')
+        ax.text(correlations[AVAL], slm_weights_raw[AVAL], 'AVAL')
+        ax.text(deriv_correlations[AVAL], slm_weights_raw_deriv[AVAL], 'AVAL')
+
     ax.axvline(0, linestyle='dashed')
     ax.axhline(0, linestyle='dashed')
     ax.set_title('  %.2f Percent of Weights come from derivatives' % Frac_dFdt[i])
