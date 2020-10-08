@@ -18,7 +18,7 @@ import prediction.dataHandler as dh
 from seaborn import clustermap
 
 
-def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, time, time_contig):
+def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, time, time_contig, velocity):
     # take the loaded in data and pull out the neuron data for moving or immobile.
     # look up time of start frame/end frame in the time_contig
     # see what index in time (noncontig) is closest to time_contig value
@@ -31,7 +31,9 @@ def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, t
     zscore_neuron = neurons_Zscore[:, start_index:end_index]
     [row, column] = neurons.shape
     neuron_num = list(range(0, row, 1))
-    return neuron_data, neuron_NaN_data, zscore_neuron, neuron_num
+    crop_velocity = velocity[start_frame:end_frame]
+    crop_time = time_contig[start_frame:end_frame]
+    return neuron_data, neuron_NaN_data, zscore_neuron, neuron_num, crop_velocity, crop_time
 
 
 def do_correlation_all(neuron_data):
@@ -95,8 +97,13 @@ def do_residual(moving_worm, immobile_worm):
 def do_clustering(matrix):
     cg = clustermap(matrix)
     cgIdx = np.array(cg.data2d.columns)
+    #cgIdx is a list of the resorted neuron numbers. Want to mark neurons for AVA
     return cgIdx
 
+def get_index_AVA_clustered(AVAneuron, cgIdx):
+    #take the cgIdx and find what index corresponds to the AVA neuron
+    AVA_index = np.where(cgIdx == AVAneuron)
+    return AVA_index
 
 def cluster_matrix(matrix, cgIdx):
     clustered_1 = matrix[:, cgIdx]
@@ -119,13 +126,19 @@ def remove_and_cluster_and_residual(matrix_move, matrix_immobile, index_list):
     #do immobile clustering
     immobile_cgIdx = do_clustering(matrix_immobile_noNaN)
     moving_cgIdx = do_clustering(matrix_move_noNaN)
+    movecluster_AVA_index1 = get_index_AVA_clustered(17, moving_cgIdx)
+    movecluster_AVA_index2 = get_index_AVA_clustered(81,moving_cgIdx)
+    movecluster_AVA = [movecluster_AVA_index1, movecluster_AVA_index2]
+    immcluster_AVA_index1 = get_index_AVA_clustered(17, immobile_cgIdx)
+    immcluster_AVA_index2 = get_index_AVA_clustered(81,immobile_cgIdx)
+    immcluster_AVA = [immcluster_AVA_index1, immcluster_AVA_index2]
     movecluster_move_noNaN = cluster_matrix(matrix_move_noNaN, moving_cgIdx)
     movecluster_immobile_noNaN = cluster_matrix(matrix_immobile_noNaN, moving_cgIdx)
     immcluster_move_noNaN = cluster_matrix(matrix_move_noNaN, immobile_cgIdx)
     immcluster_immobile_noNaN = cluster_matrix(matrix_immobile_noNaN, immobile_cgIdx)
     movecluster_residual = do_residual(movecluster_move_noNaN, movecluster_immobile_noNaN)
     immcluster_residual = do_residual(immcluster_move_noNaN, immcluster_immobile_noNaN)
-    return movecluster_move_noNaN, movecluster_immobile_noNaN, movecluster_residual, immcluster_move_noNaN, immcluster_immobile_noNaN, immcluster_residual
+    return movecluster_move_noNaN, movecluster_immobile_noNaN, movecluster_residual, movecluster_AVA, immcluster_move_noNaN, immcluster_immobile_noNaN, immcluster_residual, immcluster_AVA
 
 def sum_matrix(matrix):
     # sum together all of the elements of the matrix. subtract the 1:1 correlation, divide by matrix
@@ -165,12 +178,12 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
         neurons_ZScore = dataSets[key]['Neurons']['ActivityFull'] # Z scored neurons to use to look at calcium traces
-        # velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+        velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
         # curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
         # For immobile- how is NaN neurons that are not hand tracked dealt with by the smooth_interp...
         # Still do the correlation with all (the interpolated ones too, but then replace with 0s)?
 
-    moving_data, moving_withNaN, moving_zscore, neuron_number = get_data(0, 1429, neurons, neurons_withNaN, neurons_ZScore, time, time_contig)
+    moving_data, moving_withNaN, moving_zscore, neuron_number, moving_velocity, moving_time = get_data(0, 1429, neurons, neurons_withNaN, neurons_ZScore, time, time_contig,velocity)
     moving_corr, moving_r_square = do_correlation_all(moving_data)
     AVA_corr_noNan1, AVA_r_square_noNan1 = do_correlation_AVA(moving_corr,moving_r_square, 17)
     AVA_corr_noNan2, AVA_r_square_noNan2 = do_correlation_AVA(moving_corr,moving_r_square, 81)
@@ -178,7 +191,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     # cgIdx = do_clustering(moving_corr_NaN) cluster based on immobile
 
-    immobile_data, data_withNaN, immobile_zscore, neuron_number_im = get_data(1539, 2904, neurons, neurons_withNaN, neurons_ZScore, time, time_contig)
+    immobile_data, data_withNaN, immobile_zscore, neuron_number_im, imm_velocity, imm_time = get_data(1539, 2904, neurons, neurons_withNaN, neurons_ZScore, time, time_contig, velocity)
     immobile_corr, immobile_r_square = do_correlation_all(immobile_data)
     AVA_corr_im1, AVA_r_square_im1 = do_correlation_AVA(immobile_corr, immobile_r_square, 17)
     AVA_corr_im2, AVA_r_square_im2 = do_correlation_AVA(immobile_corr, immobile_r_square, 81)
@@ -191,7 +204,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     moving_r_square_NaN = replace_NaN_neurons(moving_r_square, nan_index, neuron_number)
 
     #Remove Nan, cluster and do residuals on correlation matrix
-    mcluster_move_noNaN, mcluster_imm_noNaN, mcluster_residual, imcluster_move_noNaN, imcluster_imm_noNaN, imcluster_residual = remove_and_cluster_and_residual(moving_corr, immobile_corr, nan_index)
+    mcluster_move_noNaN, mcluster_imm_noNaN, mcluster_residual, mcluster_AVA, imcluster_move_noNaN, imcluster_imm_noNaN, imcluster_residual, imcluster_AVA = remove_and_cluster_and_residual(moving_corr, immobile_corr, nan_index)
     move_noNaN_avg_corr = sum_matrix(mcluster_move_noNaN)
     imm_nonNaN_avg_corr = sum_matrix(mcluster_imm_noNaN)
     move_noNaN_avg_corr = round(move_noNaN_avg_corr,2)
@@ -210,9 +223,12 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     cgIdx_immobile = do_clustering(immobile_corr_NaN)
     clustered_immobile_corr = cluster_matrix(immobile_corr_NaN, cgIdx_immobile)
     clustered_immobile_r = cluster_matrix(immobile_r_NaN, cgIdx_immobile)
+    AVA_index_imm1 = get_index_AVA_clustered(17, cgIdx_immobile)
+    AVA_index_imm2 = get_index_AVA_clustered(81, cgIdx_immobile)
 
     clustered_moving_corr = cluster_matrix(moving_corr_NaN, cgIdx_immobile)
     clustered_moving_r = cluster_matrix(moving_r_square_NaN, cgIdx_immobile)
+
 
     # cluster the neuron signal
     data_withNaN = insert_Nan_neurons(data_withNaN, nan_index)
@@ -242,6 +258,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     moving_cluster_immobile_corr = cluster_matrix(immobile_corr_NaN, cgIdx_moving)
     moving_cluster_moving_r = cluster_matrix(moving_r_square_NaN, cgIdx_moving)
     moving_cluster_immobile_r = cluster_matrix(immobile_r_NaN, cgIdx_moving)
+    AVA_index_mov1 = get_index_AVA_clustered(17, cgIdx_moving)
+    AVA_index_mov2 = get_index_AVA_clustered(81, cgIdx_moving)
 
     moving_corr_residual = do_residual(moving_cluster_moving_corr, moving_cluster_immobile_corr)
     moving_r_residual = do_residual(moving_cluster_moving_r, moving_cluster_immobile_r)
@@ -251,6 +269,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     moving_cluster_immobile_zscore = cluster_calcium(immobile_zscore, cgIdx_moving)
     moving_cluster_moving_zscore = cluster_calcium(moving_zscore, cgIdx_moving)
 
+    AVA_label = [17, 81] #For dataset 144610
    #PLOTTING
 
     plot1 = plt.figure(1)
@@ -260,6 +279,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Correlation_144610_moving')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(clustered_immobile_corr,vmin=-1, vmax=1)
@@ -267,6 +288,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Correlation_144610_immobile')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(corr_residual, vmin=-1, vmax=1)
@@ -274,6 +297,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_144610')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plot2 = plt.figure(2)
     plt.subplot(1,3,1)
@@ -282,6 +307,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('R^2_144610_moving')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(clustered_immobile_r, vmin=0, vmax=1)
@@ -289,6 +316,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('R^2_144610_immobile')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(r_square_residual, vmin=-1, vmax=1)
@@ -296,6 +325,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_14461')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_imm1,AVA_index_imm2], AVA_label)
+    plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plot3 = plt.figure(3)
     plt.subplot(2,3,1)
@@ -404,6 +435,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Correlation_144610_moving')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(moving_cluster_immobile_corr,vmin=-1, vmax=1)
@@ -411,6 +444,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Correlation_144610_immobile')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(moving_corr_residual, vmin=-1, vmax=1)
@@ -418,6 +453,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_144610')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
+
 
     plot6 = plt.figure(6)
     plt.subplot(1,3,1)
@@ -426,6 +464,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('R_Square_144610_moving')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(moving_cluster_immobile_r,vmin=0, vmax=1)
@@ -433,6 +473,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('R_Square_144610_immobile')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(moving_r_residual, vmin=-1, vmax=1)
@@ -440,6 +482,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_144610')
     plt.xlabel('Sorted Neuron')
     plt.ylabel('Sorted Neuron')
+    plt.xticks([AVA_index_mov1,AVA_index_mov2], AVA_label)
+    plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plot7 = plt.figure(7)
     plt.subplot(2,2,1)
@@ -506,6 +550,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Move_144610_AvgCorr ='+str(move_noNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(mcluster_AVA, AVA_label)
+    plt.yticks(mcluster_AVA, AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(mcluster_imm_noNaN,vmin=-1, vmax=1)
@@ -513,6 +559,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Imm_144610_AvgCorr =' +str(imm_nonNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(mcluster_AVA, AVA_label)
+    plt.yticks(mcluster_AVA, AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(mcluster_residual, vmin=-1, vmax=1)
@@ -520,6 +568,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_144610')
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(mcluster_AVA, AVA_label)
+    plt.yticks(mcluster_AVA, AVA_label)
 
     plot10 = plt.figure(10)
     plt.subplot(1,3,1)
@@ -528,6 +578,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Move_144610_AvgCorr ='+str(move_noNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(imcluster_AVA, AVA_label)
+    plt.yticks(imcluster_AVA, AVA_label)
 
     plt.subplot(1,3,2)
     plt.imshow(imcluster_imm_noNaN,vmin=-1, vmax=1)
@@ -535,6 +587,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Imm_144610_AvgCorr =' +str(imm_nonNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(imcluster_AVA, AVA_label)
+    plt.yticks(imcluster_AVA, AVA_label)
 
     plt.subplot(1,3,3)
     plt.imshow(imcluster_residual, vmin=-1, vmax=1)
@@ -542,6 +596,22 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.title('Residual_moving-immobile_144610')
     plt.xlabel('Sorted Neuron_NaN removed')
     plt.ylabel('Sorted Neuron_NaN removed')
+    plt.xticks(imcluster_AVA, AVA_label)
+    plt.yticks(imcluster_AVA, AVA_label)
 
+    plot11 = plt.figure(11)
+    plt.subplot(3,1,1)
+    plt.plot(moving_velocity) #, moving_time)
+    plt.title('Velocity')
+    plt.xlabel('time_contig')
 
+    plt.subplot(3,1,2)
+    plt.plot(moving_withNaN[17,:]) #, moving_time)
+    plt.title('AVA Neuron 17')
+    plt.xlabel('time_contig')
+
+    plt.subplot(3,1,3)
+    plt.plot(moving_withNaN[81,:])#, moving_time)
+    plt.title('AVA Neuron 81')
+    plt.xlabel('time_contig')
     plt.show()
