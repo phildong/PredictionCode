@@ -7,6 +7,7 @@ import prediction.dataHandler as dh
 from seaborn import clustermap
 
 # For data set 110803 (moving only)- frames 1-1465, AVA 33 and 16
+# For dataset 122300 (immobile part only analyze)- immobile 1600-2910, BFP 2924-end, AVA 94 and 23?
 
 
 def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, time, time_contig):

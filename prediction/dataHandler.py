@@ -293,6 +293,8 @@ def decorrelateNeuronsICA(R, G):
 
     for li in range(len(R)):
         Y = np.vstack([R[li, ~nanmask[li]], G[li, ~nanmask[li]]]).T
+        if Y.size == 0:
+            continue
         sclar2 = StandardScaler(copy=True, with_mean=True, with_std=True)
         Y = sclar2.fit_transform(Y)
         S = ica.fit_transform(Y)
@@ -359,8 +361,10 @@ def preprocessNeuralData(R, G, dataPars):
     RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])
     GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
     print("windowGCaMP:", str(dataPars['windowGCamp']))
-
-    YN = decorrelateNeuronsICA_deprecated(R, G)
+    try:
+        YN = decorrelateNeuronsICA_deprecated(R, G)
+    except ValueError:
+        YN = 0*R+1
     YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
     #$YN = GS/RS
     # percentile scale
@@ -368,7 +372,7 @@ def preprocessNeuralData(R, G, dataPars):
     dR = np.divide(YN-R0,np.abs(R0))
     #dR = YN
     # zscore values
-    YN =  preprocessing.scale(YN.T).T
+    YN = preprocessing.scale(YN.T).T
     R0 = np.percentile(GS/RS, [20], axis=1).T
     RM = np.divide(GS/RS-R0,np.abs(R0))
 
@@ -772,10 +776,12 @@ def gauss_filterNaN(U,sig):
 
     valid_mask = np.isfinite(Z_interp)
     invalid_mask = ~valid_mask
-    if np.any(invalid_mask):
-        # If there are still non finite valus (like NaNs)
+    if np.any(invalid_mask) and np.any(valid_mask):
+        # If there are still non finite values (like NaNs)
         #Go ahead and do regular old interpolation
         Z_interp[invalid_mask] = np.interp(np.flatnonzero(invalid_mask), np.flatnonzero(valid_mask), Z_interp[valid_mask])
+    else:
+        Z_interp[invalid_mask] = 0
     return  Z_interp
 
 def loadNeuronPositions(filename):
@@ -935,7 +941,7 @@ def correctPhotobleaching(raw, vps=6, error_bad_fit=False):
         if np.true_divide(num_FailsExpFit,N_neurons) > 0.5:
             print("Uh oh!: The majority of neurons fail to exhibit exponential decay in their raw signals.\n"+
                     "this could be a sign of a bad recording. \n If this is the red channel its grounds for exclusion., ")
-            assert error_bad_fit is False, "The majority of neurons fail to exhibit exponential decay in their raw signal compared to flat line."
+  #          assert error_bad_fit is False, "The majority of neurons fail to exhibit exponential decay in their raw signal compared to flat line."
 
     elif raw.ndim == 1:
         smoothed = medfilt(raw, medfilt_window)
