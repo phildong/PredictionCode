@@ -10,8 +10,9 @@ This is a meta script to run runAnalysis over and over again.
 
 import runAnalysis as analysis
 
-analysis.actuallyRun('AKS297.51', 'moving')
-analysis.actuallyRun('AML32','moving')
+#analysis.actuallyRun('AKS297.51', 'moving')
+analysis.actuallyRun('AML18','moving')
+
 # if True:
 #     analysis.actuallyRun('AML70','moving')
 #     analysis.actuallyRun('AML175','moving')

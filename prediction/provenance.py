@@ -43,7 +43,7 @@ def stamp(ax=plt.gca(), x =.1, y =.5,  notes=''):
 
     # place a text box in upper left in axes coords
     try:
-        ax.text(x, y, getStampString()+'\n'+__file__+'\n'+notes, transform=ax.transAxes, fontsize=8, verticalalignment='top', bbox=props)
+        ax.text(x, y, getStampString()+'\n'+notes, transform=ax.transAxes, fontsize=8, verticalalignment='top', bbox=props)
     except:
-        ax.text2D(x, y, getStampString()+'\n'+__file__+'\n'+notes, transform=ax.transAxes, fontsize=8, verticalalignment='top', bbox=props)
+        ax.text2D(x, y, getStampString()+'\n'+notes, transform=ax.transAxes, fontsize=8, verticalalignment='top', bbox=props)
 

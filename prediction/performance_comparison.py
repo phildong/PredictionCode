@@ -1,79 +1,61 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+outfile = 'performance_comparison_deriv_rho2_curvature_l10.pdf'
 
-with open('comparison_results_cmsvelocity.dat', 'rb') as handle:
+pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat'
+with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
-# with open('comparison_results_cv_aml18.dat', 'rb') as handle:
-#     dataGFP = pickle.load(handle)
+SHOW_GFP = True
+if SHOW_GFP:
+    pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_curvature_l10.dat'
+    with open(pickled_data_GFP, 'rb') as handle:
+        dataGFP = pickle.load(handle)
 
-fig, ax = plt.subplots(1, 1, figsize = (10, 10))
+fig, ax = plt.subplots(1, 1, figsize = (4, 10))
 
 ax.set_xticks([0, 1, 2, 3])
 ax.set_xticklabels(['BSNd', 'SLMd', 'BSNd (GFP control)', 'SLMd (GFP control)'], fontsize=16)
 ax.set_ylabel(r'$\rho^2_{\mathrm{adj},2}$', fontsize=16)
+ax.set_ylim(-0.8, 1)
 
-ax.set_ylim(-1, 1)
+def calc_rho2_adj2(data, key, type='slm_with_derivs'):
+    # Calculate rho2adj  (code snippet from comparison_grid_display.py)
+    res = data[key][type]
+    y = res['signal'][res['test_idx']]
+    yhat = res['output'][res['test_idx']]
 
-for key in data.keys():
-    res_bsn = data[key]['bsn_deriv']
-    y = res_bsn['signal'][res_bsn['test_idx']]
-    yhat = res_bsn['output'][res_bsn['test_idx']]
-    
     truemean = np.mean(y)
-    alpha = np.mean((yhat-truemean)*(y-yhat))
-    beta = np.mean(y-yhat)
+    beta = np.mean(yhat) - truemean
+    alpha = np.mean((yhat - truemean) * (y - yhat))
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
+    rho2_adj = (res['corrpredicted'] ** 2 - alpha ** 2 / (truesigma * predsigma) ** 2)
+    print(key + ': %.2f' % rho2_adj)
+    return rho2_adj
 
-    bsn_rho = res_bsn['corrpredicted']**2 - (alpha)**2/(truesigma*predsigma)**2
+bsn_rho=np.zeros(len(data.keys()))
+slm_rho=np.zeros(len(data.keys()))
+for k, key in enumerate(data.keys()): #Comparison line plot
+    bsn_rho[k] = calc_rho2_adj2(data, key, 'bsn_deriv')
+    slm_rho[k] = calc_rho2_adj2(data, key, 'slm_with_derivs')
+    ax.plot([0, 1], [bsn_rho[k], slm_rho[k]], markersize=5)
+ax.boxplot([bsn_rho, slm_rho], positions=[0, 1], manage_xticks=False, medianprops=dict(linewidth=4))
 
-    res_slm = data[key]['slm_with_derivs']
-    y = res_slm['signal'][res_slm['test_idx']]
-    yhat = res_slm['output'][res_slm['test_idx']]
-    
-    truemean = np.mean(y)
-    alpha = np.mean((yhat-truemean)*(y-yhat))
-    beta = np.mean(y-yhat)
 
-    truesigma = np.std(y)
-    predsigma = np.std(yhat)
+bsn_rho_g = np.zeros(len(data.keys()))
+slm_rho_g = np.zeros(len(data.keys()))
+if SHOW_GFP:
+    print("GFP:")
+    for k, key in enumerate(dataGFP.keys()):
+        bsn_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
+        slm_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
+        ax.plot([2, 3], [bsn_rho_g[k], slm_rho_g[k]], markersize=5, color='k')
+    ax.boxplot([bsn_rho_g, slm_rho_g], positions=[2, 3], manage_xticks=False, medianprops=dict(linewidth=4))
 
-    slm_rho = res_slm['corrpredicted']**2 - (alpha)**2/(truesigma*predsigma)**2
-
-    ax.plot([0, 1], [bsn_rho, slm_rho], markersize=5)
-
-ax.axvline(1.5, linestyle='dashed')
-
-# for key in dataGFP.keys():
-#     res_bsn = dataGFP[key]['bsn_deriv']
-#     y = res_bsn['signal'][res_bsn['test_idx']]
-#     yhat = res_bsn['output'][res_bsn['test_idx']]
-    
-#     truemean = np.mean(y)
-#     alpha = np.mean((yhat-truemean)*(y-yhat))
-#     beta = np.mean(y-yhat)
-
-#     truesigma = np.std(y)
-#     predsigma = np.std(yhat)
-
-#     bsn_rho = res_bsn['corrpredicted']**2 - (alpha)**2/(truesigma*predsigma)**2
-
-#     res_slm = dataGFP[key]['slm_with_derivs']
-#     y = res_slm['signal'][res_slm['test_idx']]
-#     yhat = res_slm['output'][res_slm['test_idx']]
-    
-#     truemean = np.mean(y)
-#     alpha = np.mean((yhat-truemean)*(y-yhat))
-#     beta = np.mean(y-yhat)
-
-#     truesigma = np.std(y)
-#     predsigma = np.std(yhat)
-
-#     slm_rho = res_slm['corrpredicted']**2 - (alpha)**2/(truesigma*predsigma)**2
-
-#     ax.plot([2, 3], [bsn_rho, slm_rho], markersize=5, color='k')
-
-fig.savefig('performance_comparison_cmsvelocity.pdf')
+import prediction.provenance as prov
+prov.stamp(ax,.55,.35,__file__)
+ax.set_title(outfile)
+fig.savefig(outfile)
