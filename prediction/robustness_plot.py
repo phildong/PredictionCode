@@ -21,7 +21,7 @@ for i in range(11):
         else:
             ax.plot(xs, ys, label = keyList[i][21:])
 
-ax.set_xlabel('Number of Neurons', fontsize = 16)
+ax.set_xlabel('Neurons Removed', fontsize = 16)
 ax.set_ylabel(r'$\rho^2_{\mathrm{adj},2}$', fontsize = 16)
 ax.set_ylim(0, 1)
 
