@@ -23,7 +23,7 @@ def autolabel(rects):
                         textcoords="offset points",
                         ha='center', va='top', color='white')
 
-pickled_data = 'comparison_results_head_bend_sin_l10.dat'
+pickled_data = 'comparison_results_aml18_head_bend_cos_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
