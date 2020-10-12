@@ -25,7 +25,7 @@ import prediction.dataHandler as dh
 def main():
 
     codePath = userTracker.codePath()
-    outputFolder = os.path.join(codePath,'figures/2020_subpanesl/generatedFigs')
+    outputFolder = os.path.join(codePath,'figures/2020_subpanels/generatedFigs')
 
     data = {}
     for typ in ['AKS297.51', 'AML32', 'AML18']:
@@ -77,7 +77,7 @@ def main():
     pylab.rcParams.update(params)
 
     print("Plotting heatmaps.....")
-    for key in ['AKS297.51_moving', 'AML32_moving', 'AML32_immobilized', 'AML18_moving', 'AML18_immobilized']:
+    for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
         dset = data[key]['input']
         # For each recording
         for idn in dset.keys():
@@ -93,8 +93,17 @@ def main():
             valid_map = dset['Neurons']['I_valid_map']
             I_smooth_interp_crop_noncontig_wnans[:, valid_map] = dset['Neurons']['I_smooth_interp_crop_noncontig']
 
+
+
+
             Iz = dset['Neurons']['ActivityFull']
             time = dset['Neurons']['I_Time']
+
+            # Cluster on Z-scored interpolated data to get indices
+            from scipy.cluster.hierarchy import linkage, dendrogram
+            Z = linkage(dset['Neurons']['Activity'])
+            d = dendrogram(Z, no_plot=True)
+            idx_clust = np.array(d['leaves'])
 
             prcntile = 99.7
             fig = plt.figure(figsize=(18,20))
@@ -102,10 +111,10 @@ def main():
 
 
             ax = plt.subplot(4,1,1)
-            pos = ax.imshow(I_smooth, aspect='auto',
+            pos = ax.imshow(I_smooth[idx_clust,:], aspect='auto',
                             interpolation='none', vmin=np.nanpercentile(I_smooth.flatten(), 0.1), vmax=np.nanpercentile(I_smooth.flatten(), prcntile),
                             extent = [ time[0], time[-1], 0, I_smooth.shape[0] ], origin='lower')
-            ax.set_title('I_smooth_interp_noncontig  (smooth, common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
+            ax.set_title('I_smooth clustered (smooth, common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
             fig.colorbar(pos, ax=ax)
@@ -113,17 +122,31 @@ def main():
 
 
             ax = plt.subplot(4,1,2)
-            pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans, aspect='auto',
+            pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans[idx_clust,:], aspect='auto',
                             interpolation='none', vmin=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1), vmax=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile),
                             extent = [ time[0], time[-1], 0, I_smooth_interp_crop_noncontig_wnans.shape[0] ], origin='lower')
             ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
             fig.colorbar(pos, ax=ax)
+            if idn == 'BrainScanner20200130_110803':
+                AVAR = 32
+                AVAL = 15
+                xt = ax.get_yticks()
+                yt = np.append(yt, [AVAR, AVAL])
+
+                ytl = yt.tolist()
+                ytl[-1] = "AVAR"
+                ytl[-1] = "AVAL"
+                ax.set_yticks(yt)
+                ax.set_yticklabels(yt)
+
+                ax.text(0,np.argwhere(idx_clust == AVAR), 'AVAR', color='white')
+                ax.text(0,np.argwhere(idx_clust == AVAL), 'AVAL', color='white')
 
 
             ax = plt.subplot(4, 1, 3)
-            pos = ax.imshow(Iz, aspect='auto',
+            pos = ax.imshow(Iz[idx_clust,:], aspect='auto',
                             interpolation='none', vmin=-2, vmax=2,
                             extent = [time[0], time[-1], 0, Iz.shape[0] ], origin='lower')
             ax.set_title('Activity  (per-neuron z-scored,  aggressive interpolation, common noise rejected,  Jeffs photobleach correction)')
@@ -144,13 +167,13 @@ def main():
             axbeh.set_title('Velocity')
             axbeh.set_xlabel('Time (s)')
             axbeh.set_ylabel('Velocity (Body bends)')
-
-            prov.stamp(plt.gca(),__file__,.9,.15)
+            from prediction import provenance as prov
+            prov.stamp(plt.gca(), .9, .15, __file__)
 
 
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps.pdf"))
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps_clustered.pdf"))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
