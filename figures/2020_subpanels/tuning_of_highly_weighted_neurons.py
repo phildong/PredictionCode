@@ -78,7 +78,7 @@ key='BrainScanner20200130_110803'
 
 import os
 outfilename = key + '_highweight_tuning_' + behavior + '.pdf'
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(),'figures','2020_subpanels','generatedFigs', outfilename))
 
 #Sort neurons by abs value weight
 slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size / 2]
@@ -114,15 +114,15 @@ for type in ['F', 'dF/dt']:
         for k, each in enumerate(np.unique(assigned_bin)):
             activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
-        fig1 = plt.figure(constrained_layout=True, figsize=[15, 8])
+        fig1 = plt.figure(constrained_layout=True, figsize=[7, 3])
         fig1.suptitle(key + '  ' + type + ' Neuron: %d, Weight Rank: %d, Weight = %.4f' % (neuron, rank, weight))
         gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
 
         #Generate scatter plot and then box plot
         f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + type + ')')
         f1_ax1.plot(beh_data[key], activity, 'o', alpha=.05, color=color)
-        boxprops = dict(linewidth=1.5)
-        medianprops = dict(linewidth=3.5, color='red')
+        boxprops = dict(linewidth=.5)
+        medianprops = dict(linewidth=1.5, color='#67eb34')
         labels = [''] * len(activity_bin)
         f1_ax1.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
                     medianprops=medianprops, labels=labels, manage_xticks=False)

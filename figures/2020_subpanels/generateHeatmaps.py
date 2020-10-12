@@ -106,67 +106,71 @@ def main():
             idx_clust = np.array(d['leaves'])
 
             prcntile = 99.7
-            fig = plt.figure(figsize=(18,20))
-            plt.suptitle('data[' + key + '][' + idn + ']')
+            fig = plt.figure(figsize=(18,12), constrained_layout=False)
+            import matplotlib.gridspec as gridspec
+            gs = gridspec.GridSpec(ncols=1, nrows=3, figure=fig, height_ratios=[2, .7, .7], width_ratios=[5])
+            fig.suptitle('data[' + key + '][' + idn + ']')
 
+            ax = fig.add_subplot(gs[0, :])
+            num_Neurons = I_smooth_interp_crop_noncontig_wnans.shape[0]
+            vmin = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1)
+            vmax = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile)
 
-            ax = plt.subplot(4,1,1)
-            pos = ax.imshow(I_smooth[idx_clust,:], aspect='auto',
-                            interpolation='none', vmin=np.nanpercentile(I_smooth.flatten(), 0.1), vmax=np.nanpercentile(I_smooth.flatten(), prcntile),
-                            extent = [ time[0], time[-1], 0, I_smooth.shape[0] ], origin='lower')
-            ax.set_title('I_smooth clustered (smooth, common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Neuron')
-            fig.colorbar(pos, ax=ax)
-            fig.tight_layout(rect=[0, 0.03, 1.1, 0.97])
-
-
-            ax = plt.subplot(4,1,2)
             pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans[idx_clust,:], aspect='auto',
-                            interpolation='none', vmin=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1), vmax=np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile),
-                            extent = [ time[0], time[-1], 0, I_smooth_interp_crop_noncontig_wnans.shape[0] ], origin='lower')
+                            interpolation='none', vmin=vmin, vmax=vmax,
+                            extent=[time[0], time[-1], -.5, num_Neurons-.5], origin='lower')
+            ax.set_ylim(-.5, num_Neurons+.5)
+            ax.set_yticks(np.arange(0, num_Neurons, 25))
+            ax.set_xticks(np.arange(0, time[-1], 60))
             ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
-            fig.colorbar(pos, ax=ax)
+            from matplotlib import ticker
+            cb = fig.colorbar(pos, ax=ax)
+            tick_locator = ticker.MaxNLocator(nbins=5)
+            cb.locator = tick_locator
+            cb.update_ticks()
+
+            ax.set_xlim(0, time[-1])
             if idn == 'BrainScanner20200130_110803':
                 AVAR = 32
                 AVAL = 15
-                xt = ax.get_yticks()
-                yt = np.append(yt, [AVAR, AVAL])
 
+                AVAR_ci = np.argwhere(idx_clust == AVAR)
+                AVAL_ci = np.argwhere(idx_clust == AVAL)
+
+                yt = ax.get_yticks()
+                yt = np.append(yt, [AVAR_ci, AVAL_ci])
                 ytl = yt.tolist()
-                ytl[-1] = "AVAR"
-                ytl[-1] = "AVAL"
+                ytl[-2:-1] = ["AVAR", "AVAL"]
                 ax.set_yticks(yt)
-                ax.set_yticklabels(yt)
-
-                ax.text(0,np.argwhere(idx_clust == AVAR), 'AVAR', color='white')
-                ax.text(0,np.argwhere(idx_clust == AVAL), 'AVAL', color='white')
-
-
-            ax = plt.subplot(4, 1, 3)
-            pos = ax.imshow(Iz[idx_clust,:], aspect='auto',
-                            interpolation='none', vmin=-2, vmax=2,
-                            extent = [time[0], time[-1], 0, Iz.shape[0] ], origin='lower')
-            ax.set_title('Activity  (per-neuron z-scored,  aggressive interpolation, common noise rejected,  Jeffs photobleach correction)')
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Neuron')
-            fig.colorbar(pos, ax=ax)
+                ax.set_yticklabels(ytl)
 
             beh = dset['BehaviorFull']['AngleVelocity']
             time = dset['Neurons']['TimeFull']
 
-            axbeh = plt.subplot(4, 1, 4)
-            axbeh.plot(time, beh)
+            axbeh = fig.add_subplot(gs[1,:])
+            axbeh.plot(time, beh, linewidth=1.5, color='k')
             fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=0.5, color='k')
-            axbeh.set_ylim([-2, 4])
             axbeh.set_xlim(ax.get_xlim())
 
             axbeh.set_title('Velocity')
             axbeh.set_xlabel('Time (s)')
-            axbeh.set_ylabel('Velocity (Body bends)')
+            axbeh.set_ylabel('Body Bend Velocity (radians per second)')
+            from prediction import provenance as prov
+            prov.stamp(plt.gca(), .9, .15, __file__)
+
+            curv = dset['BehaviorFull']['Eigenworm3']
+            axbeh = fig.add_subplot(gs[2,:])
+            axbeh.plot(time, curv, linewidth=1.5, color='brown')
+            fig.colorbar(pos, ax=axbeh)
+            axbeh.axhline(linewidth=.5, color='k')
+            axbeh.set_xlim(ax.get_xlim())
+
+            axbeh.set_title('Velocity')
+            axbeh.set_xlabel('Time (s)')
+            axbeh.set_ylabel('Curvature (arb units)')
             from prediction import provenance as prov
             prov.stamp(plt.gca(), .9, .15, __file__)
 

@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/comparison_results_cv.dat', 'rb') as handle:
+with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008', 'BrainScanner20200309_145927'] #exclude 145927 because it is L4
@@ -70,7 +70,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
 keys = list(X_data.keys())
 keys.sort()
 
-figtypes = ['bsn', 'slm']
+figtypes = ['bsn', 'slm_with_derivs']
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "translocation.pdf"))
 
@@ -155,10 +155,11 @@ for key in keys:
     # segs[i,0,:] == segs[i-1,1,:]
     # make the collection of segments
     from matplotlib.collections import LineCollection
-    lc = LineCollection(segs, cmap=plt.get_cmap('gist_rainbow'))
+    lc = LineCollection(segs, cmap=plt.get_cmap('gist_rainbow'),  linewidths=4)
     lc.set_array(res['time'])  # color the segments by our parameter
     # plot the collection
     ax.add_collection(lc)  # add the collection to the plot
+    ax.plot([0,0],[0,1], 'k')
 
 
 #    ax.plot(X_data[key][ind], Y_data[key][ind], label="furthest_distance", color="orange")
@@ -169,7 +170,7 @@ for key in keys:
     ax.set_title(r'$\bar{v}$ = %0.2f, $\mathrm{std}(v)$ = %0.3f, max_d = %0.1f' % (np.nanmean(res['signal']), np.nanstd(res['signal']), dist))
 
     import prediction.provenance as prov
-    prov.stamp(ax,.55,.15)
+    prov.stamp(ax,.55,.15, __file__)
     fig.colorbar(lc)  # , cax=ax)  # , orientation='horizontal')
     ax.set_xlim(-13, 13)
     ax.set_ylim(-13, 13)
