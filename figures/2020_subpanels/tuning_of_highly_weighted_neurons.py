@@ -114,7 +114,7 @@ for type in ['F', 'dF/dt']:
         for k, each in enumerate(np.unique(assigned_bin)):
             activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
-        fig1 = plt.figure(constrained_layout=True, figsize=[7, 3])
+        fig1 = plt.figure(constrained_layout=True, figsize=[10, 5.3])
         fig1.suptitle(key + '  ' + type + ' Neuron: %d, Weight Rank: %d, Weight = %.4f' % (neuron, rank, weight))
         gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
 
@@ -122,10 +122,14 @@ for type in ['F', 'dF/dt']:
         f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + type + ')')
         f1_ax1.plot(beh_data[key], activity, 'o', alpha=.05, color=color)
         boxprops = dict(linewidth=.5)
-        medianprops = dict(linewidth=1.5, color='#67eb34')
+        capprops = dict(linewidth=.5)
+        whiskerprops = dict(linewidth=.5)
+        flierprops = dict(linewidth=.2, markersize=1, marker='+')
+        medianprops = dict(linewidth=2, color='#67eb34')
         labels = [''] * len(activity_bin)
         f1_ax1.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
-                    medianprops=medianprops, labels=labels, manage_xticks=False)
+                    medianprops=medianprops, labels=labels, manage_xticks=False,
+                    capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops)
         plt.locator_params(nbins=4)
 
         f1_ax2 = fig1.add_subplot(gs[0,1:], xlabel='time (s)', ylabel='Activity')

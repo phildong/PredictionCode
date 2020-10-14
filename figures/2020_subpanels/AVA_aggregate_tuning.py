@@ -98,17 +98,35 @@ for  key, idn, neuron in itertools.izip(keys, idns, neurons):
 
 print("plotting aggregate figure")
 import matplotlib.pyplot as plt
-#import seaborn as sns
-#plt.style.use('seaborn')
-nbins=10
-bin_means, bin_edges, binnumber = stats.binned_statistic(vel_bucket,
-                z_activity, statistic='median', bins=nbins)
+
+# Calculate bins for box plot and split data up into subarrays based on bin
+nbins = 10
+plus_epsilon = 1.00001
+bin_edges = np.linspace(np.nanmin(vel_bucket) * plus_epsilon, np.nanmax(vel_bucket) * plus_epsilon, nbins)
+binwidth = np.diff(bin_edges)
+assigned_bin = np.digitize(vel_bucket, bin_edges)
+activity_bin = [None] * (len(
+    bin_edges) - 1)  # note the activity has to be lists, and there should be 1 less because the bins are edges
+for k, each in enumerate(np.unique(assigned_bin)):
+    activity_bin[k] = z_activity[np.argwhere(assigned_bin == each)[:, 0]]
+
+
 plt.figure()
-plt.axhline(dashes=[3, 3], lw=0.5, color="black", zorder=0)
-plt.axvline(dashes=[3, 3], lw=0.5, color="black", zorder=1)
-plt.plot(vel_bucket, z_activity, '.', color='gray', label='raw data', alpha=.07, zorder=10)
-plt.hlines(bin_means, bin_edges[:-1], bin_edges[1:], colors='orange', lw=5,
-           label='binned median of data', alpha=1, zorder=20)
+#plt.axhline(dashes=[3, 3], lw=0.5, color="black", zorder=0)
+#plt.axvline(dashes=[3, 3], lw=0.5, color="black", zorder=1)
+plt.plot(vel_bucket, z_activity, '.', color=u'#1f77b4', label='raw data', alpha=.05, zorder=10)
+boxprops = dict(linewidth=.5)
+capprops = dict(linewidth=.5)
+whiskerprops = dict(linewidth=.5)
+flierprops = dict(linewidth=.2, markersize=1, marker='+')
+medianprops = dict(linewidth=2, color='#67eb34')
+labels = [''] * len(activity_bin)
+plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
+               medianprops=medianprops, labels=labels, manage_xticks=False,
+               capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops, zorder=20)
+plt.locator_params(nbins=5)
+
+
 plt.xlabel('Body bend velocity (rad/s)')
 plt.ylabel('AVA activity (z-score(F))')
 plt.legend()
