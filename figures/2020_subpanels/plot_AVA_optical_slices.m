@@ -1,4 +1,4 @@
-file='AVAR_RFP.mat'
+file='AVAL_RFP.mat'
 dir='/projects/LEIFER/PanNeuronal/20200130/BrainScanner20200130_110803_XP/user_exported_tracking_frames/'
 blue_cmap = colorcet('L15');
 red_cmap = colorcet('L13');
@@ -11,7 +11,7 @@ hold on
 x=closeXY(:,1);
 y=closeXY(:,2);
 plot(x, y,'ow')
-plot(inSliceXY(:,1),inSliceXY(:,2),'xw')
+plot(inSliceXY(:,1),inSliceXY(:,2),'+w')
 set(gca,'YDir','normal')
 dx=0
 dy=3
@@ -19,10 +19,15 @@ mat2clust_pyindx=[56,33,103,8,28,118,115,38,96,9,126,88,70,110,53,130,15,62,66,1
 cell_numeric_labels=num2cell(mat2clust_pyindx(closePointsIds));
 labels=cellfun(@num2str,cell_numeric_labels,'UniformOutput',false)
 text(x+dx, y+dy, labels, 'color','white');
-xlim([25, 400])
-ylim([150, 400])
+axis image
+xlim([60, 350])
+ylim([220, 330])
+d=47.3;
+plot([300, 300+d],[225, 225],'w') % using calibration 473px/mm this bar should be 100 microns
+plot([65, 65],[225, 225+d],'w') % using calibration 473px/mm this bar should be 100 microns
 title(file)
-
+set(gca,'xtick',[])
+set(gca,'ytick',[])
 cmap=colormap(curr_cmap);
 
 
