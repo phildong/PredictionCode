@@ -90,7 +90,14 @@ lw = np.max(allweights)
 f1_ax1 = fig1.add_subplot(111, xlabel='Magnitude of Weight for ' + behaviors[1], ylabel='Magnitude of Weight for '+ behaviors[0])
 f1_ax1.plot(slm_weights_raw[1], slm_weights_raw[0], 'o', label='F')
 f1_ax1.plot(slm_weights_raw_deriv[1], slm_weights_raw_deriv[0], 'o', label='dF/dt')
-f1_ax1.plot([0, lw], [0, lw], 'k--')
+if key == 'BrainScanner20200130_110803':
+    AVAR = 32
+    AVAL = 15
+    f1_ax1.text(slm_weights_raw[1][AVAR], slm_weights_raw[0][AVAR], 'AVAR')
+    f1_ax1.text(slm_weights_raw[1][AVAL], slm_weights_raw[0][AVAR], 'AVAL')
+    f1_ax1.text(slm_weights_raw_deriv[1][AVAL], slm_weights_raw_deriv[0][AVAL], 'AVAL')
+    f1_ax1.text(slm_weights_raw_deriv[1][AVAR], slm_weights_raw_deriv[0][AVAR], 'AVAR')
+
 fig1.legend()
 prov.stamp(f1_ax1, .55, .35, __file__ + '\n' + pickled_data)
 pdf.savefig(fig1)
@@ -98,8 +105,14 @@ pdf.savefig(fig1)
 fig2 = plt.figure(constrained_layout=True, figsize=[10, 10])
 fig2.suptitle('max(F, dF/dt)')
 f2_ax1 = fig2.add_subplot(111, xlabel='Magnitude of Weight for ' + behaviors[1], ylabel='Magnitude of Weight for '+ behaviors[0])
-f2_ax1.plot(np.max([[slm_weights_raw[1]], [slm_weights_raw_deriv[1]]], axis=0).T, np.max([[slm_weights_raw[0]], [slm_weights_raw_deriv[0]]], axis=0).T, 'o', label='max(F,dF/dt)')
-f2_ax1.plot([0, lw], [0, lw], 'k--')
+maxw =[np.max([[slm_weights_raw[0]], [slm_weights_raw_deriv[0]]], axis=0).T,  np.max([[slm_weights_raw[1]], [slm_weights_raw_deriv[1]]], axis=0).T]
+f2_ax1.plot(maxw[1], maxw[0], 'o', label='max(F,dF/dt)')
+if key == 'BrainScanner20200130_110803':
+    AVAR = 32
+    AVAL = 15
+    f2_ax1.text(maxw[1][AVAR], maxw[0][AVAR], 'AVAR')
+    f2_ax1.text(maxw[1][AVAL], maxw[0][AVAL], 'AVAL')
+
 prov.stamp(f2_ax1, .55, .35, __file__ + '\n' + pickled_data)
 pdf.savefig(fig2)
 

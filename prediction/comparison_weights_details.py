@@ -48,7 +48,16 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     ha.axvline(0, color="black")
     ha.axvline(np.nanmean(a), linestyle='dashed', color='blue', label='mean ' + alabel)
     ha.axvline(np.nanmean(b), linestyle='dashed', color='orange', label='mean ' + blabel)
+
+    #Add a single gaussian with the mean and variance of of the combined dataset of a and b
+    from scipy.stats import norm
+    std = np.nanstd(np.concatenate([a,b]))
+    x = np.linspace(bin_centers[0],bin_centers[-1], 100)
+    ha.plot(x, 0.01 * norm.pdf(x, scale=std),
+            'r-', lw=5, alpha=0.6, label='norm with measured mean and std')
     ha.legend()
+
+
     hb = hfig.add_subplot(gs[1, 0])
     hb.step(bin_centers, a_hist - b_hist, where='mid', label="A-B")
     hb.axvline(0, color="black")
