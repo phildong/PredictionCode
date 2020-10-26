@@ -31,7 +31,7 @@ def rectified_derivative(neurons):
 
     return deriv_pos, deriv_neg, deriv
 
-pickled_data = 'comparison_results_curvature_l10.dat'
+pickled_data = 'comparison_results_velocity_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle, encoding = 'bytes')
 
@@ -47,6 +47,7 @@ neurons_and_derivs = np.vstack((neurons_unn, nderiv))
 mean = np.mean(neurons_and_derivs, axis = 1)[:, np.newaxis]
 std = np.std(neurons_and_derivs, axis = 1)[:, np.newaxis]
 neurons = (neurons_and_derivs-mean)/std
+nn = neurons.shape[0]/2
 
 fig = plt.figure(constrained_layout = True, figsize=(15, 10))
 gs = fig.add_gridspec(3, 2)
@@ -74,6 +75,9 @@ trainpts, = sc.plot([], [], 'go', rasterized = True)
 testpts, = sc.plot([], [], 'bo', rasterized = True)
 
 order = np.argsort(-np.abs(res[b'weights']))
+is_neuron = np.where(order < nn, True, False)
+blue_mask = [True]+[is_neuron[i//2] for i in range(2*is_neuron.size)]
+orange_mask = [True]+[not is_neuron[i//2] for i in range(2*is_neuron.size)]
 
 lines = np.zeros((order.size, res[b'time'].size))
 
@@ -87,6 +91,9 @@ for i in range(order.size):
     lines[i,:] = poly1d_fn(output)
 
 rhos = np.array([rho_adj(res[b'signal'][res[b'test_idx']], lines[i,:][res[b'test_idx']]) for i in range(order.size)])
+dbl_rhos = np.zeros(2*rhos.size)
+dbl_rhos[::2] = rhos
+dbl_rhos[1::2] = rhos
 
 performance.set_ylim((0, 1))
 performance.set_xlabel('Number of Neurons+Derivatives')
@@ -98,17 +105,19 @@ def init():
     trainpts.set_data([], [])
     testpts.set_data([],[])
     neur.set_data([], [])
-    fill_lines = performance.fill_between(range(0), np.zeros(0), rhos[:0], color='green', alpha = 0.5)
-    return line, trainpts, testpts, neur, fill_lines
+    fill_lines_blue = performance.fill_between(range(0), rhos[:0], color='blue', alpha = 0.5)
+    fill_lines_orange = performance.fill_between(range(0), rhos[:0], color='orange', alpha = 0.5)
+    return line, trainpts, testpts, neur, fill_lines_blue, fill_lines_orange
 
 def animate(i):
     line.set_data(res[b'time'], lines[i,:])
     trainpts.set_data(res[b'signal'][res[b'train_idx']], lines[i,:][res[b'train_idx']])
     testpts.set_data(res[b'signal'][res[b'test_idx']], lines[i,:][res[b'test_idx']])
     neur.set_data(res[b'time'], neurons[i,:])
-    fill_lines = performance.fill_between(range(i), np.zeros(i), rhos[:i], color='green', alpha=0.5)
-    return line, trainpts, testpts, neur, fill_lines
+    fill_lines_blue = performance.fill_between(np.arange(2*i+2)/2, dbl_rhos[:2*i+2], where = blue_mask[:2*i+2], color='blue', alpha=0.5)
+    fill_lines_orange = performance.fill_between(np.arange(2*i+2)/2, dbl_rhos[:2*i+2], where = orange_mask[:2*i+2], color='orange', alpha=0.5)
+    return line, trainpts, testpts, neur, fill_lines_blue, fill_lines_orange
 
 anim = animation.FuncAnimation(fig, animate, init_func=init, frames=order.size, interval=100, blit=True)
-plt.show()
-# anim.save('weights_animation_105620.mp4', writer='ffmpeg')
+# plt.show()
+anim.save('weights_animation_110803.mp4', writer='ffmpeg')
