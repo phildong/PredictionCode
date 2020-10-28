@@ -20,8 +20,8 @@ def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, t
     neuron_data = neurons[:, start_index:end_index]
     velocity = velocity[start_frame:end_frame]
 
-    neuron_NaN_data = neurons_withNaN[:, :640]
-    zscore_neuron = neurons_Zscore[:, :640]
+    neuron_NaN_data = neurons_withNaN[:, start_index:end_index]
+    zscore_neuron = neurons_Zscore[:, start_index:end_index]
     [row, column] = neurons.shape
     neuron_num = list(range(0, row, 1))
     return neuron_data, neuron_NaN_data, zscore_neuron, neuron_num, velocity
@@ -145,3 +145,4 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plt.show()
 
+print('Done')

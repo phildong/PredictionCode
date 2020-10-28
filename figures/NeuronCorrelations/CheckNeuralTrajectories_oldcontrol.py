@@ -19,8 +19,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
 
     # Hard coding in folder for old dataset:
-    #folder = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/'
-    #dataLog = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/Special_transition_datasets.txt'
+    folder = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/'
+    dataLog = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/Special_transition_datasets.txt'
 
     # data parameters
     dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
@@ -33,7 +33,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     theDataset = '172438'
-    #theDataset = '134913' #2018 dataset #hard Coded in
+    theDataset = '134913' #2018 dataset #hard Coded in
     for key in filter(lambda x: theDataset in x, keyList):
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
@@ -48,8 +48,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     im_start = 1305
     im_end = 2205
-    #im_start = len(time_contig)/2
-    #im_end = len(time_contig)-1
+    im_start = len(time_contig)/2
+    im_end = len(time_contig)-1
 
     # see what index in time (noncontig) is closest to time_contig value
     start_time= time_contig[im_start]
