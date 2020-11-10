@@ -14,6 +14,8 @@ print("Loading data..")
 codePath = userTracker.codePath()
 outputFolder = os.path.join(codePath,'figures/Debugging')
 
+DERIV = False
+
 data = {}
 for typ in ['AKS297.51']:
     for condition in ['moving']:  # ['moving', 'immobilized', 'chip']:
@@ -55,7 +57,17 @@ for  key, idn, neuron in itertools.izip(keys, idns, neurons):
 
     ### Get the relevant data.
     dset = data[key]['input'][idn]
-    activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+
+    if DERIV:
+        from prediction.Classifier import rectified_derivative
+        _, _, activity = rectified_derivative(dset['Neurons']['I_smooth_interp_crop_noncontig'])
+        color = u'#ff7f0e'
+        type = 'dF/dt'
+    else:
+        activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+        color = u'#1f77b4'
+        type = 'F'
+
     time = dset['Neurons']['I_Time_crop_noncontig']
 
     numNeurons = activity.shape[0]
@@ -111,10 +123,19 @@ for k, each in enumerate(np.unique(assigned_bin)):
     activity_bin[k] = z_activity[np.argwhere(assigned_bin == each)[:, 0]]
 
 
-plt.figure()
+plt.figure(figsize=[4,3.6]) #width, height
 #plt.axhline(dashes=[3, 3], lw=0.5, color="black", zorder=0)
 #plt.axvline(dashes=[3, 3], lw=0.5, color="black", zorder=1)
-plt.plot(vel_bucket, z_activity, '.', color=u'#1f77b4', label='raw data', alpha=.05, zorder=10)
+plt.plot(vel_bucket, z_activity, '.', color=color, alpha=.05, zorder=10)
+if False:
+    import numpy.polynomial.polynomial as poly
+    try:
+        coefs = poly.polyfit(vel_bucket, z_activity, 1)
+        x_new = np.linspace(np.min(vel_bucket), 0, num=10)
+        ffit = poly.polyval(x_new, coefs)
+        plt.plot(x_new, ffit, 'r--', zorder=9)
+    except:
+        None
 boxprops = dict(linewidth=.5)
 capprops = dict(linewidth=.5)
 whiskerprops = dict(linewidth=.5)
@@ -126,9 +147,9 @@ plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwid
                capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops, zorder=20)
 plt.locator_params(nbins=5)
 
-
+plt.xlim([-2.1, 3])
 plt.xlabel('Body bend velocity (rad/s)')
-plt.ylabel('AVA activity (z-score(F))')
+plt.ylabel('AVA activity (z-score(' + type + '))')
 plt.legend()
 plt.show()
 print("done")
