@@ -54,8 +54,19 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     std = np.nanstd(np.concatenate([a,b]))
     x = np.linspace(bin_centers[0],bin_centers[-1], 100)
     ha.plot(x, 0.01 * norm.pdf(x, scale=std),
-            'r-', lw=5, alpha=0.6, label='norm with measured mean and std')
+            'r-', lw=5, alpha=0.6,
+            label='norm with measured mean and std')
     ha.legend()
+    ha.yaxis.tick_right()
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=90)
+    ha.set_xlim(low_lim, high_lim)
+    max_yticks = 3
+    yloc = plt.MaxNLocator(max_yticks)
+    ha.yaxis.set_major_locator(yloc)
+    ha.spines["left"].set_visible(False)
+    ha.spines["right"].set_visible(True)
+
 
 
     hb = hfig.add_subplot(gs[1, 0])
@@ -68,7 +79,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
 
     ylim_high = np.max([a_hist, b_hist])
     ylim_low = np.min(a_hist-b_hist)
-    ha.set_ylim(ylim_low, ylim_high)
+    hb.set_xlim(low_lim, high_lim)
     hb.set_ylim(ylim_low, ylim_high)
 
     ha.set_ylabel('Probability Density')
@@ -170,7 +181,8 @@ for i, key in enumerate(keys):
         sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % rho2_adj2[row, i])
         sc.legend()
 
-    ax = fig.add_subplot(gs[:, 2:], xlabel=r'$\rho$', ylabel='Weight')
+    fig2 = plt.figure(figsize=[7,7])
+    ax2 = fig2.add_subplot(111, xlabel=r'$\rho$', ylabel='Weight')
 
     slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size/2]
     slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size/2:]
@@ -179,27 +191,43 @@ for i, key in enumerate(keys):
 
     Frac_dFdt[i] = np.sum(np.abs(slm_weights_raw_deriv)) /  (np.sum( np.abs(slm_weights_raw)) + np.sum(np.abs(slm_weights_raw_deriv) ))
 
-    ax.plot(correlations, slm_weights_raw, 'o', label='F',  markersize=20 )
-    ax.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize=20, color='orange', label='dF/dt')
+    ax2.plot(correlations, slm_weights_raw, 'o', label='F',  markersize=8 )
+    ax2.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize=8, color='orange', label='dF/dt')
     if key == 'BrainScanner20200130_110803':
         AVAR = 32
         AVAL = 15
-        ax.text(correlations[AVAR], slm_weights_raw[AVAR], 'AVAR')
-        ax.text(deriv_correlations[AVAR], slm_weights_raw_deriv[AVAR], 'AVAR')
-        ax.text(correlations[AVAL], slm_weights_raw[AVAL], 'AVAL')
-        ax.text(deriv_correlations[AVAL], slm_weights_raw_deriv[AVAL], 'AVAL')
+        ax2.text(correlations[AVAR], slm_weights_raw[AVAR], 'AVAR')
+        ax2.text(deriv_correlations[AVAR], slm_weights_raw_deriv[AVAR], 'AVAR')
+        ax2.text(correlations[AVAL], slm_weights_raw[AVAL], 'AVAL')
+        ax2.text(deriv_correlations[AVAL], slm_weights_raw_deriv[AVAL], 'AVAL')
+    import numpy.polynomial.polynomial as poly
+    try:
+        rho = np.concatenate((correlations, deriv_correlations), axis=None)
+        weights = np.concatenate((slm_weights_raw, slm_weights_raw_deriv), axis=None)
+        coefs = poly.polyfit(rho, weights, 1)
+        x_new = np.linspace(np.min(rho), np.max(rho), num=3)
+        ffit = poly.polyval(x_new, coefs)
+        plt.plot(x_new, ffit,'r--')
+    except:
+        None
 
-    ax.axvline(0, linestyle='dashed')
-    ax.axhline(0, linestyle='dashed')
-    ax.set_title('  %.2f Percent of Weights come from derivatives' % Frac_dFdt[i])
-    ax.legend()
+    ax2.axvline(0, color="black")
+    ax2.axhline(0, color="black")
+    ax2.set_title(key + ',  %.2f Percent of Weights come from derivatives' % Frac_dFdt[i])
+    ax2.legend()
+
+    largest_weight = np.nanmax(np.abs([slm_weights_raw, slm_weights_raw_deriv]))
+    ax2.set_ylim(-largest_weight, largest_weight)
+    ax2.spines["top"].set_visible(True)
+    ax2.spines["right"].set_visible(True)
+    pdf.savefig(fig2)
+
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
-    prov.stamp(ax, .55, .35, __file__ + '\n'+ pickled_data)
+    #prov.stamp(ax2, .55, .35, __file__ + '\n'+ pickled_data)
     pdf.savefig(fig)
 
     # Plot distribution of weights
-    largest_weight = np.nanmax(np.abs([slm_weights_raw, slm_weights_raw_deriv]))
     compare_pdf(slm_weights_raw, slm_weights_raw_deriv,
                 low_lim=-largest_weight, high_lim=largest_weight, nbins=24,
                 alabel='F', blabel='dF/dt', PDF=pdf, suplabel='PDF of population decoder weights\n' + key)
@@ -209,7 +237,9 @@ for i, key in enumerate(keys):
     h.scatter(slm_weights_raw, slm_weights_raw_deriv)
     h.axhline()
     h.axvline()
-    prov.stamp(ax, .55, .35, __file__ + '\n' + pickled_data)
+    h.set_xlim(-largest_weight, largest_weight)
+    h.set_ylim(-largest_weight, largest_weight)
+    #prov.stamp(ax2, .55, .35, __file__ + '\n' + pickled_data)
     pdf.savefig(f)
 
 
