@@ -74,6 +74,8 @@ for typ_cond in ['AKS297.51_moving']:
         beh_data[key] = beh
 
 
+
+
 key='BrainScanner20200130_110803'
 
 import os
@@ -86,6 +88,55 @@ slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_w
 highly_weighted_neurons = np.flipud(np.argsort(np.abs(slm_weights_raw)))
 highly_weighted_neurons_deriv = np.flipud(np.argsort(np.abs(slm_weights_raw_deriv)))
 num_neurons=len(highly_weighted_neurons)
+
+from skimage.util.shape import view_as_windows as viewW
+def strided_indexing_roll(a, r):
+    # Concatenate with sliced to cover all rolls
+    # This function will roll each row of a matrix a, a an amount specified by r.
+    # I got it here: https://stackoverflow.com/a/51613442/200688
+    a_ext = np.concatenate((a,a[:,:-1]),axis=1)
+
+    # Get sliding windows; use advanced-indexing to select appropriate ones
+    n = a.shape[1]
+    return viewW(a_ext,(1,n))[np.arange(len(r)), (n-r)%n,0]
+
+import numpy.ma as ma
+def nancorrcoef(A, B):
+    a = ma.masked_invalid(A)
+    b = ma.masked_invalid(B)
+
+    msk = (~a.mask & ~b.mask)
+
+    return ma.corrcoef(a[msk], b[msk])
+
+def get_pval_from_cdf(x,  rhos_abs, cum_prob):
+    return 1 - np.interp(x, rhos_abs, cum_prob)
+
+def shuffled_cdf_rho_abs(activity, behavior, nShuffles=5000):
+    '''Take recording of F and dF/dt for a set of N neurons, and shuffle
+    each neuron nShuffles times. Calculate the Pearsons Correlation coefficient
+    rho and get a distrubtion out.
+    The distrubtion is the cumulative distribution of the rhos from the N x nShuffle
+    '''
+    import numpy.matlib
+    print("Beginning shuffle...")
+    print("Duplicating data...")
+    shuff_activity = np.matlib.repmat(activity, nShuffles, 1)
+    print("Generating Random Numbers...")
+    roll = np.random.randint(len(activity), size=nShuffles)
+    print("Permuting neural activity...")
+    shuff_activity = strided_indexing_roll(shuff_activity, roll)
+    print("Calculating pearson's correlation coefficients...")
+    rhos = [nancorrcoef(row, behavior)[0,1] for row in shuff_activity]
+    print("Finding CDF...")
+    rhos_abs = np.sort(np.abs(np.array(rhos)))
+    cum_prob = np.linspace(0, 1, len(rhos), endpoint=False)
+    print("Shuffled distribution found.")
+    return rhos_abs, cum_prob
+
+#Calculate distribution of corrcoeff's on shuffled data for getting p-values
+activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
+rhos_abs, cum_prob = shuffled_cdf_rho_abs(activity_all, beh_data[key])
 
 for type in ['F', 'dF/dt']:
     for rank in np.arange(num_neurons):
@@ -114,8 +165,10 @@ for type in ['F', 'dF/dt']:
         for k, each in enumerate(np.unique(assigned_bin)):
             activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
+        rho=nancorrcoef(beh_data[key], activity)[0,1]
+        pval = get_pval_from_cdf(np.abs(rho), rhos_abs, cum_prob)
         fig1 = plt.figure(constrained_layout=True, figsize=[10, 5.3])
-        fig1.suptitle(key + '  ' + type + ' Neuron: %d, Weight Rank: %d, Weight = %.4f' % (neuron, rank, weight))
+        fig1.suptitle(key + '  ' + type + ' Neuron: %d,\n Weight Rank: %d, Weight = %.4f, rho= %.2f, p=%.3f' % (neuron, rank, weight, rho, pval), size=10)
         gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
 
         #Generate scatter plot and then box plot

@@ -11,7 +11,7 @@ import prediction.provenance as prov
 
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving', 'AML32_moving']
-behavior = 'velocity'
+behavior = 'velocity' #'curvature'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
@@ -30,9 +30,10 @@ def take_deriv(neurons):
     return nderiv
 
 def calc_pdf(x, low_lim, high_lim, nbins):
+    bin_width = np.true_divide(high_lim-low_lim, nbins)
     counts, bin_edges = np.histogram(x, np.linspace(low_lim, high_lim, nbins))
     bin_centers = bin_edges[:-1] + np.diff(bin_edges) / 2
-    density = np.true_divide(counts, np.sum(counts))
+    density = np.true_divide(counts, np.sum(counts)*bin_width)
     return density, bin_centers, bin_edges
 
 def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PDF=None, suplabel=""):
@@ -43,19 +44,21 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     hfig = plt.figure(figsize=[10,10])
     gs = gridspec.GridSpec(2, 1, figure=hfig)
     ha = hfig.add_subplot(gs[0, 0])
-    ha.step(bin_centers, a_hist, where='mid', label=alabel)
-    ha.step(bin_centers, b_hist, where='mid', label=blabel)
+    ha.step(bin_centers, a_hist, where='mid', label=alabel, lw=4)
+    ha.step(bin_centers, b_hist, where='mid', label=blabel, lw=4)
     ha.axvline(0, color="black")
     ha.axvline(np.nanmean(a), linestyle='dashed', color='blue', label='mean ' + alabel)
     ha.axvline(np.nanmean(b), linestyle='dashed', color='orange', label='mean ' + blabel)
 
-    #Add a single gaussian with the mean and variance of of the combined dataset of a and b
+    #Add two gaussians, each with the variance  of a or b
     from scipy.stats import norm
-    std = np.nanstd(np.concatenate([a,b]))
     x = np.linspace(bin_centers[0],bin_centers[-1], 100)
-    ha.plot(x, 0.01 * norm.pdf(x, scale=std),
-            'r-', lw=5, alpha=0.6,
-            label='norm with measured mean and std')
+    ha.plot(x, norm.pdf(x, scale=np.nanstd(a)),
+            'r-', lw=3, alpha=0.6, color='blue',
+            label=alabel + ' gaussian sigma = %.3f' % np.nanstd(a))
+    ha.plot(x,  norm.pdf(x, scale=np.nanstd(b)),
+            'r-', lw=3, alpha=0.6, color='orange',
+            label=blabel + ' gaussian sigma = %.3f' % np.nanstd(b))
     ha.legend()
     ha.yaxis.tick_right()
     plt.xticks(rotation=90)
@@ -66,6 +69,8 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     ha.yaxis.set_major_locator(yloc)
     ha.spines["left"].set_visible(False)
     ha.spines["right"].set_visible(True)
+    ha.tick_params(labelsize=17)
+
 
 
 
@@ -202,8 +207,8 @@ for i, key in enumerate(keys):
         ax2.text(deriv_correlations[AVAL], slm_weights_raw_deriv[AVAL], 'AVAL')
     import numpy.polynomial.polynomial as poly
     try:
-        rho = np.concatenate((correlations, deriv_correlations), axis=None)
-        weights = np.concatenate((slm_weights_raw, slm_weights_raw_deriv), axis=None)
+        rho = np.concatenate((np.array(correlations), np.array(deriv_correlations)), axis=None)
+        weights = np.concatenate((np.array(slm_weights_raw), np.array(slm_weights_raw_deriv)), axis=None)
         coefs = poly.polyfit(rho, weights, 1)
         x_new = np.linspace(np.min(rho), np.max(rho), num=3)
         ffit = poly.polyval(x_new, coefs)
@@ -220,6 +225,7 @@ for i, key in enumerate(keys):
     ax2.set_ylim(-largest_weight, largest_weight)
     ax2.spines["top"].set_visible(True)
     ax2.spines["right"].set_visible(True)
+    ax2.tick_params(labelsize=17)
     pdf.savefig(fig2)
 
     fig.suptitle(key)
