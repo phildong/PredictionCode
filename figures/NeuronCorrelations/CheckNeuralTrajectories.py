@@ -10,7 +10,19 @@ from seaborn import clustermap
 #Goal is to plot neural trajectories projected into first three PCs
 
 
-
+def plot_trajectories(pcs, title='Neural State Space Trajectories', color='blue'):
+    fig = plt.figure(figsize=(12, 8))
+    plt.suptitle(title)
+    for nplot in np.arange(6) + 1:
+        ax = plt.subplot(2, 3, nplot, projection='3d')
+        ax.plot(pcs[:, 0], pcs[:, 1], pcs[:, 2])
+        ax.view_init(np.random.randint(360), np.random.randint(360))
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.set_zlabel('PC3')
+    import prediction.provenance as prov
+    prov.stamp(plt.gca(), .55, .15, __file__)
+    return
 
 
 for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
@@ -34,6 +46,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     keyList = np.sort(dataSets.keys())
     theDataset = '172438'
     #theDataset = '134913' #2018 dataset #hard Coded in
+    theDataset = '193044'
     for key in filter(lambda x: theDataset in x, keyList):
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
@@ -66,48 +79,52 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     pca = PCA(n_components=nComp)
     Neuro = np.copy(neurons[:, start_index: end_index]).T
 
+    #Repeat on the derivatives a la Kato et al
+    def take_deriv(neurons):
+        from prediction.Classifier import rectified_derivative
+        _, _, nderiv = rectified_derivative(neurons)
+        return nderiv
+    Neuro_dFdt = take_deriv(neurons[:, start_index: end_index]).T
+
+
     # make sure data is centered
     sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
     zscore = StandardScaler(copy=True, with_mean=True, with_std=True)
     Neuro_mean_sub = sclar.fit_transform(Neuro)
     Neuro_z = zscore.fit_transform(Neuro)
+    Neuro_dFdt_mean_sub = sclar.fit_transform(Neuro_dFdt)
+    Neuro_dFdt_z = zscore.fit_transform(Neuro_dFdt)
+
 
     pcs = pca.fit_transform(Neuro_mean_sub)
     pcs_z = pca.fit_transform(Neuro_z)
-    idn = ''
-    fig = plt.figure(figsize=(12, 8))
-    plt.suptitle(key + idn + '\n PCA (minimally processed)')
-    for nplot in np.arange(6) + 1:
-        ax = plt.subplot(2, 3, nplot, projection='3d')
-        ax.plot(pcs[:, 0], pcs[:, 1], pcs[:, 2])
-        ax.view_init(np.random.randint(360), np.random.randint(360))
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-        ax.set_zlabel('PC3')
-    import prediction.provenance as prov
-    prov.stamp(plt.gca(), .55, .15, __file__)
+    pcs_dFdt = pca.fit_transform(Neuro_dFdt_mean_sub)
+    pcs_dFdt_z = pca.fit_transform(Neuro_dFdt_z)
 
-    fig = plt.figure(figsize=(12, 8))
-    plt.suptitle(key + idn + '\n PCA (z-scored) ')
-    for nplot in np.arange(6) + 1:
-        ax = plt.subplot(2, 3, nplot, projection='3d')
-        ax.plot(pcs_z[:, 0], pcs_z[:, 1], pcs_z[:, 2], color='orange')
-        ax.view_init(np.random.randint(360), np.random.randint(360))
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-        ax.set_zlabel('PC3')
-    prov.stamp(plt.gca(), .55, .15, __file__)
+    plot_trajectories(pcs, key + '\n F PCA (minimally processed)')
+    plot_trajectories(pcs_z, key + '\n F PCA (z-scored)')
+    plot_trajectories(pcs_dFdt, key + '\n dF/dt PCA (minimally processed)', color='orange')
+    plot_trajectories(pcs_dFdt_z, key + '\n dF/dt PCA (z-scored)', color='orange')
+
 
     plt.figure()
     plt.plot(time[start_index:end_index], pcs[:, 0])
     plt.plot(time[start_index:end_index], pcs[:, 1])
     plt.plot(time[start_index:end_index], pcs[:, 2])
 
+    plt.figure()
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 0])
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 1])
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 2])
+
+
 
 #    #We are goig to do PCA on a lot of Nan'ed out or interpolated timepoints.
 
 
 #    plt.imshow(neurons_withNaN[:, im_start:im_end])
+
+    print("Plotting.")
     plt.show()
 
 
