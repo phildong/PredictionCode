@@ -9,8 +9,8 @@ import os
 from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
-behavior = 'curvature'
-#behavior = 'velocity'
+#behavior = 'curvature'
+behavior = 'velocity'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
@@ -99,7 +99,6 @@ def strided_indexing_roll(a, r):
     # Get sliding windows; use advanced-indexing to select appropriate ones
     n = a.shape[1]
     return viewW(a_ext,(1,n))[np.arange(len(r)), (n-r)%n,0]
-
 import numpy.ma as ma
 def nancorrcoef(A, B):
     a = ma.masked_invalid(A)
@@ -109,34 +108,60 @@ def nancorrcoef(A, B):
 
     return ma.corrcoef(a[msk], b[msk])
 
-def get_pval_from_cdf(x,  rhos_abs, cum_prob):
-    return 1 - np.interp(x, rhos_abs, cum_prob)
+def vcorrcoef(X,y):
+    ''' vectorized corrcoef, from a https://waterprogramming.wordpress.com/2014/06/13/numpy-vectorized-correlation-coefficient/'''
+    Xm = np.reshape(np.mean(X,axis=1),(X.shape[0],1))
+    ym = np.mean(y)
+    r_num = np.sum((X-Xm)*(y-ym),axis=1)
+    r_den = np.sqrt(np.sum((X-Xm)**2,axis=1)*np.sum((y-ym)**2))
+    r = r_num/r_den
+    return r
 
-def shuffled_cdf_rho_abs(activity, behavior, nShuffles=5000):
+def get_pval_from_cdf(x,  rhos, cum_prob):
+    np.all(np.diff(rhos) > 0)
+    if x > 0:
+        p = 1 - np.interp(x, rhos, cum_prob)
+    if x <= 0:
+        p = np.interp(x, rhos, cum_prob)
+    return p
+
+def shuffled_cdf_rho(activity, behavior, pdf, nShuffles=5000):
     '''Take recording of F and dF/dt for a set of N neurons, and shuffle
     each neuron nShuffles times. Calculate the Pearsons Correlation coefficient
     rho and get a distrubtion out.
     The distrubtion is the cumulative distribution of the rhos from the N x nShuffle
     '''
+    assert(activity.shape[1] > 360), "The recording is less than 1 minute long, or the array is not in the expected format"
     import numpy.matlib
-    print("Beginning shuffle...")
-    print("Duplicating data...")
-    shuff_activity = np.matlib.repmat(activity, nShuffles, 1)
+    print("Shuffling %d times has begun." % nShuffles*activity.shape[0])
+    print("Time reversing and duplicating data...")
+    shuff_activity = np.matlib.repmat(np.fliplr(activity), nShuffles, 1)
+    assert (np.all(shuff_activity[4,:] == shuff_activity[4+activity.shape[0],:])), "Somehow repmat failed"
     print("Generating Random Numbers...")
-    roll = np.random.randint(len(activity), size=nShuffles)
+    roll = np.random.randint(activity.shape[1], size=nShuffles*activity.shape[0])
+    assert (roll.shape[0] == shuff_activity.shape[0]), "The number of time lags does not match the number of rows of activity to shuffle"
     print("Permuting neural activity...")
     shuff_activity = strided_indexing_roll(shuff_activity, roll)
+    assert (np.logical_not(np.all(np.all(shuff_activity[4,:] == shuff_activity[4+activity.shape[0],:])))), "By chance, two preselected rows were shuffled the same amount, or not at all. Should only happen p=1/(Number of samples in recording)"
     print("Calculating pearson's correlation coefficients...")
-    rhos = [nancorrcoef(row, behavior)[0,1] for row in shuff_activity]
+#    rhos = np.array([nancorrcoef(row, behavior)[0,1] for row in shuff_activity])
+    rhos = vcorrcoef(shuff_activity, behavior)
+    assert(rhos.shape[0]==shuff_activity.shape[0]), "Got the wrong number of corrcoefs rho"
     print("Finding CDF...")
-    rhos_abs = np.sort(np.abs(np.array(rhos)))
+    rhos = np.sort(rhos)
     cum_prob = np.linspace(0, 1, len(rhos), endpoint=False)
     print("Shuffled distribution found.")
-    return rhos_abs, cum_prob
+    fig_cdf=plt.figure()
+    plt.plot(rhos, cum_prob)
+    plt.xlabel('rho')
+    plt.ylabel('p')
+    plt.title('CDF , N=%d, max(rho)=%.2f, min(rho)=%.2f' % (nShuffles*activity.shape[0], np.max(rhos), np.min(rhos)))
+    pdf.savefig(fig_cdf)
+    return rhos, cum_prob
 
 #Calculate distribution of corrcoeff's on shuffled data for getting p-values
 activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
-rhos_abs, cum_prob = shuffled_cdf_rho_abs(activity_all, beh_data[key])
+rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf)
 
 for type in ['F', 'dF/dt']:
     for rank in np.arange(num_neurons):
@@ -166,10 +191,13 @@ for type in ['F', 'dF/dt']:
             activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
         rho=nancorrcoef(beh_data[key], activity)[0,1]
-        pval = get_pval_from_cdf(np.abs(rho), rhos_abs, cum_prob)
+        pval = get_pval_from_cdf(rho, rhos, cum_prob)
         fig1 = plt.figure(constrained_layout=True, figsize=[10, 5.3])
-        fig1.suptitle(key + '  ' + type + ' Neuron: %d,\n Weight Rank: %d, Weight = %.4f, rho= %.2f, p=%.3f' % (neuron, rank, weight, rho, pval), size=10)
         gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
+        plt.rc('xtick', labelsize=17)
+        plt.rc('ytick', labelsize=17)
+
+        ax_blank=fig1.add_subplot(gs[1,0], title=key + '  ' + type + '\n Neuron: %d,\n Weight Rank: %d, Weight = %.4f\n rho= %.2f, p=%.2E' % (neuron, rank, weight, rho, pval))
 
         #Generate scatter plot and then box plot
         f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + type + ')')
@@ -187,9 +215,12 @@ for type in ['F', 'dF/dt']:
 
         f1_ax2 = fig1.add_subplot(gs[0,1:], xlabel='time (s)', ylabel='Activity')
         f1_ax2.plot(time_data[key], activity, color=color)
+        f1_ax2.set_xlim(left=0)
+
         f1_ax3 = fig1.add_subplot(gs[1,1:], xlabel='time (s)', ylabel=behavior)
-        f1_ax3.plot(time_data[key], beh_data[key], 'k')
-        f1_ax3.axhline('k')
+        f1_ax3.plot(time_data[key], beh_data[key], color='black')
+        f1_ax3.axhline(color='black')
+        f1_ax3.set_xlim(left=0)
         prov.stamp(f1_ax3, .55, .35, __file__ + '\n' + pickled_data)
         pdf.savefig(fig1)
 

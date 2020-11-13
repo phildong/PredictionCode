@@ -59,8 +59,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         # For immobile- how is NaN neurons that are not hand tracked dealt with by the smooth_interp...
         # Still do the correlation with all (the interpolated ones too, but then replace with 0s)?
 
-    im_start = 1305
-    im_end = 2205
+    im_start = 950
+    im_end = 2885
     #im_start = len(time_contig)/2
     #im_end = len(time_contig)-1
 
@@ -106,17 +106,29 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plot_trajectories(pcs_dFdt, key + '\n dF/dt PCA (minimally processed)', color='orange')
     plot_trajectories(pcs_dFdt_z, key + '\n dF/dt PCA (z-scored)', color='orange')
 
+    AVA1 = 36
+    AVA2 = 23
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.plot(time[start_index:end_index], pcs[:, 0], label='PC0')
+    plt.plot(time[start_index:end_index], 3+pcs[:, 1], label='PC1')
+    plt.plot(time[start_index:end_index], 6+pcs[:, 2], label='PC2')
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.plot(time[start_index:end_index], neurons[AVA1, start_index:end_index], label='Neuron %d' % AVA1)
+    plt.plot(time[start_index:end_index], neurons[AVA2, start_index:end_index], label='Neuron %d' % AVA2)
+    plt.legend()
 
     plt.figure()
-    plt.plot(time[start_index:end_index], pcs[:, 0])
-    plt.plot(time[start_index:end_index], pcs[:, 1])
-    plt.plot(time[start_index:end_index], pcs[:, 2])
-
-    plt.figure()
-    plt.plot(time[start_index:end_index], pcs_dFdt[:, 0])
-    plt.plot(time[start_index:end_index], pcs_dFdt[:, 1])
-    plt.plot(time[start_index:end_index], pcs_dFdt[:, 2])
-
+    plt.subplot(2, 1, 1)
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 0], label='PC0 dF/dT')
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 1], label='PC1 dF/dT')
+    plt.plot(time[start_index:end_index], pcs_dFdt[:, 2], label='PC2 dF/dT')
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.plot(time[start_index:end_index], Neuro_dFdt[:, AVA1].T, label='Neuron %d' % AVA1)
+    plt.plot(time[start_index:end_index], Neuro_dFdt[:, AVA2].T, label='Neuron %d' % AVA2)
+    plt.legend()
 
 
 #    #We are goig to do PCA on a lot of Nan'ed out or interpolated timepoints.
