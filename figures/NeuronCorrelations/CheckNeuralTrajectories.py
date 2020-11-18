@@ -102,9 +102,17 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     AVA2 = 23
     print("AVA 1 weights:", pca.components_[:,AVA1])
     print("AVA 2 weights:", pca.components_[:,AVA2])
+    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA1))
+    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA2))
 
     pcs_z = pca.fit_transform(Neuro_z)
     pcs_dFdt = pca.fit_transform(Neuro_dFdt_mean_sub)
+    
+    print("AVA 1 weights:", pca.components_[:,AVA1])
+    print("AVA 2 weights:", pca.components_[:,AVA2])
+    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA1))
+    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA2))
+    
     pcs_dFdt_z = pca.fit_transform(Neuro_dFdt_z)
 
     plot_trajectories(pcs, key + '\n F PCA (minimally processed)')
