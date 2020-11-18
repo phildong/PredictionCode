@@ -1,11 +1,11 @@
-file='AVAL_RFP.mat'
+file='AVAR_BFP.mat'
 dir='/projects/LEIFER/PanNeuronal/20200130/BrainScanner20200130_110803_XP/user_exported_tracking_frames/'
 blue_cmap = colorcet('L15');
 red_cmap = colorcet('L13');
-curr_cmap= red_cmap;
+curr_cmap= blue_cmap;
 
 load([dir, file])
-figure('Position', [100 100 1000 700])
+figure('Position', [50 50 550 200])
 imagesc(baseImg)
 hold on
 x=closeXY(:,1);
@@ -20,14 +20,16 @@ cell_numeric_labels=num2cell(mat2clust_pyindx(closePointsIds));
 labels=cellfun(@num2str,cell_numeric_labels,'UniformOutput',false)
 text(x+dx, y+dy, labels, 'color','white');
 axis image
-xlim([60, 350])
-ylim([220, 330])
+%xlim([60, 350])
+%ylim([220, 330])
 d=47.3;
-plot([300, 300+d],[225, 225],'w') % using calibration 473px/mm this bar should be 100 microns
-plot([65, 65],[225, 225+d],'w') % using calibration 473px/mm this bar should be 100 microns
+plot([200, 200+d],[250, 250],'w') % using calibration 473px/mm this bar should be 100 microns
+plot([150, 150],[225, 225+d],'w') % using calibration 473px/mm this bar should be 100 microns
 title(file)
 set(gca,'xtick',[])
 set(gca,'ytick',[])
 cmap=colormap(curr_cmap);
-
+camroll(-28)
+camtarget([213, 267, 0])
+camzoom(9)
 

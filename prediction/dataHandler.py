@@ -293,8 +293,8 @@ def decorrelateNeuronsICA(R, G):
 
     for li in range(len(R)):
         Y = np.vstack([R[li, ~nanmask[li]], G[li, ~nanmask[li]]]).T
-        if Y.size == 0:
-            continue
+        if Y.size <= 2: #If we don't have enough points, we can't remove motion artifact
+            continue #So just leave it as is
         sclar2 = StandardScaler(copy=True, with_mean=True, with_std=True)
         Y = sclar2.fit_transform(Y)
         S = ica.fit_transform(Y)
