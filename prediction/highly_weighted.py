@@ -162,4 +162,4 @@ plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
 fig2.savefig('number_of_neurons.pdf')
 
-
+print(np.median(n_impact_vel), np.median(n_impact_curv), np.median(n_impact_overlap))
