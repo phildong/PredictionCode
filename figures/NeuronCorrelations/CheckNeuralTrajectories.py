@@ -97,6 +97,12 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
 
     pcs = pca.fit_transform(Neuro_mean_sub)
+
+    AVA1 = 36
+    AVA2 = 23
+    print("AVA 1 weights:", pca.components_[:,AVA1])
+    print("AVA 2 weights:", pca.components_[:,AVA2])
+
     pcs_z = pca.fit_transform(Neuro_z)
     pcs_dFdt = pca.fit_transform(Neuro_dFdt_mean_sub)
     pcs_dFdt_z = pca.fit_transform(Neuro_dFdt_z)
@@ -106,8 +112,6 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plot_trajectories(pcs_dFdt, key + '\n dF/dt PCA (minimally processed)', color='orange')
     plot_trajectories(pcs_dFdt_z, key + '\n dF/dt PCA (z-scored)', color='orange')
 
-    AVA1 = 36
-    AVA2 = 23
     plt.figure()
     plt.subplot(2, 1, 1)
     plt.plot(time[start_index:end_index], pcs[:, 0], label='PC0')

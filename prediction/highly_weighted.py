@@ -3,7 +3,7 @@ from matplotlib import animation
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
-datafolder = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
+datafolder = ''#'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
 
 def rho_adj(y, yhat):
     truemean = np.mean(y)
@@ -69,8 +69,8 @@ for ii, dataset in enumerate(keys[:nKeys]):
     neurons = (neurons_and_derivs-mean)/std
     nn = neurons.shape[0]//2
 
-    vel_order = np.argsort(-np.abs(vel_res[b'weights'][:nn])-np.abs(vel_res[b'weights'][nn:]))
-    curv_order = np.argsort(-np.abs(curv_res[b'weights'][:nn])-np.abs(curv_res[b'weights'][nn:]))
+    vel_order = np.argsort(-np.maximum(np.abs(vel_res[b'weights'][:nn]),np.abs(vel_res[b'weights'][nn:])))
+    curv_order = np.argsort(-np.maximum(np.abs(curv_res[b'weights'][:nn]),np.abs(curv_res[b'weights'][nn:])))
 
     vel_lines = np.zeros((vel_order.size, vel_res[b'time'].size))
     curv_lines = np.zeros((curv_order.size, curv_res[b'time'].size))
