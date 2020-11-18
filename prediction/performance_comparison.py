@@ -1,23 +1,25 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-outfile = 'performance_comparison_deriv_rho2_curvature_l10.pdf'
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat'
+behavior = 'velocity'
+outfile = 'performance_comparison_deriv_rho2_'+behavior+'_l10.pdf'
+
+pickled_data = 'comparison_results_'+behavior+'_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
 SHOW_GFP = True
 if SHOW_GFP:
-    pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_curvature_l10.dat'
+    pickled_data_GFP = 'comparison_results_aml18_'+behavior+'_l10.dat'
     with open(pickled_data_GFP, 'rb') as handle:
         dataGFP = pickle.load(handle)
 
-fig, ax = plt.subplots(1, 1, figsize = (4, 10))
+fig, ax = plt.subplots(1, 1, figsize = (10, 10))
 
 ax.set_xticks([0, 1, 2, 3])
 ax.set_xticklabels(['BSNd', 'SLMd', 'BSNd (GFP control)', 'SLMd (GFP control)'], fontsize=16)
-ax.set_ylabel(r'$\rho^2_{\mathrm{adj},2}$', fontsize=16)
+ax.set_ylabel(r'$\rho^2_{\mathrm{adj}}$', fontsize=16)
 ax.set_ylim(-0.8, 1)
 
 def calc_rho2_adj2(data, key, type='slm_with_derivs'):
@@ -32,7 +34,7 @@ def calc_rho2_adj2(data, key, type='slm_with_derivs'):
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
-    rho2_adj = (res['corrpredicted'] ** 2 - alpha ** 2 / (truesigma * predsigma) ** 2)
+    rho2_adj = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
     print(key + ': %.2f' % rho2_adj)
     return rho2_adj
 
@@ -55,7 +57,7 @@ if SHOW_GFP:
         ax.plot([2, 3], [bsn_rho_g[k], slm_rho_g[k]], markersize=5, color='k')
     ax.boxplot([bsn_rho_g, slm_rho_g], positions=[2, 3], manage_xticks=False, medianprops=dict(linewidth=4))
 
-import prediction.provenance as prov
-prov.stamp(ax,.55,.35,__file__)
-ax.set_title(outfile)
+# import prediction.provenance as prov
+# prov.stamp(ax,.55,.35,__file__)
+# ax.set_title(outfile)
 fig.savefig(outfile)

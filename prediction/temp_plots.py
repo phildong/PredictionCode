@@ -9,7 +9,7 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-behavior = 'velocity'
+behavior = 'curvature'
 with open('comparison_results_%s_l10.dat' % behavior, 'rb') as handle:
     data = pickle.load(handle)
 
@@ -21,16 +21,15 @@ keys.sort()
 
 figtypes = ['bsn_deriv', 'slm_with_derivs']
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "%s_cross_val.pdf" % behavior))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), "%s_plots.pdf" % behavior))
 
 for key in keys:
 
-    fig = plt.figure(constrained_layout = True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
-    gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
+    fig = plt.figure(constrained_layout = True, figsize=(10*len(figtypes), 10*len(figtypes)))
+    gs = gridspec.GridSpec(len(figtypes), len(figtypes), figure=fig, width_ratios=[1]*(len(figtypes)))
 
     for row, figtype in enumerate(figtypes):
         res = data[key][figtype]
-
 
         y = res['signal'][res['test_idx']]
         yhat = res['output'][res['test_idx']]
@@ -43,44 +42,26 @@ for key in keys:
         predsigma = np.std(yhat)
         R2 = 1-np.sum(np.power(y-yhat, 2))/np.sum(np.power(y-truemean, 2))
 
-        print(beta**2, alpha)
-        print(res['corrpredicted']**2, (beta/truesigma)**2, ((alpha+beta**2)**2/(truesigma*predsigma)**2))
-        print("Actual R^2:  ",R2)
-        print("Formula R^2: ",res['corrpredicted']**2 - (beta/truesigma)**2 - (alpha+beta**2)**2/((truesigma*predsigma)**2))
-
 
         ts = fig.add_subplot(gs[row, 0])
         ts.plot(res['time'], res['signal'], 'k', lw=1)
         ts.plot(res['time'], res['output'], 'b', lw=1)
-        # w = np.ones(res['time'].size, dtype=bool)
-        # w[:6] = 0
-        # w[-6:] = 0
-        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
-        ts.set_xlabel('Time (s)')
-        ts.set_ylabel('%s' % behavior)
+        ts.set_xlabel('Time (s)', fontsize = 20, labelpad=20)
+        ts.set_ylabel('%s' % behavior, fontsize = 20, labelpad=20)
+        ts.set_yticks([])
+        ts.tick_params(labelsize=16)
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
         sc = fig.add_subplot(gs[row, 1])
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % (res['corrpredicted']**2 - (alpha+beta**2)**2/(truesigma*predsigma)**2))
-        sc.set_xlabel('Measured %s' % behavior)
-        sc.set_ylabel('Predicted %s' % behavior)
-        sc.legend()
-
-    ax = fig.add_subplot(gs[:, 2:])
-
-    r2s = data[key]['slm_with_derivs']['crossval']
-    l1s = sorted(list(set(map(lambda x: x[2], r2s))))
-
-    for l1 in l1s:
-        pts = np.array(sorted(list(map(lambda x: [x[1],x[0]], filter(lambda x: abs(x[2] - l1) < 1e-3, r2s))),key = lambda x: x[0]))
-        ax.plot(pts[:,0], pts[:,1], label = 'l1_ratio = %f' % l1)
-        ax.set_xlabel(r'$\alpha$', fontsize=14)
-        ax.set_xscale('log')
-        ax.set_ylabel(r'Cross-validation $R^2$ (Chose: $\alpha = %f$, l1_ratio = %f)' % (data[key]['slm_with_derivs']['alpha'], data[key]['slm_with_derivs']['l1_ratio']), fontsize=14)
-    ax.legend()
+        sc.text(.1, .7, r'$\rho^2_{\mathrm{adj}} = %0.2f$' % (res['corrpredicted']**2 - (alpha+beta**2)**2/(truesigma*predsigma)**2), transform = sc.transAxes, fontsize=20)
+        sc.set_xlabel('Measured %s' % behavior, fontsize = 20, labelpad=20)
+        sc.set_ylabel('Predicted %s' % behavior, fontsize = 20, labelpad=20)
+        sc.set_xticks([])
+        sc.set_yticks([])
+        sc.legend(fontsize = 20)
 
     fig.suptitle(key)
     fig.tight_layout(rect=[0,.03,1,0.97])
