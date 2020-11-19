@@ -3,17 +3,20 @@ from matplotlib import animation
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
-datafolder = ''#'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
+datafolder = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
 
 def rho_adj(y, yhat):
     truemean = np.mean(y)
     alpha = np.mean((yhat-truemean)*(y-yhat))
+    beta = np.mean(yhat) - truemean
+
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
     rho2 = np.corrcoef(y, yhat)[0,1]**2
+    rho2_adj_1 = (rho2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
 
-    return rho2 - (alpha)**2/((truesigma*predsigma)**2)
+    return rho2_adj_1
 
 def rectified_derivative(neurons):
     nan_zero = np.copy(neurons)
