@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-behavior= 'curvature'
+behavior= 'velocity'
 outfile = 'performance_comparison_deriv_rho21_' + behavior + '_l10.pdf'
 
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
