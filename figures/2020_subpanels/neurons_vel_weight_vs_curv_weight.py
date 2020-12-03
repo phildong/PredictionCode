@@ -98,6 +98,7 @@ if key == 'BrainScanner20200130_110803':
     f1_ax1.text(slm_weights_raw_deriv[1][AVAL], slm_weights_raw_deriv[0][AVAL], 'AVAL')
     f1_ax1.text(slm_weights_raw_deriv[1][AVAR], slm_weights_raw_deriv[0][AVAR], 'AVAR')
 
+f1_ax1.tick_params(labelsize=18)
 fig1.legend()
 prov.stamp(f1_ax1, .55, .35, __file__ + '\n' + pickled_data)
 pdf.savefig(fig1)
@@ -112,7 +113,7 @@ if key == 'BrainScanner20200130_110803':
     AVAL = 15
     f2_ax1.text(maxw[1][AVAR], maxw[0][AVAR], 'AVAR')
     f2_ax1.text(maxw[1][AVAL], maxw[0][AVAL], 'AVAL')
-
+f2_ax1.tick_params(labelsize=18)
 prov.stamp(f2_ax1, .55, .35, __file__ + '\n' + pickled_data)
 pdf.savefig(fig2)
 
