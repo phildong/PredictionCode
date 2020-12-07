@@ -9,17 +9,26 @@ from seaborn import clustermap
 # For data set 110803 (moving only)- frames 1-1465, AVA 33 and 16
 #Goal is to plot neural trajectories projected into first three PCs
 
+def plot_a_trajectory(ax, pc_traj, theta=0, phi=0, color='#1f77b4'):
+    ax.view_init(theta, phi)
+    ax.plot(pc_traj[:, 0], pc_traj[:, 1], pc_traj[:, 2], color=color)
+    ax.set_xlabel('PC1')
+    ax.set_ylabel('PC2')
+    ax.set_zlabel('PC3')
 
-def plot_trajectories(pcs, title='Neural State Space Trajectories', color='blue'):
+def plot_trajectories(pc_traj, imm_start_index, end_index, title='Neural State Space Trajectories', color='#1f77b4'):
     fig = plt.figure(figsize=(12, 8))
     plt.suptitle(title)
-    for nplot in np.arange(6) + 1:
-        ax = plt.subplot(2, 3, nplot, projection='3d')
-        ax.plot(pcs[:, 0], pcs[:, 1], pcs[:, 2])
-        ax.view_init(np.random.randint(360), np.random.randint(360))
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-        ax.set_zlabel('PC3')
+    row=2
+    col=4
+    for nplot in np.arange(col) + 1:
+        theta, phi = np.random.randint(360), np.random.randint(360)
+        ax1 = plt.subplot(row, col, nplot, projection='3d', title='immobile (%d, %d)' % (theta, phi) )
+        plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], theta, phi, color)
+
+        ax2 = plt.subplot(row, col, nplot+col, projection='3d', title='moving (%d, %d)' % (theta, phi))
+        plot_a_trajectory(ax2, pc_traj[:imm_start_index,:], theta, phi, color)
+
     import prediction.provenance as prov
     prov.stamp(plt.gca(), .55, .15, __file__)
     return
@@ -57,22 +66,29 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
         neurons_ZScore = dataSets[key]['Neurons']['ActivityFull'] # Z scored neurons to use to look at calcium traces
         velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
-        # curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
-        # For immobile- how is NaN neurons that are not hand tracked dealt with by the smooth_interp...
-        # Still do the correlation with all (the interpolated ones too, but then replace with 0s)?
+
+        # Only consider neurons that have timepoints present for at least 75% of the time during immobilization
+        frac_nan_during_imm = np.true_divide(np.sum(np.isnan(neurons_withNaN[:, im_start:]), axis=1),
+                                             neurons_withNaN[:, transition:].shape[1])
+        valid_imm = np.argwhere(frac_nan_during_imm < 0.25)[:, 0]
+
 
         dset = dataSets[key]
         Iz = neurons_ZScore
         # Cluster on Z-scored interpolated data to get indices
+        # Cluster only on the immobile portion; and only consider neurons prsent for both moving and immobile
         from scipy.cluster.hierarchy import linkage, dendrogram
-        Z = linkage(dataSets[key]['Neurons']['Activity'])
-        d = dendrogram(Z[:,0:transition], no_plot=True)
+        Z = linkage(dataSets[key]['Neurons']['Activity'][valid_imm,transition:])
+        d = dendrogram(Z, no_plot=True)
         idx_clust = np.array(d['leaves'])
 
         imm_start_time = time_contig[im_start]
-        imm_start_index = np.abs(time - imm_start_time).argmin()
+        imm_start_index = np.abs(time - imm_start_time).argmin() #Index is for Noncontig
         end_time = time_contig[im_end]
-        end_index = np.abs(time - end_time).argmin()
+        end_index = np.abs(time - end_time).argmin() # INdex is for noncontig
+
+
+
 
 
     #### Plot heatmap and behavior for whoel recording
@@ -82,10 +98,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     ax = fig.add_subplot(gs[0, :])
 
     prcntile = 99.7
-    num_Neurons=neurons_withNaN.shape[0]
-    vmin = np.nanpercentile(neurons_withNaN, 0.1)
-    vmax = np.nanpercentile(neurons_withNaN.flatten(), prcntile)
-    pos = ax.imshow(neurons_withNaN[idx_clust, :], aspect='auto',
+    num_Neurons=neurons_withNaN[valid_imm, :].shape[0]
+    vmin = np.nanpercentile(neurons_withNaN[valid_imm, :], 0.1)
+    vmax = np.nanpercentile(neurons_withNaN[valid_imm, :].flatten(), prcntile)
+    pos = ax.imshow(neurons_withNaN[valid_imm[idx_clust], :], aspect='auto',
                     interpolation='none', vmin=vmin, vmax=vmax,
                     extent=[time_contig[0], time_contig[-1], -.5, num_Neurons - .5], origin='lower')
     ax.set_ylim(-.5, num_Neurons + .5)
@@ -103,9 +119,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     cb.update_ticks()
 
     AVA1 = AVAL = 72#36
-    AVA2 = AVAR = 8 #126#23
-    AVAR_ci = np.argwhere(idx_clust == AVAR)
-    AVAL_ci = np.argwhere(idx_clust == AVAL)
+    AVA2 = AVAR = 22 #126#23
+    AVAR_ci = np.argwhere(valid_imm[idx_clust] == AVAR)
+    AVAL_ci = np.argwhere(valid_imm[idx_clust] == AVAL)
 
     yt = ax.get_yticks()
     yt = np.append(yt, [AVAR_ci, AVAL_ci])
@@ -114,11 +130,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     ax.set_yticks(yt)
     ax.set_yticklabels(ytl)
 
-    beh = dset['BehaviorFull']['AngleVelocity']
-    time = dset['Neurons']['TimeFull']
+
 
     axbeh = fig.add_subplot(gs[1, :], sharex=ax)
-    axbeh.plot(time, beh, linewidth=1.5, color='k')
+    axbeh.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], linewidth=1.5, color='k')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=0.5, color='k')
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
@@ -128,7 +143,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     curv = dset['BehaviorFull']['Eigenworm3']
     axbeh = fig.add_subplot(gs[2, :], sharex=ax)
-    axbeh.plot(time, curv, linewidth=1.5, color='brown')
+    axbeh.plot(dset['Neurons']['TimeFull'], curv, linewidth=1.5, color='brown')
     axbeh.set_ylabel('Curvature')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=.5, color='k')
@@ -151,107 +166,146 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     fig.colorbar(pos, ax=axava)
     axava.set_xlim(ax.get_xlim())
 
-    ### Next it will be important to show that the neurons before and after transitions
-    # are likely the same
-    before = np.arange(700, 800)
-    after = np.arange(1100,1200)
-    av_b = np.nanmean(dataSets[key]['Neurons']['gRaw'][:, before], axis=1)
-    av_a = np.nanmean(dataSets[key]['Neurons']['gRaw'][:, after], axis=1)
-    av_bprime = np.nanmean(dataSets[key]['Neurons']['gRaw'][:, before-400], axis=1)
-    av_aprime = np.nanmean(dataSets[key]['Neurons']['gRaw'][:, after+400], axis=1)
-    plt.figure()
-    for k in np.arange(av_b.shape[0]):
-        plt.plot([0, 1], [av_b[k], av_a[k]],'ko-')
-        plt.plot([3, 4], [av_bprime[k], av_b[k]],'ko-')
-        plt.plot([5, 6], [av_a[k], av_aprime[k]],'ko-')
-    plt.text(0, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_b - av_a)))
-    plt.text(3, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_bprime - av_b)))
-    plt.text(5, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_a - av_aprime)))
-    labels = ['(700 to 800)', '(1100 to 1200)', '(300 to 400)', '(700 to 800)', '(1100 to 1200)', '(1500 to 1600)' ]
-    plt.xticks([0, 1, 3, 4, 5, 6], labels)
-    plt.title('Change in Mean raw RFP Values across different time windows')
-    plt.ylabel('F')
-    plt.xlabel('Averaging Window (Volumes)')
 
 
-    from sklearn.decomposition import PCA
+    # PLOT Neural State Space PCA Analysis
     from sklearn.preprocessing import StandardScaler
 
-    # Plot neural state space trajectories in first 3 PCs
-    # also reduce dimensionality of the neural dynamics.
-    nComp = 3  # pars['nCompPCA']
-    pca = PCA(n_components=nComp)
-    Neuro = np.copy(neurons[:, imm_start_index: end_index]).T
+
+
 
     #Repeat on the derivatives a la Kato et al
     def take_deriv(neurons):
         from prediction.Classifier import rectified_derivative
         _, _, nderiv = rectified_derivative(neurons)
         return nderiv
-    Neuro_dFdt = take_deriv(neurons[:, imm_start_index: end_index]).T
+    Neuro_dFdt = take_deriv(neurons[valid_imm[idx_clust], :]).T
+    Neuro = np.copy(neurons[valid_imm[idx_clust], ]).T  # I_smooth_interp_nonctoig
 
 
-    # make sure data is centered
-    sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
-    zscore = StandardScaler(copy=True, with_mean=True, with_std=True)
-    Neuro_mean_sub = sclar.fit_transform(Neuro)
-    Neuro_z = zscore.fit_transform(Neuro)
-    Neuro_dFdt_mean_sub = sclar.fit_transform(Neuro_dFdt)
-    Neuro_dFdt_z = zscore.fit_transform(Neuro_dFdt)
+    def center_and_scale_around_immmobile_portion(recording, imm_start_index, end_index, with_std=False):
+        # subtract and rescale the whole recording  so that the mean during hte immobile portion is zero
+        # and, optionally, so that the variance during immobile portion is 1
+        mean_scale = StandardScaler(copy=True, with_mean=True, with_std=with_std)
+        mean_scale.fit(recording[imm_start_index:end_index, :]) #calcluate mean and or variance based on immobile
+        return mean_scale.transform(recording) #rescale based on whole recording
 
 
-    pcs = pca.fit_transform(Neuro_mean_sub)
+    Neuro_mean_sub = center_and_scale_around_immmobile_portion(Neuro, imm_start_index, end_index, with_std=False)
+    Neuro_z = center_and_scale_around_immmobile_portion(Neuro, imm_start_index, end_index, with_std=True)
+    Neuro_dFdt_mean_sub = center_and_scale_around_immmobile_portion(Neuro_dFdt, imm_start_index, end_index, with_std=False)
+    Neuro_dFdt_z = center_and_scale_around_immmobile_portion(Neuro_dFdt, imm_start_index, end_index, with_std=True)
+
+    def print_AVAs_weights_in_pcs(AVAL_ci, AVAR_ci, pca, label=''):
+        from sklearn.decomposition import PCA
+        print(label)
+        print("AVAL weights:", pca.components_[:, AVAL_ci])
+        print("AVAR weights:", pca.components_[:, AVAR_ci])
+        print("AVAL ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAL_ci))
+        print("AVAR ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAR_ci))
+        return
+
+    def project_into_immobile_pcs(recording, imm_start_index, end_index, AVAL_ci=None, AVAR_ci=None, label=''):
+        # Plot neural state space trajectories in first 3 PCs
+        # also reduce dimensionality of the neural dynamics.
+        from sklearn.decomposition import PCA
+        nComp = 3  # pars['nCompPCA']
+        pca = PCA(n_components=nComp, copy=True)
+        pcs = pca.fit(recording[imm_start_index:end_index, :]).transform(recording)
+        if AVAL_ci is not None and AVAR_ci is not None:
+            print_AVAs_weights_in_pcs(AVAL_ci, AVAR_ci, pca, label=label)
+        del pca
+        return np.copy(pcs)
 
 
-    print("AVA 1 weights:", pca.components_[:,AVA1])
-    print("AVA 2 weights:", pca.components_[:,AVA2])
-    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA1))
-    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA2))
+    pcs = project_into_immobile_pcs(Neuro_mean_sub, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='activity')
+    pcs_z = project_into_immobile_pcs(Neuro_z, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='z-score')
+    pcs_dFdt = project_into_immobile_pcs(Neuro_dFdt_mean_sub, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='deriv')
+    pcs_dFdt_z = project_into_immobile_pcs(Neuro_dFdt_z, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='deriv Z-scored')
 
-    print("Shape of pca.components_:", pca.components_.shape)
+    plot_trajectories(pcs, imm_start_index, im_end, key + '\n F  PCA (minimally processed)')
+    plot_trajectories(pcs_z,  imm_start_index, im_end, key + '\n F  PCA (z-scored)')
+    plot_trajectories(pcs_dFdt,  imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e")
+    plot_trajectories(pcs_dFdt_z,  imm_start_index, im_end, key + '\n F  dF/dt PCA (z-scored)', color="#ff7f0e")
 
-    pcs_z = pca.fit_transform(Neuro_z)
-    pcs_dFdt = pca.fit_transform(Neuro_dFdt_mean_sub)
-    
-    print("AVA 1 weights:", pca.components_[:,AVA1])
-    print("AVA 2 weights:", pca.components_[:,AVA2])
-    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA1))
-    print("AVA 1 ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVA2))
-    
-    pcs_dFdt_z = pca.fit_transform(Neuro_dFdt_z)
 
-    plot_trajectories(pcs, key + '\n F PCA (minimally processed)')
-    plot_trajectories(pcs_z, key + '\n F PCA (z-scored)')
-    plot_trajectories(pcs_dFdt, key + '\n dF/dt PCA (minimally processed)', color='orange')
-    plot_trajectories(pcs_dFdt_z, key + '\n dF/dt PCA (z-scored)', color='orange')
 
     plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.plot(time[imm_start_index:end_index], pcs[:, 0], label='PC0')
-    plt.plot(time[imm_start_index:end_index], 3 + pcs[:, 1], label='PC1')
-    plt.plot(time[imm_start_index:end_index], 6 + pcs[:, 2], label='PC2')
+    plt.subplot(3, 1, 1)
+    plt.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], 'k', label='velocity')
+    plt.axhline(color="black")
+    plt.ylabel('Velocity')
+    plt.subplot(3, 1, 2)
+    plt.plot(time, pcs[:, 0], label='PC0')
+    plt.plot(time, 3 + pcs[:, 1], label='PC1')
+    plt.plot(time, 6 + pcs[:, 2], label='PC2')
     plt.legend()
-    plt.subplot(2, 1, 2)
-    plt.plot(time[imm_start_index:end_index], neurons[AVA1, imm_start_index:end_index], label='Neuron %d' % AVA1)
-    plt.plot(time[imm_start_index:end_index], neurons[AVA2, imm_start_index:end_index], label='Neuron %d' % AVA2)
+    plt.subplot(3, 1, 3)
+    plt.plot(time, neurons[AVA1, :], label='Neuron %d' % AVAL_ci)
+    plt.plot(time, neurons[AVA2, :], label='Neuron %d' % AVAR_ci)
     plt.legend()
 
     plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.plot(time[imm_start_index:end_index], pcs_dFdt[:, 0], label='PC0 dF/dT')
-    plt.plot(time[imm_start_index:end_index], pcs_dFdt[:, 1], label='PC1 dF/dT')
-    plt.plot(time[imm_start_index:end_index], pcs_dFdt[:, 2], label='PC2 dF/dT')
+    plt.subplot(3, 1, 1)
+    plt.plot(dset['Neurons']['TimeFull'],  dset['BehaviorFull']['AngleVelocity'], 'k', label='velocity')
+    plt.axhline(color="black")
+    plt.ylabel('Velocity')
+    plt.subplot(3, 1, 2)
+    plt.plot(time, pcs_z[:, 0], label='PC0 z')
+    plt.plot(time, 3 + pcs_z[:, 1], label='PC1 z')
+    plt.plot(time, 6 + pcs_z[:, 2], label='PC2 z')
     plt.legend()
-    plt.subplot(2, 1, 2)
-    plt.plot(time[imm_start_index:end_index], Neuro_dFdt[:, AVA1].T, label='Neuron %d' % AVA1)
-    plt.plot(time[imm_start_index:end_index], Neuro_dFdt[:, AVA2].T, label='Neuron %d' % AVA2)
+    plt.subplot(3, 1, 3)
+    plt.plot(time, pcs_dFdt_z[:, 0], label='PC0 z dF/dT')
+    plt.plot(time, pcs_dFdt_z[:, 1], label='PC1 z dF/dT')
+    plt.plot(time, pcs_dFdt_z[:, 2], label='PC2 z dF/dT')
     plt.legend()
 
 
-#    #We are goig to do PCA on a lot of Nan'ed out or interpolated timepoints.
+    plt.figure()
+    plt.subplot(3, 1, 1)
+    plt.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], 'k', label='velocity')
+    plt.axhline(color="black")
+    plt.xlim(time[imm_start_index], time[end_index])
+    plt.ylabel('Velocity')
+    plt.subplot(3, 1, 2)
+    plt.plot(time, pcs_dFdt[:, 0], label='PC0 dF/dT')
+    plt.plot(time, pcs_dFdt[:, 1], label='PC1 dF/dT')
+    plt.plot(time, pcs_dFdt[:, 2], label='PC2 dF/dT')
+    plt.legend()
+    plt.subplot(3, 1, 3)
+    plt.plot(time, Neuro_dFdt[:, AVA1].T, label='Neuron %d' % AVA1)
+    plt.plot(time, Neuro_dFdt[:, AVA2].T, label='Neuron %d' % AVA2)
+    plt.legend()
 
 
-#    plt.imshow(neurons_withNaN[:, im_start:im_end])
+
+
+    ### Next it will be important to show that the neurons before and after transitions
+    # are likely the same
+    before = np.arange(700, 800)
+    after = np.arange(1100, 1200)
+    av_b = np.nanmean(dataSets[key]['Neurons']['rRaw'][valid_imm, before[0]:before[-1]], axis=1)
+    av_a = np.nanmean(dataSets[key]['Neurons']['rRaw'][valid_imm, after[0]:after[-1]], axis=1)
+    av_bprime = np.nanmean(dataSets[key]['Neurons']['rRaw'][valid_imm, before[0] - 400 : before[-1] - 400], axis=1)
+    av_aprime = np.nanmean(dataSets[key]['Neurons']['rRaw'][valid_imm, after[0] + 400 : after[-1] + 400], axis=1)
+    plt.figure()
+    for k in np.arange(av_b.shape[0]):
+        plt.plot([0, 1], [av_b[k], av_a[k]], 'ko-')
+        plt.plot([3, 4], [av_bprime[k], av_b[k]], 'ko-')
+        plt.plot([5, 6], [av_a[k], av_aprime[k]], 'ko-')
+    plt.text(0, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_b - av_a)))
+    plt.text(3, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_bprime - av_b)))
+    plt.text(5, 600, 'med |diff| = %.1f' % np.nanmedian(np.abs(av_a - av_aprime)))
+    labels = ['(700 to 800)', '(1100 to 1200)', '(300 to 400)', '(700 to 800)', '(1100 to 1200)', '(1500 to 1600)']
+    plt.xticks([0, 1, 3, 4, 5, 6], labels)
+    plt.title('Change in Mean raw RFP Values across different time windows')
+    plt.ylabel('F')
+    plt.xlabel('Averaging Window (Volumes)')
+
+    diff = av_a - av_b
+    print("Neurons that have RFP values that change a lott before and after transition. (top two increase; top two decrease; python indexing")
+    print(valid_imm[np.argsort(diff)[[0, 1, -1, -2]]])
 
     print("Plotting.")
     plt.show()
