@@ -16,21 +16,47 @@ def plot_a_trajectory(ax, pc_traj, theta=0, phi=0, color='#1f77b4'):
     ax.set_ylabel('PC2')
     ax.set_zlabel('PC3')
 
-def plot_trajectories(pc_traj, imm_start_index, end_index, title='Neural State Space Trajectories', color='#1f77b4'):
+def sync3d_limits(ax1, ax2):
+    xmax, xmin = np.max([ax1.axes.get_xlim3d(), ax2.axes.get_xlim3d()]), np.min([ax1.axes.get_xlim3d(), ax2.axes.get_xlim3d()])
+    ymax, ymin = np.max([ax1.axes.get_ylim3d(), ax2.axes.get_ylim3d()]), np.min([ax1.axes.get_ylim3d(), ax2.axes.get_ylim3d()])
+    zmax, zmin = np.max([ax1.axes.get_zlim3d(), ax2.axes.get_zlim3d()]), np.min([ax1.axes.get_zlim3d(), ax2.axes.get_zlim3d()])
+    ax1.axes.set_xlim3d(xmin, xmax)
+    ax2.axes.set_xlim3d(xmin, xmax)
+    ax1.axes.set_ylim3d(ymin, ymax)
+    ax2.axes.set_ylim3d(ymin, ymax)
+    ax1.axes.set_zlim3d(zmin, zmax)
+    ax2.axes.set_zlim3d(zmin, zmax)
+
+
+
+
+def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title='Neural State Space Trajectories', color='#1f77b4', theta=None, phi =None):
     fig = plt.figure(figsize=(12, 8))
     plt.suptitle(title)
     row=2
     col=4
+    #How do we choose the orientation of the 3d plot?
+    if theta is None or phi is None:
+        RAND = True #randomize theta or phi
+    else:
+        RAND = False # show the plot orientated around the specified value
+        theta_spec, phi_spec = theta, phi
+        jit = 1.5 #magnitude of jitter in degrees
+
     for nplot in np.arange(col) + 1:
-        theta, phi = np.random.randint(360), np.random.randint(360)
+        if RAND: #Generate a random angle to view the 3D plot
+            theta, phi = np.random.randint(360), np.random.randint(360)
+        else: #Generate a random centered around the view
+            theta, phi = theta_spec + jit*np.random.randn(), phi_spec + jit*np.random.randn()
         ax1 = plt.subplot(row, col, nplot, projection='3d', title='immobile (%d, %d)' % (theta, phi) )
         plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], theta, phi, color)
 
         ax2 = plt.subplot(row, col, nplot+col, projection='3d', title='moving (%d, %d)' % (theta, phi))
-        plot_a_trajectory(ax2, pc_traj[:imm_start_index,:], theta, phi, color)
+        plot_a_trajectory(ax2, pc_traj[:drug_app_index,:], theta, phi, color)
+        sync3d_limits(ax1, ax2)
 
     import prediction.provenance as prov
-    prov.stamp(plt.gca(), .55, .15, __file__)
+    #prov.stamp(plt.gca(), .55, .15, __file__)
     return
 
 
@@ -54,6 +80,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     theDataset = '193044'
+    drug_application = 620
     transition = im_start = 950
     im_end = 2885
 
@@ -82,6 +109,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         d = dendrogram(Z, no_plot=True)
         idx_clust = np.array(d['leaves'])
 
+        drug_app_time = time_contig[drug_application]
+        drug_app_index =  np.abs(time - drug_app_time).argmin()
         imm_start_time = time_contig[im_start]
         imm_start_index = np.abs(time - imm_start_time).argmin() #Index is for Noncontig
         end_time = time_contig[im_end]
@@ -92,9 +121,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
 
     #### Plot heatmap and behavior for whoel recording
-    fig = plt.figure(figsize=(18, 18), constrained_layout=False)
+    fig = plt.figure(figsize=(10, 12), constrained_layout=False)
     import matplotlib.gridspec as gridspec
-    gs = gridspec.GridSpec(ncols=1, nrows=5, figure=fig, height_ratios=[2, .7, .7, .7, .7], width_ratios=[5])
+    gs = gridspec.GridSpec(ncols=1, nrows=6, figure=fig, height_ratios=[2, .6, .6, .8, 1.1, 1.3], width_ratios=[5])
     ax = fig.add_subplot(gs[0, :])
 
     prcntile = 99.7
@@ -136,8 +165,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     axbeh.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], linewidth=1.5, color='k')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=0.5, color='k')
+    axbeh.axvline(drug_app_time)
+    axbeh.axvline(imm_start_time)
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
-    axbeh.set_xlim(ax.get_xlim())
+    axbeh.set_xlim(0, end_time)
     axbeh.set_ylabel('Velocity')
 
 
@@ -148,23 +179,17 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=.5, color='k')
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
-    axbeh.set_xlim(ax.get_xlim())
+    axbeh.set_xlim(0, end_time)
 
     axava1 = fig.add_subplot(gs[3, :], sharex=ax)
-    axava1.plot(time_contig, dataSets[key]['Neurons']['gRaw'][AVAL,:])
-    axava1.plot(time_contig, neurons_withNaN[AVAL,:])
+    #axava1.plot(time_contig, dataSets[key]['Neurons']['gRaw'][AVAL,:])
+    axava1.plot(time_contig, neurons_withNaN[AVAL,:], color='#1f77b4', label='AVAL')
+    axava1.plot(time_contig, neurons_withNaN[AVAR, :], color='blue', label='AVAR')
+    axava1.legend()
     axava1.set_xticks(np.arange(0, time_contig[-1], 60))
-    axava1.set_ylabel('AVAL')
+    axava1.set_ylabel('AVA')
     fig.colorbar(pos, ax=axava1)
-    axava1.set_xlim(ax.get_xlim())
-
-    axava = fig.add_subplot(gs[4, :], sharex=ax)
-    axava.plot(time_contig, dataSets[key]['Neurons']['gRaw'][AVAR,:])
-    axava.plot(time_contig, neurons_withNaN[AVAR,:])
-    axava.set_ylabel('AVAR')
-    axava.set_xticks(np.arange(0, time_contig[-1], 60))
-    fig.colorbar(pos, ax=axava)
-    axava.set_xlim(ax.get_xlim())
+    axava1.set_xlim(0, end_time)
 
 
 
@@ -217,15 +242,42 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     pcs_z = project_into_immobile_pcs(Neuro_z, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='z-score')
     pcs_dFdt = project_into_immobile_pcs(Neuro_dFdt_mean_sub, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='deriv')
     pcs_dFdt_z = project_into_immobile_pcs(Neuro_dFdt_z, imm_start_index, end_index, AVAL_ci, AVAR_ci, label='deriv Z-scored')
+    
+    #theta, phi = 251, 78 # one option
+    #theta, phi = 259, 179 # one option
+    theta, phi =250, 80
+    plot_trajectories(pcs, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (minimally processed)', theta=theta, phi=phi)
+    plot_trajectories(pcs_z, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (z-scored)', theta=theta, phi=phi)
+    plot_trajectories(pcs_dFdt, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e", theta=theta, phi=phi)
+    plot_trajectories(pcs_dFdt_z, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (z-scored)', color="#ff7f0e", theta=theta, phi=phi)
 
-    plot_trajectories(pcs, imm_start_index, im_end, key + '\n F  PCA (minimally processed)')
-    plot_trajectories(pcs_z,  imm_start_index, im_end, key + '\n F  PCA (z-scored)')
-    plot_trajectories(pcs_dFdt,  imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e")
-    plot_trajectories(pcs_dFdt_z,  imm_start_index, im_end, key + '\n F  dF/dt PCA (z-scored)', color="#ff7f0e")
+    offset = 20
+    axpc = fig.add_subplot(gs[4, :], sharex=ax)
+    axpc.plot(time, pcs_z[:, 0], label='PC1', color='#6339F6')
+    axpc.plot(time, offset + pcs_z[:, 1], label='PC2', color='#426BEB')
+    axpc.plot(time, 2 * offset + pcs_z[:, 2], label='PC3', color='#3DC1F6')
+    axpc.set_xticks(np.arange(0, time_contig[-1], 60))
+    axpc.legend()
+    fig.colorbar(pos, ax=axpc)
+    axpc.set_xlim(0, end_time)
 
+    offset = 24
+    axpcdf = fig.add_subplot(gs[5, :], sharex=ax)
+    axpcdf.plot(time, pcs_dFdt_z[:, 0], label='PC1 dF/dt', color='#F6C802')
+    axpcdf.plot(time, offset + pcs_dFdt_z[:, 1], label='PC2 dF/dt', color='#EB9B0F')
+    axpcdf.plot(time, 2 * offset + pcs_dFdt_z[:, 2], label='PC3 dF/dt', color='#F66607')
+    axpcdf.set_xticks(np.arange(0, time_contig[-1], 60))
+    axpcdf.legend()
+    fig.colorbar(pos, ax=axpcdf)
+    axpc.set_xlim(0, end_time)
 
+    codePath = userTracker.codePath()
+    outputFolder = os.path.join(codePath,'figures/2020_subpanels/generatedFigs')
+    import matplotlib.backends.backend_pdf
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, key + "transition.pdf"))
+    pdf.savefig(fig)
+    pdf.close()
 
-    offset = 25
     plt.figure()
     plt.subplot(3, 1, 1)
     plt.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], 'k', label='velocity')
@@ -303,8 +355,88 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     print("Neurons that have RFP values that change a lott before and after transition. (top two increase; top two decrease; python indexing")
     print(valid_imm[np.argsort(diff)[[0, 1, -1, -2]]])
 
+
+    ######################################################
+    #  Now we are lookikng at correlation structure between moving and immobile
+    #########################################################
+    def get_pearsons_coefs(recording):
+        cc = np.corrcoef(recording)
+        indices = np.tril_indices(cc.shape[0],-1) # get the lower triangle excluding the diagonel
+        return cc[indices], cc
+
+    rho_mov, cmat_mov = get_pearsons_coefs(Neuro_mean_sub[:drug_app_index, :].T)
+    rho_imm, cmat_imm = get_pearsons_coefs(Neuro_mean_sub[imm_start_index:, :].T)
+
+
+    def calc_pdf(x, low_lim, high_lim, nbins):
+        bin_width = np.true_divide(high_lim - low_lim, nbins)
+        counts, bin_edges = np.histogram(x, np.linspace(low_lim, high_lim, nbins))
+        bin_centers = bin_edges[:-1] + np.diff(bin_edges) / 2
+        density = np.true_divide(counts, np.sum(counts) * bin_width)
+        return density, bin_centers, bin_edges
+
+    low_lim, high_lim, nbins = -1, 1, 30
+    rho_mov_pdf, x, binedges = calc_pdf(rho_mov, low_lim, high_lim, nbins)
+    rho_imm_pdf, x, binedges = calc_pdf(rho_imm, low_lim, high_lim, nbins)
+
+    from scipy import stats
+    t, p = stats.ttest_ind(rho_mov, rho_imm)
+    stats.wilcoxon(rho_mov, rho_imm)
+
+    plt.figure(figsize=(4,4))
+    plt.step(x, rho_mov_pdf,  where='mid', label='Moving', lw=2)
+    plt.step(x, rho_imm_pdf,  where='mid', label='Immobile', lw=2)
+    plt.axvline(np.mean(rho_mov))
+    plt.axvline(np.mean(rho_imm))
+    plt.title('t-test p=%.4f' % p)
+    plt.legend()
+
+
+    ########
+    # Now generate correlation matrices
+    ########
+
+    def do_clustering(matrix):
+        import scipy.cluster.hierarchy as sch
+        Y = sch.linkage(matrix, method='single')
+        Z = sch.dendrogram(Y, no_plot=True)
+        return Z['leaves']
+
+    def plot_corrMatrices(cmat_mov, cmat_imm):
+        cfig = plt.figure()
+        gs = gridspec.GridSpec(3, 3, figure=cfig)
+        ax1 = cfig.add_subplot(gs[0, 0])
+        ax2 = cfig.add_subplot(gs[0, 1])
+        ax3 = cfig.add_subplot(gs[0, 2])
+        ax4 = cfig.add_subplot(gs[1, 0])
+        ax5 = cfig.add_subplot(gs[1, 1])
+        ax6 = cfig.add_subplot(gs[1, 2])
+        ax7 = cfig.add_subplot(gs[2, 0])
+        ax8 = cfig.add_subplot(gs[2, 2])
+
+
+        # Cluster based on moving
+        cgIdx = do_clustering(cmat_mov)
+        ax1.imshow(cmat_mov[:, cgIdx][cgIdx], vmin=-1, vmax=1)
+        pos=ax2.imshow(cmat_imm[:, cgIdx][cgIdx], vmin=-1, vmax=1)
+        pos2= ax3.imshow(cmat_imm[:, cgIdx][cgIdx] - cmat_mov[:, cgIdx][cgIdx], vmin=-1.3, vmax=1.35, cmap='plasma')
+
+        cb = fig.colorbar(pos, ax=ax7)
+        cb2 = fig.colorbar(pos2, ax=ax8)
+        tick_locator = ticker.MaxNLocator(nbins=5)
+        cb.locator = tick_locator
+        cb.update_ticks()
+
+        #Cluster based on immobile
+        cgIdx = do_clustering(cmat_imm)
+        ax4.imshow(cmat_mov[:, cgIdx][cgIdx], vmin=-1, vmax=1)
+        ax5.imshow(cmat_imm[:, cgIdx][cgIdx], vmin=-1, vmax=1)
+        ax6.imshow(cmat_imm[:, cgIdx][cgIdx] - cmat_mov[:, cgIdx][cgIdx], vmin=-1.3, vmax=1.35, cmap='plasma')
+
+    plot_corrMatrices(cmat_mov, cmat_imm)
     print("Plotting.")
     plt.show()
+
 
 
 print("Done")
