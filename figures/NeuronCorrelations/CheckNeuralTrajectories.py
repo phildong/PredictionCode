@@ -118,8 +118,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     cb.locator = tick_locator
     cb.update_ticks()
 
-    AVA1 = AVAL = 72#36
-    AVA2 = AVAR = 22 #126#23
+    AVA1 = AVAR = 72#36
+    AVA2 = AVAL = 22 #126#23
     AVAR_ci = np.argwhere(valid_imm[idx_clust] == AVAR)
     AVAL_ci = np.argwhere(valid_imm[idx_clust] == AVAL)
 
@@ -168,11 +168,6 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
 
 
-    # PLOT Neural State Space PCA Analysis
-    from sklearn.preprocessing import StandardScaler
-
-
-
 
     #Repeat on the derivatives a la Kato et al
     def take_deriv(neurons):
@@ -186,10 +181,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     def center_and_scale_around_immmobile_portion(recording, imm_start_index, end_index, with_std=False):
         # subtract and rescale the whole recording  so that the mean during hte immobile portion is zero
         # and, optionally, so that the variance during immobile portion is 1
+        from sklearn.preprocessing import StandardScaler
         mean_scale = StandardScaler(copy=True, with_mean=True, with_std=with_std)
         mean_scale.fit(recording[imm_start_index:end_index, :]) #calcluate mean and or variance based on immobile
         return mean_scale.transform(recording) #rescale based on whole recording
-
 
     Neuro_mean_sub = center_and_scale_around_immmobile_portion(Neuro, imm_start_index, end_index, with_std=False)
     Neuro_z = center_and_scale_around_immmobile_portion(Neuro, imm_start_index, end_index, with_std=True)
@@ -230,6 +225,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
 
 
+    offset = 25
     plt.figure()
     plt.subplot(3, 1, 1)
     plt.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], 'k', label='velocity')
@@ -237,8 +233,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.ylabel('Velocity')
     plt.subplot(3, 1, 2)
     plt.plot(time, pcs[:, 0], label='PC0')
-    plt.plot(time, 3 + pcs[:, 1], label='PC1')
-    plt.plot(time, 6 + pcs[:, 2], label='PC2')
+    plt.plot(time, offset + pcs[:, 1], label='PC1')
+    plt.plot(time, 2 * offset + pcs[:, 2], label='PC2')
     plt.legend()
     plt.subplot(3, 1, 3)
     plt.plot(time, neurons[AVA1, :], label='Neuron %d' % AVAL_ci)
@@ -252,13 +248,13 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.ylabel('Velocity')
     plt.subplot(3, 1, 2)
     plt.plot(time, pcs_z[:, 0], label='PC0 z')
-    plt.plot(time, 3 + pcs_z[:, 1], label='PC1 z')
-    plt.plot(time, 6 + pcs_z[:, 2], label='PC2 z')
+    plt.plot(time, offset + pcs_z[:, 1], label='PC1 z')
+    plt.plot(time, 2*offset + pcs_z[:, 2], label='PC2 z')
     plt.legend()
     plt.subplot(3, 1, 3)
     plt.plot(time, pcs_dFdt_z[:, 0], label='PC0 z dF/dT')
-    plt.plot(time, pcs_dFdt_z[:, 1], label='PC1 z dF/dT')
-    plt.plot(time, pcs_dFdt_z[:, 2], label='PC2 z dF/dT')
+    plt.plot(time, offset+pcs_dFdt_z[:, 1], label='PC1 z dF/dT')
+    plt.plot(time, 2*offset + pcs_dFdt_z[:, 2], label='PC2 z dF/dT')
     plt.legend()
 
 
@@ -269,9 +265,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.xlim(time[imm_start_index], time[end_index])
     plt.ylabel('Velocity')
     plt.subplot(3, 1, 2)
-    plt.plot(time, pcs_dFdt[:, 0], label='PC0 dF/dT')
-    plt.plot(time, pcs_dFdt[:, 1], label='PC1 dF/dT')
-    plt.plot(time, pcs_dFdt[:, 2], label='PC2 dF/dT')
+    plt.plot(time,  pcs_dFdt[:, 0], label='PC0 dF/dT')
+    plt.plot(time, offset + pcs_dFdt[:, 1], label='PC1 dF/dT')
+    plt.plot(time, 2 * offset + pcs_dFdt[:, 2], label='PC2 dF/dT')
     plt.legend()
     plt.subplot(3, 1, 3)
     plt.plot(time, Neuro_dFdt[:, AVA1].T, label='Neuron %d' % AVA1)
