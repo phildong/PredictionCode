@@ -149,8 +149,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     AVA1 = AVAR = 72#36
     AVA2 = AVAL = 22 #126#23
-    AVAR_ci = np.argwhere(valid_imm[idx_clust] == AVAR)
-    AVAL_ci = np.argwhere(valid_imm[idx_clust] == AVAL)
+    AVAR_ci = np.squeeze(np.argwhere(valid_imm[idx_clust] == AVAR))
+    AVAL_ci = np.squeeze(np.argwhere(valid_imm[idx_clust] == AVAL))
 
     yt = ax.get_yticks()
     yt = np.append(yt, [AVAR_ci, AVAL_ci])
@@ -201,6 +201,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         return nderiv
     Neuro_dFdt = take_deriv(neurons[valid_imm[idx_clust], :]).T
     Neuro = np.copy(neurons[valid_imm[idx_clust], ]).T  # I_smooth_interp_nonctoig
+
 
 
     def center_and_scale_around_immmobile_portion(recording, imm_start_index, end_index, with_std=False):
@@ -272,7 +273,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     axpc.set_xlim(0, end_time)
 
     codePath = userTracker.codePath()
-    outputFolder = os.path.join(codePath,'figures/2020_subpanels/generatedFigs')
+    outputFolder = os.path.join(codePath,'figures/subpanels_revision/generatedFigs')
     import matplotlib.backends.backend_pdf
     pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, key + "transition.pdf"))
     pdf.savefig(fig)
@@ -381,15 +382,17 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     from scipy import stats
     t, p = stats.ttest_ind(rho_mov, rho_imm)
-    stats.wilcoxon(rho_mov, rho_imm)
+    _, pw = stats.wilcoxon(rho_mov, rho_imm)
 
     plt.figure(figsize=(4,4))
     plt.step(x, rho_mov_pdf,  where='mid', label='Moving', lw=2)
     plt.step(x, rho_imm_pdf,  where='mid', label='Immobile', lw=2)
     plt.axvline(np.mean(rho_mov))
     plt.axvline(np.mean(rho_imm))
-    plt.title('t-test p=%.4f' % p)
+    plt.title('wilcoxon p=%.4f' % pw)
     plt.legend()
+
+
 
 
     ########
@@ -402,7 +405,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         Z = sch.dendrogram(Y, no_plot=True)
         return Z['leaves']
 
-    def plot_corrMatrices(cmat_mov, cmat_imm):
+    def plot_corrMatrices(cmat_mov, cmat_imm, AVAL=None, AVAR=None):
+        AVAL = np.squeeze(AVAL)
+        AVAR = np.squeeze(AVAR)
         cfig = plt.figure()
         gs = gridspec.GridSpec(3, 3, figure=cfig)
         ax1 = cfig.add_subplot(gs[0, 0])
@@ -426,49 +431,121 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         cb.locator = tick_locator
         cb.update_ticks()
 
+
         #Cluster based on immobile
         cgIdx = do_clustering(cmat_imm)
         ax4.imshow(cmat_mov[:, cgIdx][cgIdx], vmin=-1, vmax=1)
         ax5.imshow(cmat_imm[:, cgIdx][cgIdx], vmin=-1, vmax=1)
         ax6.imshow(cmat_imm[:, cgIdx][cgIdx] - cmat_mov[:, cgIdx][cgIdx], vmin=-1.3, vmax=1.35, cmap='plasma')
 
-    plot_corrMatrices(cmat_mov, cmat_imm)
+        axarray = [ax1, ax2, ax3, ax4, ax5, ax6]
+        if AVAL is not None and AVAR is not None:
+            for ax in axarray:
+                ax.set_yticks([np.where(np.squeeze(cgIdx)==AVAL), np.where(np.squeeze(cgIdx)==AVAR)])
+                ax.set_yticklabels(['AVAL', 'AVAR'])
+
+    plot_corrMatrices(cmat_mov, cmat_imm, AVAL=AVAL_ci, AVAR=AVAR_ci)
     print("Plotting.")
 
-    def boxdotplot(combined_data, labels=[''], title='', ylabel=''):
+    def boxdotplot(combined_data, labels=[''], title='', ylabel='', swarm=True):
         import matplotlib.pyplot as plt
         import seaborn as sns
         plt.figure()
         sns.set_style("white")
         sns.set_style("ticks")
-        ax = sns.swarmplot(data=combined_data, color="black")
-        ax = sns.boxplot(data=combined_data,
+        if swarm:
+            ax = sns.swarmplot(data=combined_data, color="black")
+            ax = sns.boxplot(data=combined_data,
                          showcaps=False, boxprops={'facecolor': 'None'},
                          showfliers=False, whiskerprops={'linewidth': 0})
+        else:
+            ax = sns.boxplot(data=combined_data, boxprops={'facecolor': 'None'})
         ax.set_xticklabels(labels)
         yloc = plt.MaxNLocator(5)
         ax.yaxis.set_major_locator(yloc)
         sns.despine()
         ax.set_title(title)
         ax.set_ylabel(ylabel)
-        plt.show()
+
+
+
+    def get_diff_dist(rhos, cum_prob):
+        #calculate distribution of differences of correlations
+        delta_rhos = rhos - rhos[np.random.permutation(rhos.size)] #randomly subtract one rho rom another
+        delta_rhos = np.sort(delta_rhos)
+        cum_prob_delta = np.linspace(0, 1, len(delta_rhos), endpoint=False)
+        return delta_rhos, cum_prob_delta
+
+    def get_sig_thresh(rhos, cum_prob, mult_hyp=1):
+        sig = 0.05
+        pos_thresh = np.min(rhos[cum_prob>1-sig/mult_hyp])
+        neg_thresh = np.max(rhos[cum_prob<sig/mult_hyp])
+        return neg_thresh, pos_thresh
+
+    def get_pvals(vec, rhos, cum_prob):
+        #Calcualte p-values for a vector of rhos
+        pvals=np.zeros(vec.shape)
+        from figures.subpanels_revision.tuning_of_highly_weighted_neurons import get_pval_from_cdf
+        for k, p in enumerate(vec):
+            pvals[k] = get_pval_from_cdf(p, rhos, cum_prob)
+        return pvals
 
     # Inspect AVA's Correlations
-    def compare_AVA_correlation(cmat_imm, cmat_mov, AVA_ci, AVA_other_ci, title=''):
+    def compare_AVA_correlation(cmat_imm, cmat_mov, AVA_ci, AVA_other_ci,  rhos=None, cum_prob=None, title=''):
         AVA_ci = AVA_ci.flatten()
         AVA_other_ci = AVA_other_ci.flatten()
 
         corr_im = cmat_imm[:, AVA_ci].squeeze()
         corr_mv = cmat_mov[:, AVA_ci].squeeze()
         N = corr_im.size
+        print(N)
 
         #Sort by strength of correlation to AVA during movement
         sidx_mv = np.flipud(np.argsort(corr_mv))
 
+        # Calculate matrix of differenes between two corr matrices
+        d = corr_im - corr_mv
+
+        plt.figure()
         fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True)
+        fig.suptitle(title)
         ax1.barh(np.arange(N), corr_mv[sidx_mv], align='center')
         ax2.barh(np.arange(N), corr_im[sidx_mv], align='center')
-        ax3.barh(np.arange(N), corr_im[sidx_mv] - corr_mv[sidx_mv], align='center')
+        ax3.barh(np.arange(N), d[sidx_mv], align='center')
+
+        j=6
+        diffsort = np.argsort(d[sidx_mv])
+        topj = np.concatenate([diffsort[-j:],diffsort[:j]])
+        for k in topj:
+            ax3.text(np.sign(d[sidx_mv][k]), k, str(sidx_mv[k]))
+
+        sig_diff = sidx_mv[topj] #convert from index locally storted
+        if rhos is not None and cum_prob is not None:
+            #find out which neurons have a change in correlation that pass  multi hyp tested threshold and flag them
+            delta_rhos, cum_prob_delta =  get_diff_dist(rhos, cum_prob)
+            #pvals = get_pvals(np.squeeze(d), delta_rhos, cum_prob_delta)
+
+            #from statsmodels.stats.multitest import multipletests
+            #reject, _, _, _ = multipletests(pvals) # uses holm-sidak adjustment
+            #for k in np.arange(reject.size)[reject]:
+            #    ax3.text(1.1*np.sign(d[k]), np.argwhere(sidx_mv==k)-.7, '*')
+
+            #Alternatively use vanilla bonferonni correction
+            nthresh, pthresh = get_sig_thresh(delta_rhos, cum_prob_delta, mult_hyp=N-1)
+            ax3.axvline(nthresh, linestyle='dashed', color='red')
+            ax3.axvline(pthresh, linestyle='dashed', color='red')
+            sig_diff = []
+            for k in np.arange(d.size):
+                if d[k] > pthresh or d[k] < nthresh:
+                    ax3.text(1.1*np.sign(d[k]), np.argwhere(sidx_mv==k)-.7, str(k))
+                    sig_diff.append(k)
+
+            nthresh, pthresh = get_sig_thresh(rhos, cum_prob, mult_hyp=N-1)
+            ax2.axvline(nthresh, linestyle='dashed', color='red')
+            ax2.axvline(pthresh, linestyle='dashed', color='red')
+            ax1.axvline(nthresh, linestyle='dashed', color='red')
+            ax1.axvline(pthresh, linestyle='dashed', color='red')
+
 
         ax1.set_xlabel('rho')
         ax2.set_xlabel('rho')
@@ -478,23 +555,68 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         ax3.set_title('Immobile - Moving')
         ax1.set_yticks([np.where(sidx_mv==AVA_ci), np.where(sidx_mv==AVA_other_ci)])
         ax1.set_yticklabels(['This AVA', 'Other AVA'])
+        return sidx_mv, sig_diff
 
-        plt.show()
-        return sidx_mv
+    from figures.subpanels_revision.tuning_of_highly_weighted_neurons import shuffled_cdf_rho, get_pval_from_cdf
 
 
     def all_indices_but(length, excl):
-        return [p for p in np.arange(length) if p not in [excl]]
+        out = np.ones(length, dtype=bool)
+        out[np.squeeze(excl)] = False
+        return out
 
-    compare_AVA_correlation(cmat_imm, cmat_mov, AVAL_ci, AVAR_ci, title='AVAL')
-    compare_AVA_correlation(cmat_imm, cmat_mov, AVAR_ci, AVAL_ci, title='AVAR')
+    N = cmat_imm.shape[0]
+    #calculate distribution of correlations
+
+    #print("calculating shuffles for AVAR..")
+    #rhos, cum_prob = shuffled_cdf_rho(neurons[all_indices_but(N, AVAR_ci), :], np.squeeze(neurons[AVAR_ci, :]), None,
+    #                                  nShuffles=2000, shuffle_phase=True)
+
+    #neg_thresh, pos_thresh = get_sig_thresh(rhos, cum_prob, mult_hyp=N-1)
+    #neg_delta_thresh, pos_delta_thresh = get_sig_thresh(delta_rhos, cum_prob_delta, mult_hyp=N-1)
+    sidx_mv, topj_R = compare_AVA_correlation(cmat_imm, cmat_mov, AVAR_ci, AVAL_ci, rhos=None, cum_prob=None, title='AVAR')
+    print("Neurons of interest in restricted clustered indexing:",topj_R, 'and in original full index', valid_imm[idx_clust[topj_R]])
+
+    #print("calculating shuffles for AVAL")
+    #rhos, cum_prob = shuffled_cdf_rho(neurons[all_indices_but(N, AVAL_ci), :], np.squeeze(neurons[AVAL_ci, :]), None,
+    #                                 nShuffles=2000, shuffle_phase=True)
+    sidx_mv, topj_L = compare_AVA_correlation(cmat_imm, cmat_mov, AVAL_ci, AVAR_ci,  rhos=None, cum_prob=None, title='AVAL')
+
+    #Summary statistic
+    exc_AVAL = all_indices_but(N, AVAL_ci)
+    exc_AVAR = all_indices_but(N, AVAR_ci)
+    alldata = [np.squeeze(cmat_mov[exc_AVAL, AVAL_ci]), np.squeeze(cmat_imm[exc_AVAL, AVAL_ci]),
+               np.squeeze(cmat_mov[exc_AVAR, AVAR_ci]), np.squeeze(cmat_imm[exc_AVAR, AVAR_ci])]
+    from scipy import stats
+    _, p_L = stats.wilcoxon(np.squeeze(cmat_mov[exc_AVAL, AVAL_ci]), np.squeeze(cmat_imm[exc_AVAL, AVAL_ci]))
+    _, p_R = stats.wilcoxon(np.squeeze(cmat_mov[exc_AVAR, AVAR_ci]), np.squeeze(cmat_imm[exc_AVAR, AVAR_ci]))
+    boxdotplot(alldata, ['AVAL mov', 'AVAL imm', 'AVAR mov', 'AVAR imm'], 'Correlations to AVA, p= %.3f, %.3f' %(p_L, p_R) , 'rho')
 
 
 
+    #Traces of Interest
+    ofint = np.concatenate([np.squeeze(np.array([AVAL_ci, AVAR_ci])), np.union1d(topj_L, topj_R)])
+    fig, axarr = plt.subplots(nrows=len(ofint), ncols=1, sharex=True)
+    for k, noi in enumerate(ofint): #For each neuron of interest
+        activity_oi = np.squeeze(neurons[valid_imm[idx_clust[noi]], :])
+        axarr[k].plot(time, activity_oi, label='Neuron %d (%d)' % (noi, valid_imm[idx_clust[noi]]))
+        axarr[k].legend()
 
 
-    cmat_mov[:, AVAL_ci]
-
+    print("Plotting scatterplot..")
+    fig, ax = plt.subplots()
+    ax.plot(alldata[0], alldata[1], 'o', label='AVAL', fillstyle='none')
+    ax.plot(alldata[2], alldata[3], 's', label='AVAR', fillstyle='none')
+    ax.axis('square')
+    ax.set_aspect('equal')
+    ax.set_xlim(-1.1,1.1)
+    ax.set_ylim(-1.1,1.1)
+    ax.set_xlabel('rho_AVA,j moving')
+    ax.set_ylabel('rho_AVA,j immobile')
+    for k, noi in enumerate(ofint): #For each neuron of interest
+        noi = np.int(noi)
+        ax.text(alldata[0][noi], alldata[1][noi], '%d(%d)' % (noi, valid_imm[idx_clust[noi]]))
+        ax.text(alldata[2][noi], alldata[3][noi], '%d(%d)' % (noi, valid_imm[idx_clust[noi]]))
 
     plt.show()
 

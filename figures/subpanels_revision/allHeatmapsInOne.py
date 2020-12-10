@@ -23,7 +23,7 @@ import prediction.dataHandler as dh
 def main():
 
     codePath = userTracker.codePath()
-    outputFolder = os.path.join(codePath,'figures/2020_subpanels/generatedFigs')
+    outputFolder = os.path.join(codePath,'figures/subpanels_revision/generatedFigs')
     maxTime=730
 
     data = {}
