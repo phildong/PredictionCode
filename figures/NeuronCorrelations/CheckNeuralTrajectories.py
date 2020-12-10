@@ -414,7 +414,6 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         ax7 = cfig.add_subplot(gs[2, 0])
         ax8 = cfig.add_subplot(gs[2, 2])
 
-
         # Cluster based on moving
         cgIdx = do_clustering(cmat_mov)
         ax1.imshow(cmat_mov[:, cgIdx][cgIdx], vmin=-1, vmax=1)
@@ -435,6 +434,68 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot_corrMatrices(cmat_mov, cmat_imm)
     print("Plotting.")
+
+    def boxdotplot(combined_data, labels=[''], title='', ylabel=''):
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        plt.figure()
+        sns.set_style("white")
+        sns.set_style("ticks")
+        ax = sns.swarmplot(data=combined_data, color="black")
+        ax = sns.boxplot(data=combined_data,
+                         showcaps=False, boxprops={'facecolor': 'None'},
+                         showfliers=False, whiskerprops={'linewidth': 0})
+        ax.set_xticklabels(labels)
+        yloc = plt.MaxNLocator(5)
+        ax.yaxis.set_major_locator(yloc)
+        sns.despine()
+        ax.set_title(title)
+        ax.set_ylabel(ylabel)
+        plt.show()
+
+    # Inspect AVA's Correlations
+    def compare_AVA_correlation(cmat_imm, cmat_mov, AVA_ci, AVA_other_ci, title=''):
+        AVA_ci = AVA_ci.flatten()
+        AVA_other_ci = AVA_other_ci.flatten()
+
+        corr_im = cmat_imm[:, AVA_ci].squeeze()
+        corr_mv = cmat_mov[:, AVA_ci].squeeze()
+        N = corr_im.size
+
+        #Sort by strength of correlation to AVA during movement
+        sidx_mv = np.flipud(np.argsort(corr_mv))
+
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharex=True)
+        ax1.barh(np.arange(N), corr_mv[sidx_mv], align='center')
+        ax2.barh(np.arange(N), corr_im[sidx_mv], align='center')
+        ax3.barh(np.arange(N), corr_im[sidx_mv] - corr_mv[sidx_mv], align='center')
+
+        ax1.set_xlabel('rho')
+        ax2.set_xlabel('rho')
+        ax3.set_xlabel('rho')
+        ax1.set_title('Moving')
+        ax2.set_title('Immobile')
+        ax3.set_title('Immobile - Moving')
+        ax1.set_yticks([np.where(sidx_mv==AVA_ci), np.where(sidx_mv==AVA_other_ci)])
+        ax1.set_yticklabels(['This AVA', 'Other AVA'])
+
+        plt.show()
+        return sidx_mv
+
+
+    def all_indices_but(length, excl):
+        return [p for p in np.arange(length) if p not in [excl]]
+
+    compare_AVA_correlation(cmat_imm, cmat_mov, AVAL_ci, AVAR_ci, title='AVAL')
+    compare_AVA_correlation(cmat_imm, cmat_mov, AVAR_ci, AVAL_ci, title='AVAR')
+
+
+
+
+
+    cmat_mov[:, AVAL_ci]
+
+
     plt.show()
 
 
