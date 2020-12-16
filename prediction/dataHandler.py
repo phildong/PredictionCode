@@ -22,6 +22,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA,  FastICA
 
 
+
 def recrWorm(av, turns, thetaTrue, r, show = 0):
     """recalculate eigenworm prefactor from angular velocity and turns."""
     thetaCum = np.cumsum(np.copy(av)/6.) # division due to rate: it's velocity per secod instread of per volume
@@ -285,7 +286,7 @@ def decorrelateNeuronsICA(R, G):
     I = np.empty(G.shape)
     I[:] = np.nan  # initialize it with nans
 
-    ica = FastICA(n_components=2)
+    ica = FastICA(n_components=2, random_state=42)
 
     # the fits can't handle the nans, so we gotta tempororaily exclude them
     # we won't interpolate, we will just remove them than add them back
@@ -514,9 +515,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #Reject noise common to both Red and Green Channels using ICA
     I = decorrelateNeuronsICA(R, G)
+    print("After ICA",np.nanmean(I))
 
     #Apply Gaussian Smoothing (and interpolate for free)
     I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+
+    print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
 
     assert np.all(np.isfinite(I_smooth_interp))
 
@@ -576,7 +580,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
 
-
+    print(np.mean(I_smooth_interp_crop_noncontig_data))
     #<DEPRECATED>
 
     # load neural data

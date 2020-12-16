@@ -65,8 +65,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         end_index = np.abs(time - end_time).argmin() # INdex is for noncontig
 
 
+    neurons.flags.writeable = False
+    print(hash(neurons.data))
 
-
+    idx_clust = np.arange(idx_clust.size)
     AVA1 = AVAR = 72#36
     AVA2 = AVAL = 22 #126#23
     AVAR_ci = np.squeeze(np.argwhere(valid_imm[idx_clust] == AVAR))
@@ -107,7 +109,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.step(x, rho_imm_pdf,  where='mid', label='Immobile', lw=2)
     plt.axvline(np.mean(rho_mov))
     plt.axvline(np.mean(rho_imm))
-    plt.title('wilcoxon p=%.4f' % pw)
+    plt.title('wilcoxon p=%.5f' % pw)
     plt.legend()
 
 

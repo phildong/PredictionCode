@@ -583,13 +583,11 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     sidx_mv, topj_L = compare_AVA_correlation(cmat_imm, cmat_mov, AVAL_ci, AVAR_ci,  rhos=None, cum_prob=None, title='AVAL')
 
     #Summary statistic
-    exc_AVAL = all_indices_but(N, AVAL_ci)
-    exc_AVAR = all_indices_but(N, AVAR_ci)
-    alldata = [np.squeeze(cmat_mov[exc_AVAL, AVAL_ci]), np.squeeze(cmat_imm[exc_AVAL, AVAL_ci]),
-               np.squeeze(cmat_mov[exc_AVAR, AVAR_ci]), np.squeeze(cmat_imm[exc_AVAR, AVAR_ci])]
+    alldata = [np.squeeze(cmat_mov[:, AVAL_ci]), np.squeeze(cmat_imm[:, AVAL_ci]),
+               np.squeeze(cmat_mov[:, AVAR_ci]), np.squeeze(cmat_imm[:, AVAR_ci])]
     from scipy import stats
-    _, p_L = stats.wilcoxon(np.squeeze(cmat_mov[exc_AVAL, AVAL_ci]), np.squeeze(cmat_imm[exc_AVAL, AVAL_ci]))
-    _, p_R = stats.wilcoxon(np.squeeze(cmat_mov[exc_AVAR, AVAR_ci]), np.squeeze(cmat_imm[exc_AVAR, AVAR_ci]))
+    _, p_L = stats.wilcoxon(np.squeeze(cmat_mov[:, AVAL_ci]), np.squeeze(cmat_imm[:, AVAL_ci]))
+    _, p_R = stats.wilcoxon(np.squeeze(cmat_mov[:, AVAR_ci]), np.squeeze(cmat_imm[:, AVAR_ci]))
     boxdotplot(alldata, ['AVAL mov', 'AVAL imm', 'AVAR mov', 'AVAR imm'], 'Correlations to AVA, p= %.3f, %.3f' %(p_L, p_R) , 'rho')
 
 
