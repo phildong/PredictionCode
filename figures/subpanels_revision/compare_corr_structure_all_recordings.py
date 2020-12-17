@@ -14,13 +14,17 @@ leifer@princeton.edu
 ################################################
 import os
 import numpy as np
+from numpy.core._multiarray_umath import ndarray
 
 from prediction import userTracker
 import prediction.dataHandler as dh
 
 
-
-
+def dissimilarity(A, B):
+    # calculate the dissimilarity between two matrices
+    # using the RMS difference of paired correlation coefficients
+    N = A.shape[0]
+    return np.sqrt(np.mean(np.square(A - B))) / np.sqrt(N * (N - 1))
 
 
 def main():
@@ -70,14 +74,10 @@ def main():
 
     import matplotlib.pylab as pylab
 
-    def dissimilarity(A,B):
-        #calculate the dissimilarity between two matrices
-        # using the RMS difference of paired correlation coefficients
-        N=A.shape[0]
-        return np.sqrt(np.mean(np.square(A-B))) / np.sqrt(N*(N-1))
+
 
     dissim={}
-    for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
+    for key in ['AKS297.51_moving', 'AML32_moving']:#,  'AML18_moving']:
         dissim[key]=[]
         dset = data[key]['input']
         # For each recording
@@ -85,19 +85,19 @@ def main():
             activity = dset[idn]['Neurons']['I_smooth_interp_crop_noncontig']
             rec_length = activity.shape[1]
             halfway = np.floor_divide(rec_length, 2)
-            first, second = np.int(0.25 * rec_length), np.int(0.25 * rec_length)
+            first, second = np.int(0.30 * rec_length), np.int(0.40 * rec_length)
             cmat_first, cmat_second = np.corrcoef(activity[:,:first]), np.corrcoef(activity[:,second:])
             dissim[key].append(dissimilarity(cmat_first, cmat_second))
 
     # From CheckNeuralTrajectories for 193044  and BrainScanner20180511_134913 (for the latter we probably have to rerun w/ a gap betwen mov and immobile)
-    transition = np.array([0.4496710515666849, 0.48741779744277375])
+    #And also for BrainScanner20200915_144610 from TransitionAnalysis2020_second.py
+    transition = np.array([0.0056080890227034885, 0.004666316998854658, 0.005891564672126974])# 0.005336660925126822])
 
     moving_gcamp = np.concatenate((np.array(dissim['AKS297.51_moving']), np.array(dissim['AML32_moving'])))
-    moving_gfp = np.array(dissim['AML18_moving'])
-    combined_data = [moving_gcamp,  transition, moving_gfp]
+    #moving_gfp = np.array(dissim['AML18_moving'])  # type: ndarray
+    combined_data = [moving_gcamp,  transition]
     from scipy import stats
     t, p_gcamp = stats.ttest_ind(moving_gcamp, transition, equal_var=False)
-    t, p_gfp = stats.ttest_ind(moving_gfp, transition, equal_var=False)
 
     labels = ["Moving to Moving", "Moving to Immobile", "Moving to Movin GFP"]
 
@@ -110,11 +110,12 @@ def main():
     ax = sns.boxplot(data=combined_data,
                      showcaps=False, boxprops={'facecolor': 'None'},
                      showfliers=False, whiskerprops={'linewidth': 0})
+    ax.set_ylim(0, .7*ax.get_ylim()[1])
     ax.set_xticklabels(labels)
     yloc = plt.MaxNLocator(5)
     ax.yaxis.set_major_locator(yloc)
     sns.despine()
-    ax.set_title('welch unequal t-test: %0.4f, %0.4f' % (p_gcamp, p_gfp))
+    ax.set_title('welch unequal t-test: %0.4f' % p_gcamp)
     ax.set_ylabel('Dissimilarity, ||A-B||/N')
     plt.show()
     print("plotted")
