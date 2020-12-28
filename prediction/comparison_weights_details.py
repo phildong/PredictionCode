@@ -10,7 +10,7 @@ from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
 #conditions = ['AML18_moving']
-conditions = ['AKS297.51_moving', 'AML32_moving']
+conditions = ['AML310_moving', 'AML32_moving']
 behavior = 'velocity' #'curvature'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
@@ -36,16 +36,16 @@ def calc_pdf(x, low_lim, high_lim, nbins):
     density = np.true_divide(counts, np.sum(counts)*bin_width)
     return density, bin_centers, bin_edges
 
-def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PDF=None, suplabel=""):
+def compare_pdf(a, b, low_lim=-3, high_lim = 3, nbins = 24, alabel="", blabel="", PDF = None, suplabel=""):
     a_hist, a_bin_centers, a_bin_edges = calc_pdf(a, low_lim, high_lim, nbins)
     b_hist, bin_centers, bin_edges = calc_pdf(b, low_lim, high_lim, nbins)
     assert np.all(a_bin_edges==bin_edges), 'Andy screwed up the code.'
 
     hfig = plt.figure(figsize=[10,10])
-    gs = gridspec.GridSpec(2, 1, figure=hfig)
+    gs = gridspec.GridSpec(2, 1, figure = hfig)
     ha = hfig.add_subplot(gs[0, 0])
-    ha.step(bin_centers, a_hist, where='mid', label=alabel, lw=4)
-    ha.step(bin_centers, b_hist, where='mid', label=blabel, lw=4)
+    ha.step(bin_centers, a_hist, where='mid', label = alabel, lw = 4)
+    ha.step(bin_centers, b_hist, where='mid', label = blabel, lw = 4)
     ha.axvline(0, color="black")
     ha.axvline(np.nanmean(a), linestyle='dashed', color='blue', label='mean ' + alabel)
     ha.axvline(np.nanmean(b), linestyle='dashed', color='orange', label='mean ' + blabel)
@@ -53,23 +53,23 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     #Add two gaussians, each with the variance  of a or b
     from scipy.stats import norm
     x = np.linspace(bin_centers[0],bin_centers[-1], 100)
-    ha.plot(x, norm.pdf(x, scale=np.nanstd(a)),
-            'r-', lw=3, alpha=0.6, color='blue',
-            label=alabel + ' gaussian sigma = %.3f' % np.nanstd(a))
-    ha.plot(x,  norm.pdf(x, scale=np.nanstd(b)),
-            'r-', lw=3, alpha=0.6, color='orange',
-            label=blabel + ' gaussian sigma = %.3f' % np.nanstd(b))
+    ha.plot(x, norm.pdf(x, scale = np.nanstd(a)),
+            'r-', lw = 3, alpha = 0.6, color='blue',
+            label = alabel + ' gaussian sigma = %.3f' % np.nanstd(a))
+    ha.plot(x,  norm.pdf(x, scale = np.nanstd(b)),
+            'r-', lw = 3, alpha = 0.6, color='orange',
+            label = blabel + ' gaussian sigma = %.3f' % np.nanstd(b))
     ha.legend()
     ha.yaxis.tick_right()
-    plt.xticks(rotation=90)
-    plt.yticks(rotation=90)
+    plt.xticks(rotation = 90)
+    plt.yticks(rotation = 90)
     ha.set_xlim(low_lim, high_lim)
     max_yticks = 3
     yloc = plt.MaxNLocator(max_yticks)
     ha.yaxis.set_major_locator(yloc)
     ha.spines["left"].set_visible(False)
     ha.spines["right"].set_visible(True)
-    ha.tick_params(labelsize=17)
+    ha.tick_params(labelsize = 17)
 
 
 
@@ -114,7 +114,7 @@ for typ_cond in conditions:
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
 
     for key in keyList:
@@ -161,20 +161,20 @@ Frac_dFdt = np.zeros(len(keys))
 rho2_adj2 = np.zeros([len(figtypes), len(keys)])
 for i, key in enumerate(keys):
 
-    fig = plt.figure(constrained_layout=True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
-    gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
+    fig = plt.figure(constrained_layout = True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
+    gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure = fig, width_ratios=[1]*(len(figtypes)+2))
 
     for row, figtype in enumerate(figtypes):
         rho2_adj2[row, i] = calc_rho2_adj2(data, key, figtype)
         res = data[key][figtype]
 
         ts = fig.add_subplot(gs[row, 0])
-        ts.plot(res['time'], res['signal'], 'k', lw=1)
-        ts.plot(res['time'], res['output'], 'b', lw=1)
-        # w = np.ones(res['time'].size, dtype=bool)
+        ts.plot(res['time'], res['signal'], 'k', lw = 1)
+        ts.plot(res['time'], res['output'], 'b', lw = 1)
+        # w = np.ones(res['time'].size, dtype = bool)
         # w[:6] = 0
         # w[-6:] = 0
-        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
+        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where = w, color='b', lw = 1)
         ts.set_xlabel('Time (s)')
         ts.set_ylabel('Velocity')
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
@@ -187,7 +187,7 @@ for i, key in enumerate(keys):
         sc.legend()
 
     fig2 = plt.figure(figsize=[7,7])
-    ax2 = fig2.add_subplot(111, xlabel=r'$\rho$', ylabel='Weight')
+    ax2 = fig2.add_subplot(111, xlabel = r'$\rho$', ylabel='Weight')
 
     slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size/2]
     slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size/2:]
@@ -196,8 +196,8 @@ for i, key in enumerate(keys):
 
     Frac_dFdt[i] = np.sum(np.abs(slm_weights_raw_deriv)) /  (np.sum( np.abs(slm_weights_raw)) + np.sum(np.abs(slm_weights_raw_deriv) ))
 
-    ax2.plot(correlations, slm_weights_raw, 'o', label='F',  markersize=8 )
-    ax2.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize=8, color='orange', label='dF/dt')
+    ax2.plot(correlations, slm_weights_raw, 'o', label='F',  markersize = 8 )
+    ax2.plot(deriv_correlations, slm_weights_raw_deriv, 'o', markersize = 8, color='orange', label='dF/dt')
     if key == 'BrainScanner20200130_110803':
         AVAR = 32
         AVAL = 15
@@ -207,10 +207,10 @@ for i, key in enumerate(keys):
         ax2.text(deriv_correlations[AVAL], slm_weights_raw_deriv[AVAL], 'AVAL')
     import numpy.polynomial.polynomial as poly
     try:
-        rho = np.concatenate((np.array(correlations), np.array(deriv_correlations)), axis=None)
-        weights = np.concatenate((np.array(slm_weights_raw), np.array(slm_weights_raw_deriv)), axis=None)
+        rho = np.concatenate((np.array(correlations), np.array(deriv_correlations)), axis = None)
+        weights = np.concatenate((np.array(slm_weights_raw), np.array(slm_weights_raw_deriv)), axis = None)
         coefs = poly.polyfit(rho, weights, 1)
-        x_new = np.linspace(np.min(rho), np.max(rho), num=3)
+        x_new = np.linspace(np.min(rho), np.max(rho), num = 3)
         ffit = poly.polyval(x_new, coefs)
         plt.plot(x_new, ffit,'r--')
     except:
@@ -225,7 +225,7 @@ for i, key in enumerate(keys):
     ax2.set_ylim(-largest_weight, largest_weight)
     ax2.spines["top"].set_visible(True)
     ax2.spines["right"].set_visible(True)
-    ax2.tick_params(labelsize=17)
+    ax2.tick_params(labelsize = 17)
     pdf.savefig(fig2)
 
     fig.suptitle(key)
@@ -235,8 +235,8 @@ for i, key in enumerate(keys):
 
     # Plot distribution of weights
     compare_pdf(slm_weights_raw, slm_weights_raw_deriv,
-                low_lim=-largest_weight, high_lim=largest_weight, nbins=24,
-                alabel='F', blabel='dF/dt', PDF=pdf, suplabel='PDF of population decoder weights\n' + key)
+                low_lim=-largest_weight, high_lim = largest_weight, nbins = 24,
+                alabel='F', blabel='dF/dt', PDF = pdf, suplabel='PDF of population decoder weights\n' + key)
     # Scatterplot of F weights vs dF/dt weights
     f =plt.figure()
     h = f.add_subplot(1,1,1, xlabel='weight of F', ylabel='weight of dF/dt', title='Weights of each neuron\n' + key)

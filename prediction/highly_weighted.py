@@ -3,7 +3,7 @@ from matplotlib import animation
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
-datafolder = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
+datafolder = ''#'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
 
 def rho_adj(y, yhat):
     truemean = np.mean(y)
@@ -46,7 +46,7 @@ with open(pickled_data, 'rb') as handle:
 with open(datafolder+'neuron_data.dat', 'rb') as f:
     neuron_data = pickle.load(f)#, encoding = 'bytes')
 
-nKeys=11
+nKeys = 11
 fig, ax = plt.subplots(3, 4, figsize = (25, 15))
 keys = sorted(vel_data.keys(), key = lambda x: -vel_data[x][b'slm_with_derivs'][b'scorespredicted'][1])
 rho2_adj_vel = np.array([vel_data[keys[x]]['slm_with_derivs']['scorespredicted'][1] for x in np.arange(nKeys)])
@@ -55,7 +55,7 @@ rho2_adj_curv = np.array([curv_data[keys[x]]['slm_with_derivs']['scorespredicted
 #preallocate arrays for plotting later
 n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(nKeys), np.zeros(nKeys), np.zeros(nKeys)
 
-nnn=np.zeros(nKeys)
+nnn = np.zeros(nKeys)
 for ii, dataset in enumerate(keys[:nKeys]):
     print(dataset)
     nnn[ii] = neuron_data[dataset]['neurons'].shape[0]
@@ -105,8 +105,8 @@ for ii, dataset in enumerate(keys[:nKeys]):
     ax[row][col].set_xlim((0, 1))
     ax[row][col].set_ylabel('Number of Neurons')
     ax[row][col].set_xlabel(r'Fraction of full model performance')
-    ax[row][col].tick_params(axis="x", labelsize=16)
-    ax[row][col].tick_params(axis="y", labelsize=16)
+    ax[row][col].tick_params(axis="x", labelsize = 16)
+    ax[row][col].tick_params(axis="y", labelsize = 16)
 
     thresh_vals = np.linspace(0, 1, 101)
     vel_counts = np.array([np.argmax(vel_rhos > t*vel_rhos[-1]) for t in thresh_vals])
@@ -120,13 +120,13 @@ for ii, dataset in enumerate(keys[:nKeys]):
 
     ax[row][col].set_title(dataset[12:] + ' N=%d, (%d, %d, %d)' %(nn, n_impact_vel[ii], n_impact_curv[ii], n_impact_overlap[ii]))
     ax[row][col].plot(thresh_vals, vel_counts, color='blue')
-    ax[row][col].fill_between(thresh_vals, np.zeros(vel_counts.size), vel_counts, color='blue', alpha=0.2, label = 'Velocity')
+    ax[row][col].fill_between(thresh_vals, np.zeros(vel_counts.size), vel_counts, color='blue', alpha = 0.2, label = 'Velocity')
 
     ax[row][col].plot(thresh_vals, curv_counts, color='green')
-    ax[row][col].fill_between(thresh_vals, np.zeros(curv_counts.size), curv_counts, color='green', alpha=0.2, label = 'Curvature')
+    ax[row][col].fill_between(thresh_vals, np.zeros(curv_counts.size), curv_counts, color='green', alpha = 0.2, label = 'Curvature')
 
     ax[row][col].plot(thresh_vals, overlap_counts, color='red')
-    ax[row][col].fill_between(thresh_vals, np.zeros(overlap_counts.size), overlap_counts, color='red', alpha=0.2, label = 'Intersect')
+    ax[row][col].fill_between(thresh_vals, np.zeros(overlap_counts.size), overlap_counts, color='red', alpha = 0.2, label = 'Intersect')
     ax[row][col].axvline(impact_thresh, linestyle='dashed', color='red')
     ax[row][col].legend()
 
@@ -136,20 +136,20 @@ for ii, dataset in enumerate(keys[:nKeys]):
     secax.set_ylabel('Fraction of Recorded Neurons')
     mn, mx = ax[row][col].get_ylim()
     secax.set_ylim(np.true_divide(mn,nn), np.true_divide(mx,nn))
-    secax.tick_params(axis="y", labelsize=16)
+    secax.tick_params(axis="y", labelsize = 16)
 
 
-fig.tight_layout(pad=3, w_pad=4, h_pad=4)
+fig.tight_layout(pad = 3, w_pad = 4, h_pad = 4)
 fig.savefig('highly_weighted.pdf')
 
-fig3=plt.figure(figsize=[4,4])
-plt.plot(rho2_adj_vel, n_impact_vel, '^', markersize=10, color='blue', fillstyle='none', label='Velocity')
-plt.plot(rho2_adj_curv, n_impact_curv, 'o', markersize=10, color='green', fillstyle='none', label='Curvature')
-plt.plot( np.max((rho2_adj_curv, rho2_adj_vel), axis=0),  n_impact_overlap, 'x', color='red', fillstyle='none',  markersize=10, label='Intersect')
+fig3 = plt.figure(figsize=[4,4])
+plt.plot(rho2_adj_vel, n_impact_vel, '^', markersize = 10, color='blue', fillstyle='none', label='Velocity')
+plt.plot(rho2_adj_curv, n_impact_curv, 'o', markersize = 10, color='green', fillstyle='none', label='Curvature')
+plt.plot( np.max((rho2_adj_curv, rho2_adj_vel), axis = 0),  n_impact_overlap, 'x', color='red', fillstyle='none',  markersize = 10, label='Intersect')
 plt.xlabel('Performance (rho2_adj_1)')
 plt.ylabel('Number of Impactful Neurons')
-plt.xticks(fontsize=16)
-plt.yticks(fontsize=16)
+plt.xticks(fontsize = 16)
+plt.yticks(fontsize = 16)
 
 plt.xlim(0,1)
 plt.legend()
@@ -159,12 +159,12 @@ fig3.savefig('nneurons_rho.pdf')
 #Plot the Number of NEurons
 import matplotlib.pyplot as plt
 import seaborn as sns
-fig2=plt.figure(figsize=[2.5,4])
+fig2 = plt.figure(figsize=[2.5,4])
 sns.set_style("whitegrid")
 axnew = sns.boxplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap])
 axnew = sns.swarmplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap], color=".2")
-plt.xticks(fontsize=16)
-plt.yticks(fontsize=16)
+plt.xticks(fontsize = 16)
+plt.yticks(fontsize = 16)
 fig2.savefig('number_of_neurons.pdf')
 
 print(np.median(n_impact_vel), np.median(n_impact_curv), np.median(n_impact_overlap))

@@ -25,7 +25,7 @@ def plot_trajectories(pcs, title='Neural State Space Trajectories', color='blue'
     return
 
 
-for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
+for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -42,7 +42,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     theDataset = '172438'
     #theDataset = '134913' #2018 dataset #hard Coded in
@@ -76,7 +76,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     # Plot neural state space trajectories in first 3 PCs
     # also reduce dimensionality of the neural dynamics.
     nComp = 3  # pars['nCompPCA']
-    pca = PCA(n_components=nComp)
+    pca = PCA(n_components = nComp)
     Neuro = np.copy(neurons[:, start_index: end_index]).T
 
     #Repeat on the derivatives a la Kato et al
@@ -88,8 +88,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
 
     # make sure data is centered
-    sclar = StandardScaler(copy=True, with_mean=True, with_std=False)
-    zscore = StandardScaler(copy=True, with_mean=True, with_std=True)
+    sclar = StandardScaler(copy = True, with_mean = True, with_std = False)
+    zscore = StandardScaler(copy = True, with_mean = True, with_std = True)
     Neuro_mean_sub = sclar.fit_transform(Neuro)
     Neuro_z = zscore.fit_transform(Neuro)
     Neuro_dFdt_mean_sub = sclar.fit_transform(Neuro_dFdt)

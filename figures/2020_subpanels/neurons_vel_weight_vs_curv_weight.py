@@ -29,7 +29,7 @@ for k, behavior in enumerate(behaviors):
                        'BrainScanner20200130_105254': [[65, 75]],
                        'BrainScanner20200310_141211': [[200, 210], [240, 250]]}
 
-    for typ_cond in ['AKS297.51_moving']:
+    for typ_cond in ['AML310_moving']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -42,7 +42,7 @@ for k, behavior in enumerate(behaviors):
                 'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
                 'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
                 }
-        dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+        dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
         keyList = np.sort(dataSets.keys())
 
         for key in keyList:
@@ -80,7 +80,7 @@ outfilename = key + 'weights_vel_v_curve.pdf'
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
 
 
-fig1 = plt.figure(constrained_layout=True, figsize=[10, 10])
+fig1 = plt.figure(constrained_layout = True, figsize=[10, 10])
 #find smallest weight and alrgest weight
 allweights =  np.concatenate([np.concatenate(slm_weights_raw_deriv), np.concatenate(slm_weights_raw)])
 lw = np.max(allweights)
@@ -102,10 +102,10 @@ fig1.legend()
 prov.stamp(f1_ax1, .55, .35, __file__ + '\n' + pickled_data)
 pdf.savefig(fig1)
 
-fig2 = plt.figure(constrained_layout=True, figsize=[10, 10])
+fig2 = plt.figure(constrained_layout = True, figsize=[10, 10])
 fig2.suptitle('max(F, dF/dt)')
 f2_ax1 = fig2.add_subplot(111, xlabel='Magnitude of Weight for ' + behaviors[1], ylabel='Magnitude of Weight for '+ behaviors[0])
-maxw =[np.max([[slm_weights_raw[0]], [slm_weights_raw_deriv[0]]], axis=0).T,  np.max([[slm_weights_raw[1]], [slm_weights_raw_deriv[1]]], axis=0).T]
+maxw =[np.max([[slm_weights_raw[0]], [slm_weights_raw_deriv[0]]], axis = 0).T,  np.max([[slm_weights_raw[1]], [slm_weights_raw_deriv[1]]], axis = 0).T]
 f2_ax1.plot(maxw[1], maxw[0], 'o', label='max(F,dF/dt)')
 if key == 'BrainScanner20200130_110803':
     AVAR = 32

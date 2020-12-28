@@ -21,7 +21,7 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
 
 results = {}
 neuron_data = {}
-for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
+for typ_cond in ['AML310_moving', 'AML32_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -34,7 +34,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
 
     for key in keyList:
@@ -56,7 +56,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
 
 import pickle
 with open('neuron_data.dat', 'wb') as handle:
-    pickle.dump(neuron_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(neuron_data, handle, protocol = pickle.HIGHEST_PROTOCOL)
 
 keyList = np.sort(data.keys())
 key = keyList[int(sys.argv[1])]
@@ -77,7 +77,7 @@ _, _, nderiv = rectified_derivative(neurons)
 
 neurons_and_derivs = np.vstack((neurons, nderiv))
 
-pca = PCA(n_components=3)
+pca = PCA(n_components = 3)
 pca.fit(neurons.T)
 neurons_reduced = pca.transform(neurons.T).T
 
@@ -126,4 +126,4 @@ results[key] = {'bsn': bsn,
 
 import pickle
 with open('/home/sdempsey/PredictionCode/comparison_results_%d.dat' % int(sys.argv[1]), 'wb') as handle:
-    pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(results, handle, protocol = pickle.HIGHEST_PROTOCOL)

@@ -35,8 +35,8 @@ def calc_rho2_adj2(data, key, type='slm_with_derivs'):
 for i, key in enumerate(data0.keys()):
     bsn_rho = np.array([calc_rho2_adj2(data0, key, 'bsn_deriv'), calc_rho2_adj2(data1, key, 'bsn_deriv')])
     slm_rho = np.array([calc_rho2_adj2(data0, key, 'slm_with_derivs'), calc_rho2_adj2(data1, key, 'slm_with_derivs')])
-    ax.plot(bsn_rho[0], slm_rho[0], '^', color='cyan', mfc='none', label=behav0 if i == 0 else "")
-    ax.plot(bsn_rho[1], slm_rho[1], 's', color='red', label=behav1 if i == 0 else "")
+    ax.plot(bsn_rho[0], slm_rho[0], '^', color='cyan', mfc='none', label = behav0 if i == 0 else "")
+    ax.plot(bsn_rho[1], slm_rho[1], 's', color='red', label = behav1 if i == 0 else "")
 
 ax.set_aspect('equal')
 ax.set_xlabel('Best Single Neuron Performance (rho2_adj2')

@@ -7,8 +7,8 @@ import os
 from scipy.ndimage import gaussian_filter
 
 def deriv_r2(signal, output, test_idx):
-    signal_deriv = gaussian_filter(signal, sigma = 14, order=1)[test_idx]
-    output_deriv = gaussian_filter(output, sigma = 14, order=1)[test_idx]
+    signal_deriv = gaussian_filter(signal, sigma = 14, order = 1)[test_idx]
+    output_deriv = gaussian_filter(output, sigma = 14, order = 1)[test_idx]
 
     return 1-np.sum(np.power(signal_deriv - output_deriv, 2))/np.sum(np.power(output_deriv, 2))
 
@@ -56,23 +56,23 @@ for i in range(len(keys)):
         score_rho[i][j] = res['corrpredicted']**2
 
 fig = plt.figure(figsize=(20*len(figtypes), 10*len(keys)+4))
-gs = gridspec.GridSpec(len(keys)+1, 2*len(figtypes), figure=fig, width_ratios=tuple(1 for i in range(2*len(figtypes))))
+gs = gridspec.GridSpec(len(keys)+1, 2*len(figtypes), figure = fig, width_ratios = tuple(1 for i in range(2*len(figtypes))))
 
 for row, key in enumerate(keys):
     for col, figtype in enumerate(figtypes):
         ax = fig.add_subplot(gs[row,2*col])
         res = data[key][figtype]
-        ax.plot(res['time'], res['signal'], 'k', lw=1)
-        ax.plot(res['time'], res['output'], 'b', lw=1)
+        ax.plot(res['time'], res['signal'], 'k', lw = 1)
+        ax.plot(res['time'], res['output'], 'b', lw = 1)
         ax.set_title(figtype+r' scores: (%0.2f, %0.2f, %0.2f, %0.2f)' % (score_R2[row][col], score_rhoadj1[row][col], score_rhoadj2[row][col], score_rho[row][col]))
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Curvature')
         ax.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
         if row == 0:
-            ax.text(1.1, 1.2, figtype, va='center', ha='center', fontsize=48, transform=ax.transAxes)
+            ax.text(1.1, 1.2, figtype, va='center', ha='center', fontsize = 48, transform = ax.transAxes)
         if col == 0:
-            ax.text(-0.5, 0.5, key[12:], va='center', ha='center', fontsize=36, rotation=90, transform=ax.transAxes)
+            ax.text(-0.5, 0.5, key[12:], va='center', ha='center', fontsize = 36, rotation = 90, transform = ax.transAxes)
 
         ax = fig.add_subplot(gs[row,2*col+1])
         res = data[key][figtype]
@@ -96,11 +96,11 @@ for i in range(len(keys)):
     ax.scatter(ind+.4, score_rhoadj1[i])
     ax.scatter(ind+.6, score_rhoadj2[i])
     ax.scatter(ind+.8, score_rho[i])
-    # autolabel(ax.bar(ind + i*width, score_R2[i], width/4, label=key[-6:], color=colors[i % len(colors)]))
-    # autolabel(ax.bar(ind + i*width+width/4, score_rhoadj1[i], width/4, label=key[-6:], color=colors[i % len(colors)]))
-    # autolabel(ax.bar(ind + i*width+width/2, score_rhoadj2[i], width/4, label=key[-6:], color=colors[i % len(colors)]))
-    # autolabel(ax.bar(ind + i*width+3*width/4, score_rho[i], width/4, label=key[-6:], color=colors[i % len(colors)]))
-    # autolabel(ax.bar(ind + i*width+width/2, score_acc[i], width/2, label=key[-6:], color=colors[i], hatch='/'))
+    # autolabel(ax.bar(ind + i*width, score_R2[i], width/4, label = key[-6:], color = colors[i % len(colors)]))
+    # autolabel(ax.bar(ind + i*width+width/4, score_rhoadj1[i], width/4, label = key[-6:], color = colors[i % len(colors)]))
+    # autolabel(ax.bar(ind + i*width+width/2, score_rhoadj2[i], width/4, label = key[-6:], color = colors[i % len(colors)]))
+    # autolabel(ax.bar(ind + i*width+3*width/4, score_rho[i], width/4, label = key[-6:], color = colors[i % len(colors)]))
+    # autolabel(ax.bar(ind + i*width+width/2, score_acc[i], width/2, label = key[-6:], color = colors[i], hatch='/'))
 
 for x in ind[1:]:
     ax.axvline(x, linestyle='dashed')

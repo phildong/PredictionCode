@@ -26,7 +26,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath
 for key in keys:
 
     fig = plt.figure(constrained_layout = True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
-    gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
+    gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure = fig, width_ratios=[1]*(len(figtypes)+2))
 
     for row, figtype in enumerate(figtypes):
         res = data[key][figtype]
@@ -50,12 +50,12 @@ for key in keys:
 
 
         ts = fig.add_subplot(gs[row, 0])
-        ts.plot(res['time'], res['signal'], 'k', lw=1)
-        ts.plot(res['time'], res['output'], 'b', lw=1)
-        # w = np.ones(res['time'].size, dtype=bool)
+        ts.plot(res['time'], res['signal'], 'k', lw = 1)
+        ts.plot(res['time'], res['output'], 'b', lw = 1)
+        # w = np.ones(res['time'].size, dtype = bool)
         # w[:6] = 0
         # w[-6:] = 0
-        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
+        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where = w, color='b', lw = 1)
         ts.set_xlabel('Time (s)')
         ts.set_ylabel('%s' % behavior)
         ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
@@ -77,9 +77,9 @@ for key in keys:
     for l1 in l1s:
         pts = np.array(sorted(list(map(lambda x: [x[1],x[0]], filter(lambda x: abs(x[2] - l1) < 1e-3, r2s))),key = lambda x: x[0]))
         ax.plot(pts[:,0], pts[:,1], label = 'l1_ratio = %f' % l1)
-        ax.set_xlabel(r'$\alpha$', fontsize=14)
+        ax.set_xlabel(r'$\alpha$', fontsize = 14)
         ax.set_xscale('log')
-        ax.set_ylabel(r'Cross-validation $R^2$ (Chose: $\alpha = %f$, l1_ratio = %f)' % (data[key]['slm_with_derivs']['alpha'], data[key]['slm_with_derivs']['l1_ratio']), fontsize=14)
+        ax.set_ylabel(r'Cross-validation $R^2$ (Chose: $\alpha = %f$, l1_ratio = %f)' % (data[key]['slm_with_derivs']['alpha'], data[key]['slm_with_derivs']['l1_ratio']), fontsize = 14)
     ax.legend()
 
     fig.suptitle(key)

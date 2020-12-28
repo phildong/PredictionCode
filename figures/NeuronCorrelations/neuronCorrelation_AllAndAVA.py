@@ -171,7 +171,7 @@ def cluster_calcium(neurons_NaN, cgIdx):
     cluster_neuron = neurons_NaN[cgIdx, :]
     return cluster_neuron
 
-for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
+for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -183,7 +183,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     for key in filter(lambda x: '144610' in x, keyList):
         print("Running "+key)
@@ -290,7 +290,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot1 = plt.figure(1)
     plt.subplot(1,3,1)
-    plt.imshow(clustered_moving_corr, vmin=-1, vmax=1)
+    plt.imshow(clustered_moving_corr, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Correlation_144610_moving')
     plt.xlabel('Sorted Neuron')
@@ -299,7 +299,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(clustered_immobile_corr,vmin=-1, vmax=1)
+    plt.imshow(clustered_immobile_corr,vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Correlation_144610_immobile')
     plt.xlabel('Sorted Neuron')
@@ -308,7 +308,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(corr_residual, vmin=-1, vmax=1)
+    plt.imshow(corr_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron')
@@ -318,7 +318,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot2 = plt.figure(2)
     plt.subplot(1,3,1)
-    plt.imshow(clustered_moving_r, vmin=0, vmax=1)
+    plt.imshow(clustered_moving_r, vmin = 0, vmax = 1)
     plt.colorbar()
     plt.title('R^2_144610_moving')
     plt.xlabel('Sorted Neuron')
@@ -327,7 +327,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(clustered_immobile_r, vmin=0, vmax=1)
+    plt.imshow(clustered_immobile_r, vmin = 0, vmax = 1)
     plt.colorbar()
     plt.title('R^2_144610_immobile')
     plt.xlabel('Sorted Neuron')
@@ -336,7 +336,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_imm1, AVA_index_imm2], AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(r_square_residual, vmin=-1, vmax=1)
+    plt.imshow(r_square_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron')
@@ -446,7 +446,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot5 = plt.figure(5)
     plt.subplot(1,3,1)
-    plt.imshow(moving_cluster_moving_corr, vmin=-1, vmax=1)
+    plt.imshow(moving_cluster_moving_corr, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Correlation_144610_moving')
     plt.xlabel('Sorted Neuron')
@@ -455,7 +455,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(moving_cluster_immobile_corr,vmin=-1, vmax=1)
+    plt.imshow(moving_cluster_immobile_corr,vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Correlation_144610_immobile')
     plt.xlabel('Sorted Neuron')
@@ -464,7 +464,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(moving_corr_residual, vmin=-1, vmax=1)
+    plt.imshow(moving_corr_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron')
@@ -475,7 +475,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot6 = plt.figure(6)
     plt.subplot(1,3,1)
-    plt.imshow(moving_cluster_moving_r, vmin=0, vmax=1)
+    plt.imshow(moving_cluster_moving_r, vmin = 0, vmax = 1)
     plt.colorbar()
     plt.title('R_Square_144610_moving')
     plt.xlabel('Sorted Neuron')
@@ -484,7 +484,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(moving_cluster_immobile_r,vmin=0, vmax=1)
+    plt.imshow(moving_cluster_immobile_r,vmin = 0, vmax = 1)
     plt.colorbar()
     plt.title('R_Square_144610_immobile')
     plt.xlabel('Sorted Neuron')
@@ -493,7 +493,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks([AVA_index_mov1, AVA_index_mov2], AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(moving_r_residual, vmin=-1, vmax=1)
+    plt.imshow(moving_r_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron')
@@ -561,7 +561,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot9 = plt.figure(9)
     plt.subplot(1,3,1)
-    plt.imshow(mcluster_move_noNaN, vmin=-1, vmax=1)
+    plt.imshow(mcluster_move_noNaN, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Move_144610_AvgCorr ='+str(move_noNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
@@ -570,7 +570,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks(mcluster_AVA, AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(mcluster_imm_noNaN,vmin=-1, vmax=1)
+    plt.imshow(mcluster_imm_noNaN,vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Imm_144610_AvgCorr =' +str(imm_nonNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
@@ -579,7 +579,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks(mcluster_AVA, AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(mcluster_residual, vmin=-1, vmax=1)
+    plt.imshow(mcluster_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron_NaN removed')
@@ -589,7 +589,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     plot10 = plt.figure(10)
     plt.subplot(1,3,1)
-    plt.imshow(imcluster_move_noNaN, vmin=-1, vmax=1)
+    plt.imshow(imcluster_move_noNaN, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Move_144610_AvgCorr ='+str(move_noNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
@@ -598,7 +598,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks(imcluster_AVA, AVA_label)
 
     plt.subplot(1,3,2)
-    plt.imshow(imcluster_imm_noNaN,vmin=-1, vmax=1)
+    plt.imshow(imcluster_imm_noNaN,vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Imm_144610_AvgCorr =' +str(imm_nonNaN_avg_corr))
     plt.xlabel('Sorted Neuron_NaN removed')
@@ -607,7 +607,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plt.yticks(imcluster_AVA, AVA_label)
 
     plt.subplot(1,3,3)
-    plt.imshow(imcluster_residual, vmin=-1, vmax=1)
+    plt.imshow(imcluster_residual, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Residual_immobile-moving_1144610')
     plt.xlabel('Sorted Neuron_NaN removed')

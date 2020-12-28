@@ -17,7 +17,7 @@ outputFolder = os.path.join(codePath,'figures/Debugging')
 DERIV = False
 
 data = {}
-for typ in ['AKS297.51']:
+for typ in ['AML310']:
     for condition in ['moving']:  # ['moving', 'immobilized', 'chip']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '{}_{}/'.format(typ, condition))
@@ -45,7 +45,7 @@ print('Done reading data.')
 
 
 ### CHOOSE DATASET TO PLOT
-keys = ['AKS297.51_moving',            'AKS297.51_moving',             'AKS297.51_moving',          'AKS297.51_moving',             'AKS297.51_moving',           'AKS297.51_moving',            'AKS297.51_moving' ]
+keys = ['AML310_moving',            'AML310_moving',             'AML310_moving',          'AML310_moving',             'AML310_moving',           'AML310_moving',            'AML310_moving' ]
 idns = ['BrainScanner20200130_110803', 'BrainScanner20200130_110803', 'BrainScanner20200130_105254', 'BrainScanner20200310_141211', 'BrainScanner20200310_141211', 'BrainScanner20200310_142022', 'BrainScanner20200310_142022'       ]
 neurons = [32,                          15,                           95,                             71,                           42,                            15,                                     16        ]
 
@@ -124,28 +124,28 @@ for k, each in enumerate(np.unique(assigned_bin)):
 
 
 plt.figure(figsize=[4,3.6]) #width, height
-#plt.axhline(dashes=[3, 3], lw=0.5, color="black", zorder=0)
-#plt.axvline(dashes=[3, 3], lw=0.5, color="black", zorder=1)
-plt.plot(vel_bucket, z_activity, '.', color=color, alpha=.05, zorder=10)
+#plt.axhline(dashes=[3, 3], lw = 0.5, color="black", zorder = 0)
+#plt.axvline(dashes=[3, 3], lw = 0.5, color="black", zorder = 1)
+plt.plot(vel_bucket, z_activity, '.', color = color, alpha=.05, zorder = 10)
 if False:
     import numpy.polynomial.polynomial as poly
     try:
         coefs = poly.polyfit(vel_bucket, z_activity, 1)
-        x_new = np.linspace(np.min(vel_bucket), 0, num=10)
+        x_new = np.linspace(np.min(vel_bucket), 0, num = 10)
         ffit = poly.polyval(x_new, coefs)
-        plt.plot(x_new, ffit, 'r--', zorder=9)
+        plt.plot(x_new, ffit, 'r--', zorder = 9)
     except:
         None
 boxprops = dict(linewidth=.5)
 capprops = dict(linewidth=.5)
 whiskerprops = dict(linewidth=.5)
-flierprops = dict(linewidth=.2, markersize=1, marker='+')
-medianprops = dict(linewidth=2, color='#67eb34')
+flierprops = dict(linewidth=.2, markersize = 1, marker='+')
+medianprops = dict(linewidth = 2, color='#67eb34')
 labels = [''] * len(activity_bin)
-plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
-               medianprops=medianprops, labels=labels, manage_xticks=False,
-               capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops, zorder=20)
-plt.locator_params(nbins=5)
+plt.boxplot(activity_bin, positions = bin_edges[:-1] + binwidth / 2, widths = binwidth * .9, boxprops = boxprops,
+               medianprops = medianprops, labels = labels, manage_xticks = False,
+               capprops = capprops, whiskerprops = whiskerprops, flierprops = flierprops, zorder = 20)
+plt.locator_params(nbins = 5)
 
 plt.xlim([-2.1, 3])
 plt.xlabel('Body bend velocity (rad/s)')

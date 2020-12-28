@@ -10,17 +10,17 @@ with open('comparison_results_curvature_l10.dat', 'rb') as handle:
 
 fig, axs = plt.subplots(2, 2, figsize = (20, 20))
 
-axs[0,0].set_xlabel(r'Velocity $\rho^2_{\mathrm{adj},1}$', fontsize=16)
-axs[0,0].set_ylabel(r'Velocity $\rho^2_{\mathrm{adj},2}$', fontsize=16)
+axs[0,0].set_xlabel(r'Velocity $\rho^2_{\mathrm{adj},1}$', fontsize = 16)
+axs[0,0].set_ylabel(r'Velocity $\rho^2_{\mathrm{adj},2}$', fontsize = 16)
 
-axs[1,0].set_xlabel(r'Velocity $\rho^2_{\mathrm{adj},1}$', fontsize=16)
-axs[1,0].set_ylabel(r'Velocity $R^2$', fontsize=16)
+axs[1,0].set_xlabel(r'Velocity $\rho^2_{\mathrm{adj},1}$', fontsize = 16)
+axs[1,0].set_ylabel(r'Velocity $R^2$', fontsize = 16)
 
-axs[0,1].set_xlabel(r'Curvature $\rho^2_{\mathrm{adj},1}$', fontsize=16)
-axs[0,1].set_ylabel(r'Curvature $\rho^2_{\mathrm{adj},2}$', fontsize=16)
+axs[0,1].set_xlabel(r'Curvature $\rho^2_{\mathrm{adj},1}$', fontsize = 16)
+axs[0,1].set_ylabel(r'Curvature $\rho^2_{\mathrm{adj},2}$', fontsize = 16)
 
-axs[1,1].set_xlabel(r'Curvature $\rho^2_{\mathrm{adj},1}$', fontsize=16)
-axs[1,1].set_ylabel(r'Curvature $R^2$', fontsize=16)
+axs[1,1].set_xlabel(r'Curvature $\rho^2_{\mathrm{adj},1}$', fontsize = 16)
+axs[1,1].set_ylabel(r'Curvature $R^2$', fontsize = 16)
 
 for row in axs:
     for ax in row:

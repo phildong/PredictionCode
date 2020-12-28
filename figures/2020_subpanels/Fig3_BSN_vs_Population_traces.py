@@ -7,7 +7,7 @@ import prediction.userTracker as userTracker
 import prediction.provenance as prov
 behavior = 'velocity'
 #conditions = ['AML18_moving']
-conditions = ['AKS297.51_moving']#, 'AML32_moving']
+conditions = ['AML310_moving']#, 'AML32_moving']
 outfilename = 'figures/2020_subpanels/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 neural_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/neuron_data.dat'
@@ -53,7 +53,7 @@ def calc_pdf(x, low_lim, high_lim, nbins):
     density = np.true_divide(counts, np.sum(counts))
     return density, bin_centers, bin_edges
 
-def frac_range_covered(true, pred, percentile=True):
+def frac_range_covered(true, pred, percentile = True):
     if percentile:
         P = 99
         gap_top = np.max(np.append(np.percentile(true, P)-np.percentile(pred, P), 0))
@@ -80,14 +80,14 @@ range_covered = np.zeros([len(figtypes), len(keys)])
 range_covered_test = np.zeros([len(figtypes), len(keys)])
 
 for i, key in enumerate(keys):
-    fig = plt.figure(constrained_layout=True, figsize=[6, 5]) #time series
-    gs = gridspec.GridSpec(ncols=1, nrows=2, figure=fig)
+    fig = plt.figure(constrained_layout = True, figsize=[6, 5]) #time series
+    gs = gridspec.GridSpec(ncols = 1, nrows = 2, figure = fig)
 
-    fig2 = plt.figure(constrained_layout=True, figsize=[8, 3.2]) #Scatter plot
-    gs2 = gridspec.GridSpec(ncols=2, nrows=1, figure=fig2)
+    fig2 = plt.figure(constrained_layout = True, figsize=[8, 3.2]) #Scatter plot
+    gs2 = gridspec.GridSpec(ncols = 2, nrows = 1, figure = fig2)
 
-    fig3 = plt.figure(constrained_layout=True, figsize=[8, 3.2]) #histogram
-    gs3 = gridspec.GridSpec(ncols=2, nrows=1, figure=fig3)
+    fig3 = plt.figure(constrained_layout = True, figsize=[8, 3.2]) #histogram
+    gs3 = gridspec.GridSpec(ncols = 2, nrows = 1, figure = fig3)
 
 
     ts = [None] * 2
@@ -103,19 +103,19 @@ for i, key in enumerate(keys):
         range_covered_test[model, i] = frac_range_covered(beh[res['test_idx']], pred[res['test_idx']])
 
         #Plot the time series of the prediction and true
-        ts[model] = fig.add_subplot(gs[model, :], sharex=ts[0], sharey=ts[0])
-        ts[model].plot(res['time'], beh, 'k', lw=1.5)
-        ts[model].plot(res['time'], pred, color=pred_color, lw=1.5)
+        ts[model] = fig.add_subplot(gs[model, :], sharex = ts[0], sharey = ts[0])
+        ts[model].plot(res['time'], beh, 'k', lw = 1.5)
+        ts[model].plot(res['time'], pred, color = pred_color, lw = 1.5)
         ts[model].set_xlabel('Time (s)')
         ts[model].set_ylabel(behavior)
-        ts[model].fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(beh), np.max(beh), facecolor=test_color, alpha=.05)
+        ts[model].fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(beh), np.max(beh), facecolor = test_color, alpha=.05)
         ts[model].set_xticks(np.arange(0, res['time'][-1], 60))
-        ts[model].axhline(linewidth=0.5, color='k')
+        ts[model].axhline(linewidth = 0.5, color='k')
 
         # plot scatter of prediction vs true
-        sc[model] = fig2.add_subplot(gs2[0, model], xlabel='Measured '+ behavior, ylabel='Predicted '+ behavior,  sharex=sc[0], sharey=sc[0])
-        sc[model].plot(beh[res['train_idx']], pred[res['train_idx']], 'o', color=pred_color, label='Train', rasterized=False, alpha=alpha)
-        sc[model].plot(beh[res['test_idx']], pred[res['test_idx']], 'o', color=test_color, label='Test', rasterized=False, alpha=alpha_test)
+        sc[model] = fig2.add_subplot(gs2[0, model], xlabel='Measured '+ behavior, ylabel='Predicted '+ behavior,  sharex = sc[0], sharey = sc[0])
+        sc[model].plot(beh[res['train_idx']], pred[res['train_idx']], 'o', color = pred_color, label='Train', rasterized = False, alpha = alpha)
+        sc[model].plot(beh[res['test_idx']], pred[res['test_idx']], 'o', color = test_color, label='Test', rasterized = False, alpha = alpha_test)
         sc[model].plot([min(beh), max(beh)], [min(beh), max(beh)], 'k-.')
         sc[model].set_title(figtype + r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % rho2_adj1[model, i])
         sc[model].legend()
@@ -127,9 +127,9 @@ for i, key in enumerate(keys):
         nbins = 24
         pred_hist, pred_bin_centers, pred_bin_edges = calc_pdf(pred[res['test_idx']], low_lim, high_lim, nbins)
         obs_hist, obs_bin_centers, obs_bin_edges = calc_pdf(beh[res['test_idx']], low_lim, high_lim, nbins)
-        his[model] = fig3.add_subplot(gs3[0, model], xlabel=behavior, ylabel='Count',
-                                      title=figtype + ' frac_range_test = %.2f' % range_covered_test[model, i],
-                                      sharex=his[0], sharey=his[0])
+        his[model] = fig3.add_subplot(gs3[0, model], xlabel = behavior, ylabel='Count',
+                                      title = figtype + ' frac_range_test = %.2f' % range_covered_test[model, i],
+                                      sharex = his[0], sharey = his[0])
         his[model].step(pred_bin_centers, pred_hist, where='mid', label='Prediction')
         his[model].step(obs_bin_centers, obs_hist, where='mid', label='Observation', color='k')
         his[model].set_ylim([0, 1.1*np.max(np.concatenate([pred_hist, obs_hist]))])
@@ -143,7 +143,7 @@ for i, key in enumerate(keys):
     pdf.savefig(fig2)
     pdf.savefig(fig3)
 
-fig4=plt.figure()
+fig4 = plt.figure()
 plt.xlabel('Population Performance (Rho2_adj1)')
 plt.ylabel('Fraction covered')
 plt.plot(rho2_adj1[1, :], range_covered_test[1, :], 'o', label='Population, Test Set')
@@ -151,7 +151,7 @@ plt.plot(rho2_adj1[1, :], range_covered_test[0, :], '+', label='BSN, Test Set')
 plt.legend()
 pdf.savefig(fig4)
 
-fig4andhalf=plt.figure()
+fig4andhalf = plt.figure()
 plt.xlabel('Population Performance - BSN performance (Rho2_adj1)')
 plt.ylabel('Fraction covered')
 plt.plot(rho2_adj1[1, :] - rho2_adj1[0, :], range_covered_test[1, :], 'o', label='Population, Test Set')
@@ -159,7 +159,7 @@ plt.plot(rho2_adj1[1, :] - rho2_adj1[0, :], range_covered_test[0, :], '+', label
 plt.legend()
 pdf.savefig(fig4andhalf)
 
-fig4andthreequarters=plt.figure()
+fig4andthreequarters = plt.figure()
 plt.xlabel('Population Performance - BSN performance (Rho2_adj1)')
 plt.ylabel('POP Fraction covered - BSN FRaction Covered')
 POPminusBSN_rho = rho2_adj1[1, :] - rho2_adj1[0, :]
@@ -173,26 +173,26 @@ ax475.axhline()
 plt.legend()
 pdf.savefig(fig4andthreequarters)
 
-fig5=plt.figure(figsize=[2, 5])
+fig5 = plt.figure(figsize=[2, 5])
 plt.title('Test Only')
 plt.ylabel('Fraction Covered')
-plt.xlabel('0= BSN, 1=Pop')
+plt.xlabel('0= BSN, 1 = Pop')
 for k in np.arange(len(range_covered_test[1, :])):
     plt.plot(np.array([0, 1]),  np.array([range_covered_test[0, k], range_covered_test[1, k]]))
 plt.xticks([0, 1])
 pdf.savefig(fig5)
 
 
-fig6=plt.figure()
+fig6 = plt.figure()
 plt.plot(rho2_adj1[1, :], range_covered[1, :], 'o', label='Population, Train + Test')
 plt.plot(rho2_adj1[1, :], range_covered[0, :], '+', label='BSN, Train + Test')
 plt.legend()
 pdf.savefig(fig6)
 
-fig7=plt.figure(figsize=[2, 5])
+fig7 = plt.figure(figsize=[2, 5])
 plt.title('Train + Test')
 plt.ylabel('Fraction Covered')
-plt.xlabel('0= BSN, 1=Pop')
+plt.xlabel('0= BSN, 1 = Pop')
 plt.xticks([0,1])
 for k in np.arange(len(range_covered[1, :])):
     plt.plot(np.array([0, 1]),  np.array([range_covered[0, k], range_covered[1, k]]))

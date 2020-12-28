@@ -11,7 +11,7 @@ import os
 
 data = {}
 res = {}
-for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
+for typ_cond in ['AML310_moving', 'AML32_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -35,7 +35,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         pass
 print('Done reading data.')
 
-key = 'AKS297.51_moving'
+key = 'AML310_moving'
 idn = 'BrainScanner20200130_110803'
 dset = data[key]['input'][idn]
 centerlines = np.array(dset['CLFull'])
@@ -46,8 +46,8 @@ def calc_head_angle(centerlines):
     nose_to_neck = 10
     neck_end = 20
 
-    nose_vec = np.diff(centerlines[:, [nose_start, nose_to_neck], :], axis=1)
-    neck_vec = np.diff(centerlines[:, [nose_to_neck, neck_end], :], axis=1)
+    nose_vec = np.diff(centerlines[:, [nose_start, nose_to_neck], :], axis = 1)
+    neck_vec = np.diff(centerlines[:, [nose_to_neck, neck_end], :], axis = 1)
 
     nose_orientation = np.zeros(centerlines.shape[0])
     neck_orientation = np.zeros(centerlines.shape[0])
@@ -67,8 +67,8 @@ smooth_head_angle = dh.gauss_filterNaN(head_angle, sigma)
 
 
 from scipy.signal import find_peaks
-peaks, _ = find_peaks(smooth_head_angle, height=0, prominence=0.4)
-neg_peaks, _ = find_peaks(smooth_head_angle*-1, height=0, prominence=0.4)
+peaks, _ = find_peaks(smooth_head_angle, height = 0, prominence = 0.4)
+neg_peaks, _ = find_peaks(smooth_head_angle*-1, height = 0, prominence = 0.4)
 
 def find_phase(peaks, time):
     #Use interpolation
@@ -96,7 +96,7 @@ nderivs = np.vstack((nderiv_pos, nderiv_neg))
 
 neurons_and_derivs = np.vstack((neurons, nderivs))
 
-pca = PCA(n_components=3)
+pca = PCA(n_components = 3)
 pca.fit(neurons.T)
 neurons_reduced = pca.transform(neurons.T).T
 
@@ -141,4 +141,4 @@ res[idn] = {'bsn': bsn,
 
 import pickle
 with open('comparison_results_head_bend.dat', 'wb') as handle:
-    pickle.dump(res, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(res, handle, protocol = pickle.HIGHEST_PROTOCOL)

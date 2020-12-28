@@ -50,11 +50,11 @@ ax.plot([-4,1],[-4,1] , ls="--", c=".3")
 
 import numpy.polynomial.polynomial as poly
 coefs_bsn = poly.polyfit(bsn_rho_all[:, 0], bsn_rho_all[:, 1], 1)
-x_new_bsn = np.linspace(np.min([bsn_rho_all[:, 0], bsn_rho_all[:, 1]]), np.max([bsn_rho_all[:, 0], bsn_rho_all[:, 1]]), num=5)
+x_new_bsn = np.linspace(np.min([bsn_rho_all[:, 0], bsn_rho_all[:, 1]]), np.max([bsn_rho_all[:, 0], bsn_rho_all[:, 1]]), num = 5)
 ffit_bsn = poly.polyval(x_new_bsn, coefs_bsn)
 plt.plot(x_new_bsn, ffit_bsn, '--', color='blue')
 coefs_slm = poly.polyfit(slm_rho_all[:, 0], slm_rho_all[:, 1], 1)
-x_new_slm = np.linspace(np.min([slm_rho_all[:, 0], slm_rho_all[:, 1]]), np.max([slm_rho_all[:, 0], slm_rho_all[:, 1]]), num=5)
+x_new_slm = np.linspace(np.min([slm_rho_all[:, 0], slm_rho_all[:, 1]]), np.max([slm_rho_all[:, 0], slm_rho_all[:, 1]]), num = 5)
 ffit_slm = poly.polyval(x_new_slm, coefs_slm)
 plt.plot(x_new_slm, ffit_slm, '--', color='orange')
 

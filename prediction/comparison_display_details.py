@@ -9,8 +9,8 @@ from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
 def deriv_r2(signal, output, test_idx):
-    signal_deriv = gaussian_filter(signal, sigma = 14, order=1)[test_idx]
-    output_deriv = gaussian_filter(output, sigma = 14, order=1)[test_idx]
+    signal_deriv = gaussian_filter(signal, sigma = 14, order = 1)[test_idx]
+    output_deriv = gaussian_filter(output, sigma = 14, order = 1)[test_idx]
 
     return 1-np.sum(np.power(signal_deriv - output_deriv, 2))/np.sum(np.power(output_deriv, 2))
 
@@ -38,7 +38,7 @@ pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath
 for key in keys:
 
     fig = plt.figure(constrained_layout = True, figsize=(5*(len(figtypes)+1), 20))
-    gs = gridspec.GridSpec(len(figtypes)+1, 2, figure=fig, width_ratios=(1, 1))
+    gs = gridspec.GridSpec(len(figtypes)+1, 2, figure = fig, width_ratios=(1, 1))
 
     for row, figtype in enumerate(figtypes):
         res = data[key][figtype]
@@ -56,12 +56,12 @@ for key in keys:
         R2 = 1-np.sum(np.power(y-yhat, 2))/np.sum(np.power(y-truemean, 2))
 
         ts = fig.add_subplot(gs[row+1, 0])
-        ts.plot(res['time'], res['signal'], 'k', lw=1)
-        ts.plot(res['time'], res['output'], 'b', lw=1)
-        # w = np.ones(res['time'].size, dtype=bool)
+        ts.plot(res['time'], res['signal'], 'k', lw = 1)
+        ts.plot(res['time'], res['output'], 'b', lw = 1)
+        # w = np.ones(res['time'].size, dtype = bool)
         # w[:6] = 0
         # w[-6:] = 0
-        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where=w, color='b', lw=1)
+        # ts.fill_betweenx(res['output'], np.roll(res['time'], -6), np.roll(res['time'], 6), where = w, color='b', lw = 1)
         # ts.set_title(figtype+r' $R^2_\mathrm{test}(\mathrm{velocity})$ = %0.3f, $R^2_\mathrm{test}(\mathrm{acceleration})$ = %0.3f' % (R2, deriv_r2(data[key][figtype]['signal'], data[key][figtype]['output'], data[key][figtype]['test_idx'])))
         ts.set_xlabel('Time (s)')
         ts.set_ylabel('Velocity')
@@ -112,12 +112,12 @@ for key in keys:
     ax.axhline(3.5)
     ax.set_ylim(1.5, 5.5)
 
-    ax.text(-2, 3.8, '$F$', fontsize=16)
-    ax.text(-2, 1.8, r'$\left.\frac{dF}{dt}\right.$', fontsize=16)
-    # ax.text(-2, -0.2, r'$\left.\frac{dF}{dt}\right|_-$', fontsize=16)
+    ax.text(-2, 3.8, '$F$', fontsize = 16)
+    ax.text(-2, 1.8, r'$\left.\frac{dF}{dt}\right.$', fontsize = 16)
+    # ax.text(-2, -0.2, r'$\left.\frac{dF}{dt}\right|_-$', fontsize = 16)
 
     ax.set_xticks(np.arange(n))
-    ax.set_xticklabels(xs, fontsize=2)
+    ax.set_xticklabels(xs, fontsize = 2)
     ax.set_yticks([])
     ax.legend()
 

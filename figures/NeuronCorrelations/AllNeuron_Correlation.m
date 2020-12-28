@@ -11,10 +11,10 @@ function [neuronCorrelation, cgIdxRev] = AllNeuron_Correlation(startFrame, endFr
 load('heatData.mat')
 
 %for each neuron do the correlation across the row
-A=Ratio2(:,startFrame:endFrame)';
+A = Ratio2(:,startFrame:endFrame)';
 A(isnan(A))=0;
-neuronCorrelation=corr(A);
-atemp=nancov(A)./sqrt(nanvar(A)'*nanvar(A));
+neuronCorrelation = corr(A);
+atemp = nancov(A)./sqrt(nanvar(A)'*nanvar(A));
 neuronCorrelation(isnan(neuronCorrelation))=atemp(isnan(neuronCorrelation));
 neuronCorrelation(isnan(neuronCorrelation))=0;
 % 
@@ -28,7 +28,7 @@ neuronCorrelation(isnan(neuronCorrelation))=0;
 
 
 cg = clustergram(neuronCorrelation);
-cgIdx=str2double(get(cg,'RowLabels'));
+cgIdx = str2double(get(cg,'RowLabels'));
 cgIdxRev = cgIdx;
 %[~,cgIdxRev]=sort(cgIdx);
 %close annoying clustergram plot

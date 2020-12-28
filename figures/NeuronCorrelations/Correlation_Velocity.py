@@ -84,7 +84,7 @@ def replace_NaN_neurons(r, neuron_num):
     return r
 
 
-for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
+for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -96,7 +96,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
     for key in filter(lambda x: '193044' in x, keyList):
         print("Running "+key)
@@ -130,7 +130,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plot3 = plt.figure(3)
 
     #plt.imshow(immobile_corr)
-    plt.imshow(cluster_imm_corr_noNan, vmin=-1, vmax=1)
+    plt.imshow(cluster_imm_corr_noNan, vmin=-1, vmax = 1)
     plt.colorbar()
     plt.title('Correlation_193044')
     plt.xlabel('Sorted Neuron')

@@ -16,7 +16,7 @@ codePath = userTracker.codePath()
 outputFolder = os.path.join(codePath,'figures/Debugging')
 
 data = {}
-for typ in ['AKS297.51']: #, 'AML32', 'AML18']:
+for typ in ['AML310']: #, 'AML32', 'AML18']:
     for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '{}_{}/'.format(typ, condition))
@@ -44,7 +44,7 @@ print('Done reading data.')
 
 
 ### CHOOSE DATASET TO PLOT
-key = 'AKS297.51_moving'
+key = 'AML310_moving'
 idn = 'BrainScanner20200130_110803'
 #key = 'AML18_moving'
 #idn = 'BrainScanner20200204_102136'
@@ -72,10 +72,10 @@ import matplotlib.gridspec as gridspec
 if False:
     #Just compare some of the behavior
     behFig = plt.figure(figsize=[12, 9])
-    behGs = gridspec.GridSpec(ncols=1, nrows=3, figure=behFig)
+    behGs = gridspec.GridSpec(ncols = 1, nrows = 3, figure = behFig)
     bax1 = behFig.add_subplot(behGs[0,0])
-    bax2 = behFig.add_subplot(behGs[1,0], sharex=bax1)
-    bax3 = behFig.add_subplot(behGs[2,0], sharex=bax1)
+    bax2 = behFig.add_subplot(behGs[1,0], sharex = bax1)
+    bax3 = behFig.add_subplot(behGs[2,0], sharex = bax1)
 
     neuron =14
     bax1.plot(activity[neuron, :])
@@ -111,7 +111,7 @@ def strided_indexing_roll(a, r):
     # Concatenate with sliced to cover all rolls
     # This function will roll each row of a matrix a, a an amount specified by r.
     # I got it here: https://stackoverflow.com/a/51613442/200688
-    a_ext = np.concatenate((a,a[:,:-1]),axis=1)
+    a_ext = np.concatenate((a,a[:,:-1]),axis = 1)
 
     # Get sliding windows; use advanced-indexing to select appropriate ones
     n = a.shape[1]
@@ -188,38 +188,38 @@ AVAL = 15
 #Loop through each neuron
 for neuron in np.array([AVAR, AVAL]): #np.arange(numNeurons):
     print("Generating plot for neuron %d" % neuron)
-    fig = plt.figure(constrained_layout=True, figsize=[6, 8])
-    gs = gridspec.GridSpec(ncols=4, nrows=5, figure=fig)
+    fig = plt.figure(constrained_layout = True, figsize=[6, 8])
+    gs = gridspec.GridSpec(ncols = 4, nrows = 5, figure = fig)
     ax1 = fig.add_subplot(gs[0, 0])
-    ax1d = fig.add_subplot(gs[0, 1], sharex=ax1)
+    ax1d = fig.add_subplot(gs[0, 1], sharex = ax1)
     ax2 = fig.add_subplot(gs[0, 2])
-    ax2d = fig.add_subplot(gs[0, 3], sharex=ax2)
+    ax2d = fig.add_subplot(gs[0, 3], sharex = ax2)
     ax3 = fig.add_subplot(gs[1, :])
-    ax4 = fig.add_subplot(gs[2, :], sharex=ax3)
-    ax5 = fig.add_subplot(gs[3, :], sharex=ax3)
-    ax6 = fig.add_subplot(gs[4, :], sharex=ax3)
+    ax4 = fig.add_subplot(gs[2, :], sharex = ax3)
+    ax5 = fig.add_subplot(gs[3, :], sharex = ax3)
+    ax6 = fig.add_subplot(gs[4, :], sharex = ax3)
 
     ax = [ax1, ax2, ax3, ax4, ax5, ax6]
 
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
 
-    ax[2].plot(time, activity[neuron, :], linewidth=1.5)
+    ax[2].plot(time, activity[neuron, :], linewidth = 1.5)
     ax[2].set_ylabel('Activity')
     ax[2].set_xlabel('Time (s)')
 
 
-    ax[3].plot(time, velocity, 'k', linewidth=1.5)
+    ax[3].plot(time, velocity, 'k', linewidth = 1.5)
     ax[3].set_ylabel(velName)
     ax[3].set_xlabel('Time (s)')
     ax[3].set_xticks(np.arange(0, time[-1], 60))
-    ax[3].axhline(linewidth=0.5, color='k')
+    ax[3].axhline(linewidth = 0.5, color='k')
 
 
     ax[4].plot(time, curv)
     ax[4].set_ylabel('Curvature')
     ax[4].set_xlabel('Time (s)')
-    ax[4].axhline(linewidth=0.5, color='k')
+    ax[4].axhline(linewidth = 0.5, color='k')
 
     ax[5].plot(time, deriv[neuron, :])
     ax[5].set_ylabel('dF/dt')
