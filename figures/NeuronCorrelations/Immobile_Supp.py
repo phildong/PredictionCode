@@ -9,9 +9,15 @@ from seaborn import clustermap
 # For data set 110803 (moving only)- frames 1-1465, AVA 33 and 16
 #Goal is to plot neural trajectories projected into first three PCs
 
-def plot_a_trajectory(ax, pc_traj, theta=0, phi=0, color='#1f77b4'):
+def plot_a_trajectory(ax, pc_traj, tscale, theta=0, phi=0, color='#1f77b4', gradient = True):
     ax.view_init(theta, phi)
-    ax.plot(pc_traj[:, 0], pc_traj[:, 1], pc_traj[:, 2], color=color)
+    if gradient:
+        lns = pc_traj.shape[0]-1
+        print(tscale)
+        for i in range(lns):
+            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.Wistia(tscale[i]))
+    else:
+        ax.plot(pc_traj[:,0], pc_traj[:,1], pc_traj[:,2], color=color)
     c=1.3
     ax.axes.set_xlim3d(c*np.min(pc_traj[:, 0]), c*np.max(pc_traj[:, 0]))
     ax.axes.set_ylim3d(c*np.min(pc_traj[:, 1]), c*np.max(pc_traj[:, 1]))
@@ -42,14 +48,21 @@ def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title
         theta_spec, phi_spec = theta, phi
         jit = 1.5 #magnitude of jitter in degrees
 
+    tscale = (time-time[0]+.0)/(time[-1]-time[0])
     for nplot in np.arange(col) + 1:
         if RAND: #Generate a random angle to view the 3D plot
             theta, phi = np.random.randint(360), np.random.randint(360)
         else: #Generate a random centered around the view
             theta, phi = theta_spec + jit*np.random.randn(), phi_spec + jit*np.random.randn()
         ax1 = plt.subplot(row, col, nplot, projection='3d', title='immobile (%d, %d)' % (theta, phi) )
-        plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], theta, phi, color)
+        plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], tscale[imm_start_index:end_index], theta, phi, color)
 
+
+    cfig = plt.figure()
+    cax = plt.subplot(1, 1)
+    cax.set_axis_off()
+    cax.imshow(np.vstack(tscale, tscale), aspect='auto', cmap=plt.cm.Wistia)
+    cfig.savefig(os.path.join(codePath,'figures/subpanels_revision/generatedFigs/')+'colorbar_Immobile_Supp.pdf')
 
 
     import prediction.provenance as prov

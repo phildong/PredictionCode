@@ -9,9 +9,17 @@ from seaborn import clustermap
 # For data set 110803 (moving only)- frames 1-1465, AVA 33 and 16
 #Goal is to plot neural trajectories projected into first three PCs
 
-def plot_a_trajectory(ax, pc_traj, theta=0, phi=0, color='#1f77b4'):
+def plot_a_trajectory(ax, pc_traj, tscale, theta=0, phi=0, color='#1f77b4', gradient = True):
     ax.view_init(theta, phi)
-    ax.plot(pc_traj[:, 0], pc_traj[:, 1], pc_traj[:, 2], color=color)
+    
+    if gradient:
+        lns = pc_traj.shape[0]-1
+        print(tscale)
+        for i in range(lns):
+            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.Wistia(tscale[i]))
+    else:
+        ax.plot(pc_traj[:,0], pc_traj[:,1], pc_traj[:,2], color=color)
+    
     ax.set_xlabel('PC1')
     ax.set_ylabel('PC2')
     ax.set_zlabel('PC3')
@@ -30,7 +38,7 @@ def sync3d_limits(ax1, ax2):
 
 
 
-def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title='Neural State Space Trajectories', color='#1f77b4', theta=None, phi =None):
+def plot_trajectories(pc_traj, time, drug_app_index, imm_start_index, end_index, title='Neural State Space Trajectories', color='#1f77b4', theta=None, phi =None):
     fig = plt.figure(figsize=(12, 8))
     plt.suptitle(title)
     row=2
@@ -43,24 +51,31 @@ def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title
         theta_spec, phi_spec = theta, phi
         jit = 1.5 #magnitude of jitter in degrees
 
+    tscale = (time-time[0]+.0)/(time[-1]-time[0])
     for nplot in np.arange(col) + 1:
         if RAND: #Generate a random angle to view the 3D plot
             theta, phi = np.random.randint(360), np.random.randint(360)
         else: #Generate a random centered around the view
             theta, phi = theta_spec + jit*np.random.randn(), phi_spec + jit*np.random.randn()
         ax1 = plt.subplot(row, col, nplot, projection='3d', title='immobile (%d, %d)' % (theta, phi) )
-        plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], theta, phi, color)
+        plot_a_trajectory(ax1, pc_traj[imm_start_index:end_index,:], tscale[imm_start_index:end_index], theta, phi, color)
 
         ax2 = plt.subplot(row, col, nplot+col, projection='3d', title='moving (%d, %d)' % (theta, phi))
-        plot_a_trajectory(ax2, pc_traj[:drug_app_index,:], theta, phi, color)
+        plot_a_trajectory(ax2, pc_traj[:drug_app_index,:], tscale[:drug_app_index], theta, phi, color)
         sync3d_limits(ax1, ax2)
+
+    cfig = plt.figure()
+    cax = plt.subplot(1, 1, 1)
+    cax.set_axis_off()
+    cax.imshow(np.vstack((tscale, tscale)), aspect=10, cmap=plt.cm.Wistia)
+    cfig.savefig(os.path.join(userTracker.codePath(), 'figures/subpanels_revision/generatedFigs/')+'colorbar_CheckNeuralTrajectories.pdf')
 
     import prediction.provenance as prov
     #prov.stamp(plt.gca(), .55, .15, __file__)
     return
 
 
-for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
+for typ_cond in ['AML310_transition']: #, 'AKS297.51_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -250,10 +265,10 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     theta, phi =None, None
     theta, phi = 83, 13
-    plot_trajectories(pcs, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (minimally processed)', theta=theta, phi=phi)
-    plot_trajectories(pcs_z, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (z-scored)', theta=theta, phi=phi)
-    plot_trajectories(pcs_dFdt, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e", theta=theta, phi=phi)
-    plot_trajectories(pcs_dFdt_z, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (z-scored)', color="#ff7f0e", theta=theta, phi=phi)
+    plot_trajectories(pcs, time, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (minimally processed)', theta=theta, phi=phi)
+    plot_trajectories(pcs_z, time, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (z-scored)', theta=theta, phi=phi)
+    plot_trajectories(pcs_dFdt, time, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e", theta=theta, phi=phi)
+    plot_trajectories(pcs_dFdt_z, time, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (z-scored)', color="#ff7f0e", theta=theta, phi=phi)
 
     offset = 20
     axpc = fig.add_subplot(gs[4, :], sharex=ax)
