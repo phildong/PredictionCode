@@ -14,9 +14,9 @@ def plot_a_trajectory(ax, pc_traj, tscale, theta=0, phi=0, color='#1f77b4', grad
     
     if gradient:
         lns = pc_traj.shape[0]-1
-        print(tscale)
+        #print(tscale)
         for i in range(lns):
-            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.Wistia(tscale[i]))
+            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.gist_ncar(tscale[i]))
     else:
         ax.plot(pc_traj[:,0], pc_traj[:,1], pc_traj[:,2], color=color)
     
@@ -67,7 +67,7 @@ def plot_trajectories(pc_traj, time, drug_app_index, imm_start_index, end_index,
     cfig = plt.figure()
     cax = plt.subplot(1, 1, 1)
     cax.set_axis_off()
-    cax.imshow(np.vstack((tscale, tscale)), aspect=10, cmap=plt.cm.Wistia)
+    cax.imshow(np.vstack((tscale, tscale)), aspect=10, cmap=plt.cm.gist_ncar)
     cfig.savefig(os.path.join(userTracker.codePath(), 'figures/subpanels_revision/generatedFigs/')+'colorbar_CheckNeuralTrajectories.pdf')
 
     import prediction.provenance as prov
@@ -75,7 +75,7 @@ def plot_trajectories(pc_traj, time, drug_app_index, imm_start_index, end_index,
     return
 
 
-for typ_cond in ['AML310_transition']: #, 'AKS297.51_moving']:
+for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))

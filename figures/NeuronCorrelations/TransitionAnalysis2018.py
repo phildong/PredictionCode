@@ -15,7 +15,7 @@ def plot_a_trajectory(ax, pc_traj, tscale, theta=0, phi=0, color='#1f77b4', grad
         lns = pc_traj.shape[0]-1
         print(tscale)
         for i in range(lns):
-            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.Wistia(tscale[i]))
+            ax.plot(pc_traj[i:i+2, 0], pc_traj[i:i+2, 1], pc_traj[i:i+2, 2], color=plt.cm.gist_ncar(tscale[i]))
     else:
         ax.plot(pc_traj[:,0], pc_traj[:,1], pc_traj[:,2], color=color)
     c=1.3
@@ -63,10 +63,10 @@ def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title
 
 
     cfig = plt.figure()
-    cax = plt.subplot(1, 1)
+    cax = plt.subplot(1, 1,1)
     cax.set_axis_off()
-    cax.imshow(np.vstack(tscale, tscale), aspect='auto', cmap=plt.cm.Wistia)
-    cfig.savefig(os.path.join(codePath,'figures/subpanels_revision/generatedFigs/')+'colorbar_TransitionAnalysis2018.pdf')
+    cax.imshow(np.vstack((tscale, tscale)), aspect='auto', cmap=plt.cm.gist_ncar)
+    #cfig.savefig(os.path.join(codePath,'figures/subpanels_revision/generatedFigs/')+'colorbar_TransitionAnalysis2018.pdf')
 
     import prediction.provenance as prov
     #prov.stamp(plt.gca(), .55, .15, __file__)
