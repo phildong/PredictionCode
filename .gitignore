@@ -1,0 +1,8 @@
+*.pyc
+build/
+.vscode/
+figures/movies/crawling_frames/
+*.html
+*.pdf
+*.png
+*.dat

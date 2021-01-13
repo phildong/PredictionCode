@@ -1,0 +1,7 @@
+matplotlib==2.2.4
+numpy==1.16.6
+scipy==1.2.3
+sklean==0.0
+sklean-contrib-py-earth==0.1.0
+pathos==0.2.6
+GitPython==2.1.14
