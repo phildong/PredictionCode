@@ -1198,17 +1198,17 @@ def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0.85, sigma=5):
     curvaccumulated = np.copy(curvsmooth[0,:])
     numloops = 0
     for j, newframe in enumerate(curvsmooth):
-        res = least_squares(residualFromShift, dx, bounds=bounds, args=(curvaccumulated, newframe, inds, roi), method='dogbox')
+        res = least_squares(residualFromShift, np.round(dx), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
         dx = res.x
         shiftaccum = interpolate.interp1d(inds, curvaccumulated, fill_value="extrapolate")  # function that allows you to shift
-        #curvaccumulated = alpha * shiftaccum(inds - dx) + (1 - alpha) * newframe #slowly update the new template
-        if np.mod(j,1000) == 0:
+        curvaccumulated = alpha * shiftaccum(inds - dx) + (1 - alpha) * newframe #slowly update the new template
+        if False: #np.mod(j,1000) == 0:
             plt.figure()
             plt.plot(newframe, label="newframe")
             plt.plot(curvaccumulated, label="curvaccumulated")
             plt.title(dx)
             plt.show()
-        curvaccumulated=np.copy(newframe)
+        #curvaccumulated=np.copy(newframe)
         ps[j] = dx
     return ps
 
