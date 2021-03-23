@@ -22,6 +22,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA,  FastICA
 
 
+
 def recrWorm(av, turns, thetaTrue, r, show = 0):
     """recalculate eigenworm prefactor from angular velocity and turns."""
     thetaCum = np.cumsum(np.copy(av)/6.) # division due to rate: it's velocity per secod instread of per volume
@@ -285,7 +286,7 @@ def decorrelateNeuronsICA(R, G):
     I = np.empty(G.shape)
     I[:] = np.nan  # initialize it with nans
 
-    ica = FastICA(n_components=2)
+    ica = FastICA(n_components=2, random_state=42)
 
     # the fits can't handle the nans, so we gotta tempororaily exclude them
     # we won't interpolate, we will just remove them than add them back
@@ -401,6 +402,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     # get centerlines with full temporal resolution of 50Hz
     clFull, clIndices = loadCenterlines(folder, full=True)
+    curv = getCurvature(clFull)
+    #findPhaseShift(curv)
+
+
     # load new eigenworms
     import userTracker
     codePath = userTracker.codePath()
@@ -409,6 +414,9 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     # do Eigenworm transformations and calculate velocity etc. 
     pcs, velo, theta, accel = transformEigenworms(pcsFull, dataPars)
+
+    debug_findPhaseShift(curv, velo, vel, clIndices)
+
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
 
@@ -514,9 +522,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #Reject noise common to both Red and Green Channels using ICA
     I = decorrelateNeuronsICA(R, G)
+    print("After ICA",np.nanmean(I))
 
     #Apply Gaussian Smoothing (and interpolate for free)
     I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+
+    print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
 
     assert np.all(np.isfinite(I_smooth_interp))
 
@@ -576,7 +587,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
 
-
+    print(np.mean(I_smooth_interp_crop_noncontig_data))
     #<DEPRECATED>
 
     # load neural data
@@ -1130,3 +1141,131 @@ def close_nan_holes(input):
     out = np.copy(input)
     out[c] = np.nan
     return out
+
+def getCurvature(centerlines):
+    ''' Calculate curvature Kappa from the animal's centerline.
+    This is a reimplementation of a snipeet of code from Leifer et al Nat Meth 2011
+    https://github.com/samuellab/mindcontrol-analysis/blob/cfa4a82b45f0edf204854eed2c68fab337d3be05/preview_wYAML_v9.m#L1555
+    Returns curvature in units of inverse worm lengths.
+
+    More information on curvature generally: https://mathworld.wolfram.com/Curvature.html
+    Kappa = 1 /R where R is the radius of curvature
+
+    '''
+    numcurvpts =np.shape(centerlines)[1]
+    diffVec = np.diff(centerlines, axis=1)
+    # calculate tangential vectors
+    atDiffVec = np.unwrap(np.arctan2(-diffVec[:,:,1], diffVec[:,:,0]))
+    curv = np.unwrap(np.diff(atDiffVec, axis=1)) # curvature kappa = derivative of angle with respect to path length
+                                  # curv = kappa * L/numcurvpts
+    curv= curv * numcurvpts     #To get cuvarture in units of 1/L
+    return curv
+
+def residualFromShift(dx, template, newframe, inds, roi):
+    ''' function takes a new frame of curvature, shifts it with respect to a template and calculates the residual
+    dx is the amount of the shift in units of the index (can be fractional)
+    teamplate and newframe are curvature vectors with corresponding indices inds
+    roi is a list of indexes that defines a smaller ROI of relevant indexes
+    '''
+    from scipy import interpolate
+    shiftfn = interpolate.interp1d(inds, newframe) #function that allows you to shift
+    shifted = shiftfn(roi+dx) #look up the values  at the indices specified by the roi shifted by dx
+    return template[roi] - shifted  #return the residual
+
+def debug_findPhaseShift(curv, velo, vel, clIndices):
+    #try with no weighted average
+    print("alpha=0...")
+    ps_a0 = findPhaseShift(curv, alpha=0)
+    print("alpha=0.85")
+    ps_a85 = findPhaseShift(curv, alpha=0.85)
+    print("plotting..")
+    plt.figure()
+    plt.plot(ps_a0, label='alpha=0')
+    plt.plot(ps_a85, label='alpha=0.85')
+    plt.legend()
+
+    # ps is in units of number of segments per frame
+    # we want it in body lengths per second
+    FPS = 50 # number of frames per second
+    NUMSEGS = curv.shape[1] #number of segments per body length
+    v = ps_a0 * FPS / NUMSEGS
+    vsmooth = gaussian_filter1d(v, sigma=50)
+    plt.figure()
+    plt.plot(v)
+    plt.plot(vsmooth)
+
+    plt.figure()
+    time = np.true_divide(np.arange(curv.shape[0]), FPS)
+    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
+    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
+    plt.xlabel('Time (s) assuming 50 fps')
+    plt.legend()
+
+    comsmooth = gaussian_filter1d(vel, sigma=6, axis=0)
+    plt.figure()
+    time = np.true_divide(np.arange(curv.shape[0]), FPS)
+    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
+    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
+    plt.plot(time[clIndices], comsmooth*np.std(vsmooth) / np.std(comsmooth), label='center of mass like')
+    plt.xlabel('Time (s) assuming 50 fps')
+    plt.legend()
+
+    plt.figure()
+    plt.imshow(curv, vmin=-np.percentile(curv,99), vmax=np.percentile(curv,99), aspect='auto')
+
+    print("done..")
+    plt.show()
+    return
+
+def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
+    # Find the phase shift by shifting in x the the n'th frame and comparing it
+    # to the (n+1)th frame and recording the shift that gets the best fit.
+    #
+    # The curvature data is low pass filtered with sigma specified by sigma.
+    # Additionally, to filter out noise, the nth frame is averaged with the
+    # (n-1)th frame according to a weighting factor, alpha.
+    # Moreover the head is cropped a certain porectange according to headCrop,
+    # and a percentage of the tail is cropped according to tailCrop.
+    #
+    # original by Marc Gershow. Modified by Andrew Leifer ca 2010.
+    # https://github.com/samuellab/mindcontrol-analysis/blob/master/findPhaseShift.m
+    # Python port 2021
+    # Marc used to use an alpha of .85 I don't find the weighting useufl.
+
+    #Gaussian filter curvature of each frame
+    from scipy.ndimage import gaussian_filter1d
+    curvsmooth = gaussian_filter1d(curv,sigma=sigma,axis=1)
+
+    #Get the indices; and cropped indices for only the ROI
+    inds = np.arange(curvsmooth.shape[1])
+    roi = inds[np.arange(np.floor(curv.shape[1] * headCrop), np.ceil(curv.shape[1]*(1-tailCrop)), dtype=int)]
+
+    from scipy.optimize import least_squares
+    from scipy import interpolate
+    bounds = [-np.floor(len(inds) * headCrop), np.floor(len(inds) * tailCrop)]
+    dx = 0 #initial guess for interframe shift
+    ps = np.zeros(curvsmooth.shape[0]) #output
+    curvaccumulated = np.copy(curvsmooth[0,:])
+    numloops = 0
+    for j, newframe in enumerate(curvsmooth):
+        res = least_squares(residualFromShift, np.round(dx, decimals=2), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
+        dx = res.x
+        shiftaccum = interpolate.interp1d(inds, curvaccumulated, fill_value="extrapolate")  # function that allows you to shift
+        curvaccumulated = alpha * shiftaccum(inds - dx) + (1 - alpha) * newframe #slowly update the new template
+        if False: #np.mod(j,1000) == 0:
+            plt.figure()
+            plt.plot(newframe, label="newframe")
+            plt.plot(curvaccumulated, label="curvaccumulated")
+            plt.title(dx)
+            plt.show()
+        #curvaccumulated=np.copy(newframe)
+        ps[j] = dx
+    return ps
+
+
+
+
+
+def getPhaseVel(centerlines, dt):
+    '''Given'''
+

@@ -9,8 +9,8 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-filename = 'correlates_of_performance_curvature_l10.pdf'
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_curvature_l10.dat', 'rb') as handle:
+filename = 'correlates_of_performance_velocity_l10.pdf'
+with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
@@ -182,17 +182,16 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         vel_pdf_mse.append(mse)
         #vel_pdf_kl.append(kl)
 
-        label.append(key)
+        label.append(key[12:])
 
 
 
 
 import matplotlib.backends.backend_pdf
 
-def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2_adj', labels=label, PDF=None):
-    fig, ax = plt.subplots(figsize=(10,10))
-    ax.scatter(x, rho2_adj)
-
+def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2_adj', labels=label, PDF=None, ylim=[0,1]):
+    fig, ax = plt.subplots(figsize=(7,7))
+    ax.plot(x, rho2_adj, 'o', markersize=16)
     #adapted from: https://stackoverflow.com/questions/18767523/fitting-data-with-numpy
     import numpy.polynomial.polynomial as poly
     try:
@@ -200,13 +199,16 @@ def plot_candidate(x,  x_name, metric  = 'rho2', metric_name = 'rho2_adj', label
         x_new = np.linspace(np.min(x), np.max(x), num=len(x))
         ffit = poly.polyval(x_new, coefs)
         plt.plot(x_new, ffit,'r--')
+        print("plotted the fit")
     except:
         None
 
     ax.set_xlabel(x_name)
     ax.set_ylabel(metric_name)
     ax.set_xlim(np.nanmin(x)*.9, np.nanmax(x)*1.4)
+    ax.set_ylim(ylim[0], ylim[1])
     ax.set_title('Corrcoef =%.2f' %np.corrcoef(x, rho2_adj)[0,1] )
+    ax.tick_params(axis='both', which='major', labelsize=19)
     for i, txt in enumerate(labels):
         ax.annotate(txt, (x[i], rho2_adj[i]))
 
@@ -242,7 +244,7 @@ plot_candidate(bsn_rho2_adj, " Best Single Neuron rho2_adj",
                    labels=label, PDF=pdf)
 plot_candidate(G_std_G_mean_largest_neuron, " value for Green neuron with highest std/mean", labels=label, PDF=pdf)
 plot_candidate(G_std_G_mean_97_neuron, " value for Green neuron with 97th percentile highest std/mean", labels=label, PDF=pdf)
-plot_candidate(G_max_fano_factor, " Fano Factor for Green Neuron with highest Fano Factor", labels=label, PDF=pdf)
+plot_candidate(G_max_fano_factor, " Fano Factor for GCaMP Neuron with highest Fano Factor", labels=label, PDF=pdf)
 
 #plot_candidate(vel_pdf_kl, 'KL divergence of Train vs Test Velocity PDF', labels=label, PDF=pdf)
 

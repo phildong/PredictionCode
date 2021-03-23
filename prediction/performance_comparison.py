@@ -103,3 +103,6 @@ from scipy import stats
 t, p = stats.ttest_ind(slm_rho, slm_rho_g, equal_var=False)
 print('Welchs unequal variance t-test from population GCAMP to population GFP:')
 print(p)
+
+print('mean pop GCAMP:', np.mean(slm_rho), 'mean pop GFP:', np.mean(slm_rho_g))
+print('median pop GCAMP:', np.median(slm_rho), 'medain pop GFP:', np.median(slm_rho_g))

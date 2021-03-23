@@ -1,8 +1,6 @@
 """
-Created Wed 8 January 2020
-Gaol here is to generate useful output to understand how ro why changes to preprocessing
-are affecting the performance of the different model predictions.
-by Andrew Leifer
+Created 23 Nov 2020
+Generate all the heatmaps in one giant figure for the supplement
 leifer@princeton.edu
 """
 
@@ -25,7 +23,8 @@ import prediction.dataHandler as dh
 def main():
 
     codePath = userTracker.codePath()
-    outputFolder = os.path.join(codePath,'figures/2020_subpanels/generatedFigs')
+    outputFolder = os.path.join(codePath,'figures/subpanels_revision/generatedFigs')
+    maxTime=730
 
     data = {}
     for typ in ['AKS297.51', 'AML32', 'AML18']:
@@ -76,7 +75,24 @@ def main():
               'ytick.labelsize': 'x-large'}
     pylab.rcParams.update(params)
 
+    Nrecs=0
+    lengths=[]
+    for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
+        dset = data[key]['input']
+        # For each recording
+        for idn in dset.keys():
+            Nrecs = Nrecs + 1
+            time = dset[idn]['Neurons']['I_Time']
+            lengths.append(time[-1]-time[0])
+
+
+    fig = plt.figure(figsize=(18, 12*Nrecs), constrained_layout=False)
+    import matplotlib.gridspec as gridspec
+
+    gs = gridspec.GridSpec(ncols=1, nrows=3*Nrecs, figure=fig, height_ratios=[2, .7, .7]*Nrecs, width_ratios=[5])
+
     print("Plotting heatmaps.....")
+    sp_indx = 0
     for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
         dset = data[key]['input']
         # For each recording
@@ -106,12 +122,12 @@ def main():
             idx_clust = np.array(d['leaves'])
 
             prcntile = 99.7
-            fig = plt.figure(figsize=(18,12), constrained_layout=False)
-            import matplotlib.gridspec as gridspec
-            gs = gridspec.GridSpec(ncols=1, nrows=3, figure=fig, height_ratios=[2, .7, .7], width_ratios=[5])
-            fig.suptitle('data[' + key + '][' + idn + ']')
 
-            ax = fig.add_subplot(gs[0, :])
+
+            ax = fig.add_subplot(gs[sp_indx, :])
+            sp_indx = sp_indx+1
+            ax.set_title('data[' + key + '][' + idn + ']')
+
             num_Neurons = I_smooth_interp_crop_noncontig_wnans.shape[0]
             vmin = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1)
             vmax = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile)
@@ -122,7 +138,7 @@ def main():
             ax.set_ylim(-.5, num_Neurons+.5)
             ax.set_yticks(np.arange(0, num_Neurons, 25))
             ax.set_xticks(np.arange(0, time[-1], 60))
-            ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
+            #ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
             from matplotlib import ticker
@@ -131,7 +147,7 @@ def main():
             cb.locator = tick_locator
             cb.update_ticks()
 
-            ax.set_xlim(0, time[-1])
+            ax.set_xlim(0, maxTime)
             if idn == 'BrainScanner20200130_110803':
                 AVAR = 32
                 AVAL = 15
@@ -149,20 +165,22 @@ def main():
             beh = dset['BehaviorFull']['AngleVelocity']
             time = dset['Neurons']['TimeFull']
 
-            axbeh = fig.add_subplot(gs[1,:])
+            axbeh = fig.add_subplot(gs[sp_indx,:])
+            sp_indx=sp_indx+1
             axbeh.plot(time, beh, linewidth=1.5, color='k')
             fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=0.5, color='k')
             axbeh.set_xlim(ax.get_xlim())
 
-            axbeh.set_title('Velocity')
-            axbeh.set_xlabel('Time (s)')
-            axbeh.set_ylabel('Body Bend Velocity (radians per second)')
+            #axbeh.set_title('Velocity')
+            #axbeh.set_xlabel('Time (s)')
+            #axbeh.set_ylabel('Body Bend Velocity (radians per second)')
             from prediction import provenance as prov
-            prov.stamp(plt.gca(), .9, .15, __file__)
+            #prov.stamp(plt.gca(), .9, .15, __file__)
 
             curv = dset['BehaviorFull']['Eigenworm3']
-            axbeh = fig.add_subplot(gs[2,:])
+            axbeh = fig.add_subplot(gs[sp_indx,:])
+            sp_indx=sp_indx+1
             axbeh.plot(time, curv, linewidth=1.5, color='brown')
             fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=.5, color='k')
@@ -170,11 +188,11 @@ def main():
 
             axbeh.set_title('Velocity')
             axbeh.set_xlabel('Time (s)')
-            axbeh.set_ylabel('Curvature (arb units)')
+            #axbeh.set_ylabel('Curvature (arb units)')
             from prediction import provenance as prov
-            prov.stamp(plt.gca(), .9, .15, __file__)
+            #prov.stamp(plt.gca(), .9, .15, __file__)
 
-
+    plt.tight_layout()
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
     pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps_clustered.pdf"))

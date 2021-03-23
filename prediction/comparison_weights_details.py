@@ -11,7 +11,7 @@ import prediction.provenance as prov
 
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving', 'AML32_moving']
-behavior = 'velocity' #'curvature'
+behavior = 'curvature' #'velocity' #'curvature'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
@@ -142,7 +142,7 @@ outfilename = os.path.splitext(os.path.basename(pickled_data))[0] + '_weights.pd
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
 
-def calc_rho2_adj2(data, key, type='slm_with_derivs'):
+def calc_rho2_adj1(data, key, type='slm_with_derivs'):
     # Calculate rho2adj  (code snippet from comparison_grid_display.py)
     res = data[key][type]
     y = res['signal'][res['test_idx']]
@@ -154,18 +154,19 @@ def calc_rho2_adj2(data, key, type='slm_with_derivs'):
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
-    return (res['corrpredicted'] ** 2 - alpha ** 2 / (truesigma * predsigma) ** 2)
+    rho2_adj_1 = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
+    return rho2_adj_1
 
 
 Frac_dFdt = np.zeros(len(keys))
-rho2_adj2 = np.zeros([len(figtypes), len(keys)])
+rho2_adj1 = np.zeros([len(figtypes), len(keys)])
 for i, key in enumerate(keys):
 
     fig = plt.figure(constrained_layout=True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
     gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
 
     for row, figtype in enumerate(figtypes):
-        rho2_adj2[row, i] = calc_rho2_adj2(data, key, figtype)
+        rho2_adj1[row, i] = calc_rho2_adj1(data, key, figtype)
         res = data[key][figtype]
 
         ts = fig.add_subplot(gs[row, 0])
@@ -183,7 +184,7 @@ for i, key in enumerate(keys):
         sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
         sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
         sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-        sc.set_title(figtype+r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % rho2_adj2[row, i])
+        sc.set_title(figtype +r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % rho2_adj1[row, i])
         sc.legend()
 
     fig2 = plt.figure(figsize=[7,7])
@@ -240,9 +241,9 @@ for i, key in enumerate(keys):
     # Scatterplot of F weights vs dF/dt weights
     f =plt.figure()
     h = f.add_subplot(1,1,1, xlabel='weight of F', ylabel='weight of dF/dt', title='Weights of each neuron\n' + key)
-    h.scatter(slm_weights_raw, slm_weights_raw_deriv)
-    h.axhline()
-    h.axvline()
+    h.scatter(slm_weights_raw, slm_weights_raw_deriv, color='black')
+    h.axhline(color='black')
+    h.axvline(color='black')
     h.set_xlim(-largest_weight, largest_weight)
     h.set_ylim(-largest_weight, largest_weight)
     #prov.stamp(ax2, .55, .35, __file__ + '\n' + pickled_data)
@@ -250,10 +251,10 @@ for i, key in enumerate(keys):
 
 
 figsummary = plt.figure()
-axs = figsummary.add_subplot(1, 1, 1, xlabel='Decoder Performance (rho2_adj2)',
+axs = figsummary.add_subplot(1, 1, 1, xlabel='Decoder Performance (rho2_adj1)',
                              ylabel='Percentage of magnitude of weights allocated to F',
                              title='Balance of weights allocated to F vs dF/dt for population decoder')
-axs.scatter(rho2_adj2[1, :], 1-Frac_dFdt)
+axs.scatter(rho2_adj1[1, :], 1 - Frac_dFdt)
 axs.axhline(0.5)
 axs.set_ylim(0, 1)
 prov.stamp(axs, .55, .35, __file__ + '\n'+ pickled_data)

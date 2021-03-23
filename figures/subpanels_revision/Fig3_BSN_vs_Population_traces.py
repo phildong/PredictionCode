@@ -8,7 +8,7 @@ import prediction.provenance as prov
 behavior = 'velocity'
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving']#, 'AML32_moving']
-outfilename = 'figures/2020_subpanels/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
+outfilename = 'figures/subpanels_revision/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 neural_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/neuron_data.dat'
 with open(pickled_data, 'rb') as handle:
