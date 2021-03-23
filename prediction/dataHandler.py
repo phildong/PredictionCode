@@ -403,7 +403,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # get centerlines with full temporal resolution of 50Hz
     clFull, clIndices = loadCenterlines(folder, full=True)
     curv = getCurvature(clFull)
-    findPhaseShift(curv)
+    #findPhaseShift(curv)
+
 
     # load new eigenworms
     import userTracker
@@ -413,6 +414,9 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     # do Eigenworm transformations and calculate velocity etc. 
     pcs, velo, theta, accel = transformEigenworms(pcsFull, dataPars)
+
+    debug_findPhaseShift(curv, velo, vel, clIndices)
+
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
 
@@ -1168,7 +1172,52 @@ def residualFromShift(dx, template, newframe, inds, roi):
     shifted = shiftfn(roi+dx) #look up the values  at the indices specified by the roi shifted by dx
     return template[roi] - shifted  #return the residual
 
-def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0.85, sigma=5):
+def debug_findPhaseShift(curv, velo, vel, clIndices):
+    #try with no weighted average
+    print("alpha=0...")
+    ps_a0 = findPhaseShift(curv, alpha=0)
+    print("alpha=0.85")
+    ps_a85 = findPhaseShift(curv, alpha=0.85)
+    print("plotting..")
+    plt.figure()
+    plt.plot(ps_a0, label='alpha=0')
+    plt.plot(ps_a85, label='alpha=0.85')
+    plt.legend()
+
+    # ps is in units of number of segments per frame
+    # we want it in body lengths per second
+    FPS = 50 # number of frames per second
+    NUMSEGS = curv.shape[1] #number of segments per body length
+    v = ps_a0 * FPS / NUMSEGS
+    vsmooth = gaussian_filter1d(v, sigma=50)
+    plt.figure()
+    plt.plot(v)
+    plt.plot(vsmooth)
+
+    plt.figure()
+    time = np.true_divide(np.arange(curv.shape[0]), FPS)
+    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
+    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
+    plt.xlabel('Time (s) assuming 50 fps')
+    plt.legend()
+
+    comsmooth = gaussian_filter1d(vel, sigma=6, axis=0)
+    plt.figure()
+    time = np.true_divide(np.arange(curv.shape[0]), FPS)
+    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
+    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
+    plt.plot(time[clIndices], comsmooth*np.std(vsmooth) / np.std(comsmooth), label='center of mass like')
+    plt.xlabel('Time (s) assuming 50 fps')
+    plt.legend()
+
+    plt.figure()
+    plt.imshow(curv, vmin=-np.percentile(curv,99), vmax=np.percentile(curv,99), aspect='auto')
+
+    print("done..")
+    plt.show()
+    return
+
+def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
     # Find the phase shift by shifting in x the the n'th frame and comparing it
     # to the (n+1)th frame and recording the shift that gets the best fit.
     #
@@ -1181,6 +1230,7 @@ def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0.85, sigma=5):
     # original by Marc Gershow. Modified by Andrew Leifer ca 2010.
     # https://github.com/samuellab/mindcontrol-analysis/blob/master/findPhaseShift.m
     # Python port 2021
+    # Marc used to use an alpha of .85 I don't find the weighting useufl.
 
     #Gaussian filter curvature of each frame
     from scipy.ndimage import gaussian_filter1d
@@ -1198,7 +1248,7 @@ def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0.85, sigma=5):
     curvaccumulated = np.copy(curvsmooth[0,:])
     numloops = 0
     for j, newframe in enumerate(curvsmooth):
-        res = least_squares(residualFromShift, np.round(dx), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
+        res = least_squares(residualFromShift, np.round(dx, decimals=2), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
         dx = res.x
         shiftaccum = interpolate.interp1d(inds, curvaccumulated, fill_value="extrapolate")  # function that allows you to shift
         curvaccumulated = alpha * shiftaccum(inds - dx) + (1 - alpha) * newframe #slowly update the new template
