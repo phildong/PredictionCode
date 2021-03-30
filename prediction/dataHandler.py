@@ -416,11 +416,15 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #calculate phase velocity, this is the velocity of the body bends as tehy propogate along the worm's body in units of bodylengths / s
     vel_ps = findPhaseVelocity(curv, clTimes, sigma=50)
+    curv_metric = get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6)
+
     debug_findPhaseShift(vel_ps, velo, vel, clIndices, clTimes, curv, folder=folder)
+    #debug_curvature_metrics(curv, pcs[0,:])
 
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
     vel_ps_downsampled = vel_ps[clIndices]
+    curv_metric_dowsampled = curv_metric[clIndices]
 
     velo = velo[clIndices]*50. # to get it in per Volume units -> This is radians per sec
     accel = accel[clIndices]*50
@@ -668,10 +672,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['BehaviorFull'] = {}
     dataDict['Behavior_crop_noncontig'] = {}
     print RM.shape
-    tmpData = [vel[:,0], pc1, pc2, pc3, vel_ps_downsampled, velo, accel, theta, etho, xPos, yPos]
+    tmpData = [vel[:,0], pc1, pc2, pc3, vel_ps_downsampled, curv_metric_dowsampled, velo, accel, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
-        'PhaseShiftVelocity',\
+        'PhaseShiftVelocity', 'Curvature',\
                 'AngleVelocity', 'AngleAccel', 'Theta', 'Ethogram', 'X', 'Y']):
 
         dataDict['Behavior'][key] = tmpData[kindex][nonNan_data] #Deprecated
@@ -1191,7 +1195,57 @@ def findPhaseVelocity(curv, clTimes, sigma=50):
     return ps_vel_smooth
 
 
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+    https://stackoverflow.com/a/6520696/200688
 
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+def get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6):
+    #Calculate mean curvature within an ROI.
+    # Identify outliers (default 6 sigma)  and interpolate over them.
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+    return curv_metric
+
+
+def debug_curvature_metrics(curv, pc3, num_stds=6):
+    #CALCULATE CURVATURE WITHIN ROI
+    ROI_start = 15
+    ROI_end = 80
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+
+    pc3_rescale = pc3 * np.std(curv_metric) / np.std(pc3)
+    fig, axs = plt.subplots(2,1, constrained_layout=True, figsize=(18,12))
+    axs[0].plot(curv_metric, label='Curvature')
+    axs[0].plot(pc3_rescale, label='PC3, rescaled')
+    axs[0].legend()
+    axs[0].set_xlabel('Frames')
+    axs[0].set_ylabel('Inverse body lengths')
+    axs[1].plot(np.abs(curv_metric - pc3_rescale), label="residual")
+    axs[1].legend()
+    return
 
 def debug_findPhaseShift(vsmooth, velo, vel, clIndices, clTime, curv, folder=''):
     plt.figure()
