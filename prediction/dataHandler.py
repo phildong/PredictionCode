@@ -22,6 +22,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA,  FastICA
 
 
+
 def recrWorm(av, turns, thetaTrue, r, show = 0):
     """recalculate eigenworm prefactor from angular velocity and turns."""
     thetaCum = np.cumsum(np.copy(av)/6.) # division due to rate: it's velocity per secod instread of per volume
@@ -169,7 +170,7 @@ def estimateEigenwormError(folder, eigenworms, show=False):
     """use the high resolution behavior to get a variance estimate.
     This will be wrong or meaningless if the centerlines were copied between frames."""
     # calculate centerline projections for full movie
-    clFull, clIndices = loadCenterlines(folder, full = True)
+    clFull, clIndices, clTime = loadCenterlines(folder, full = True)
     print 'done loading'
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     print 'done projecting'
@@ -249,7 +250,7 @@ def loadCenterlines(folder, full = False, wormcentered = False):
 #    for cl in clNew[::10]:
 #        plt.plot(cl[:,0], cl[:,1])
 #    plt.show()
-    return cl ,clIndices.astype(int)
+    return cl ,clIndices.astype(int), clTime
     
 def transformEigenworms(pcs, dataPars):
     """interpolate, smooth Eigenworms and calculate associated metrics like velocity."""
@@ -285,7 +286,7 @@ def decorrelateNeuronsICA(R, G):
     I = np.empty(G.shape)
     I[:] = np.nan  # initialize it with nans
 
-    ica = FastICA(n_components=2)
+    ica = FastICA(n_components=2, random_state=42)
 
     # the fits can't handle the nans, so we gotta tempororaily exclude them
     # we won't interpolate, we will just remove them than add them back
@@ -400,7 +401,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
         cutVolume = np.max(vel.size)
 
     # get centerlines with full temporal resolution of 50Hz
-    clFull, clIndices = loadCenterlines(folder, full=True)
+    clFull, clIndices, clTimes = loadCenterlines(folder, full=True)
+    curv = getCurvature(clFull)
+
+
     # load new eigenworms
     import userTracker
     codePath = userTracker.codePath()
@@ -409,8 +413,18 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     # do Eigenworm transformations and calculate velocity etc. 
     pcs, velo, theta, accel = transformEigenworms(pcsFull, dataPars)
+
+    #calculate phase velocity, this is the velocity of the body bends as tehy propogate along the worm's body in units of bodylengths / s
+    vel_ps = findPhaseVelocity(curv, clTimes, sigma=50)
+    curv_metric = get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6)
+
+    debug_findPhaseShift(vel_ps, velo, vel, clIndices, clTimes, curv, folder=folder)
+    #debug_curvature_metrics(curv, pcs[0,:])
+
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
+    vel_ps_downsampled = vel_ps[clIndices]
+    curv_metric_dowsampled = curv_metric[clIndices]
 
     velo = velo[clIndices]*50. # to get it in per Volume units -> This is radians per sec
     accel = accel[clIndices]*50
@@ -514,9 +528,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #Reject noise common to both Red and Green Channels using ICA
     I = decorrelateNeuronsICA(R, G)
+    print("After ICA",np.nanmean(I))
 
     #Apply Gaussian Smoothing (and interpolate for free)
     I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+
+    print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
 
     assert np.all(np.isfinite(I_smooth_interp))
 
@@ -576,7 +593,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
 
-
+    print(np.mean(I_smooth_interp_crop_noncontig_data))
     #<DEPRECATED>
 
     # load neural data
@@ -655,9 +672,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['BehaviorFull'] = {}
     dataDict['Behavior_crop_noncontig'] = {}
     print RM.shape
-    tmpData = [vel[:,0], pc1, pc2, pc3, velo, accel, theta, etho, xPos, yPos]
+    tmpData = [vel[:,0], pc1, pc2, pc3, vel_ps_downsampled, curv_metric_dowsampled, velo, accel, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
+        'PhaseShiftVelocity', 'Curvature',\
                 'AngleVelocity', 'AngleAccel', 'Theta', 'Ethogram', 'X', 'Y']):
 
         dataDict['Behavior'][key] = tmpData[kindex][nonNan_data] #Deprecated
@@ -1130,3 +1148,208 @@ def close_nan_holes(input):
     out = np.copy(input)
     out[c] = np.nan
     return out
+
+def getCurvature(centerlines):
+    ''' Calculate curvature Kappa from the animal's centerline.
+    This is a reimplementation of a snipeet of code from Leifer et al Nat Meth 2011
+    https://github.com/samuellab/mindcontrol-analysis/blob/cfa4a82b45f0edf204854eed2c68fab337d3be05/preview_wYAML_v9.m#L1555
+    Returns curvature in units of inverse worm lengths.
+
+    More information on curvature generally: https://mathworld.wolfram.com/Curvature.html
+    Kappa = 1 /R where R is the radius of curvature
+
+    '''
+    numcurvpts =np.shape(centerlines)[1]
+    diffVec = np.diff(centerlines, axis=1)
+    # calculate tangential vectors
+    atDiffVec = np.unwrap(np.arctan2(-diffVec[:,:,1], diffVec[:,:,0]))
+    curv = np.unwrap(np.diff(atDiffVec, axis=1)) # curvature kappa = derivative of angle with respect to path length
+                                  # curv = kappa * L/numcurvpts
+    curv= curv * numcurvpts     #To get cuvarture in units of 1/L
+    return curv
+
+def residualFromShift(dx, template, newframe, inds, roi):
+    ''' function takes a new frame of curvature, shifts it with respect to a template and calculates the residual
+    dx is the amount of the shift in units of the index (can be fractional)
+    teamplate and newframe are curvature vectors with corresponding indices inds
+    roi is a list of indexes that defines a smaller ROI of relevant indexes
+    '''
+    from scipy import interpolate
+    shiftfn = interpolate.interp1d(inds, newframe) #function that allows you to shift
+    shifted = shiftfn(roi+dx) #look up the values  at the indices specified by the roi shifted by dx
+    return template[roi] - shifted  #return the residual
+
+def findPhaseVelocity(curv, clTimes, sigma=50):
+    #Find the phase shift
+    ps_a0 = findPhaseShift(curv, alpha=0)
+
+    # ps is in units of number of segments per frame
+    # we want it in body lengths per second
+    NUMSEGS = curv.shape[1] #number of segments per body length
+    v = np.append(0, ps_a0[1:] / (NUMSEGS * np.diff(clTimes)))
+    # UNITS: (# segs / frame)  / ( (# seconds / frame) * ( # segs / bodylength)    )  = (bodylengths/second)
+    # Note the first element of ps_a0 is NOT real, its just always zero because of the way findPhaseVelocity deals with the fact that it is taking a derivative
+    # Thats why we have this funny 0 in front
+    ps_vel_smooth = gaussian_filter1d(v, sigma=sigma)
+    # Note in the future it woudl be better to interpolate onto an even spaced timeline before gaussian smoothing.. but we will ignore that for now.
+    return ps_vel_smooth
+
+
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+    https://stackoverflow.com/a/6520696/200688
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+def get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6):
+    #Calculate mean curvature within an ROI.
+    # Identify outliers (default 6 sigma)  and interpolate over them.
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+    return curv_metric
+
+
+def debug_curvature_metrics(curv, pc3, num_stds=6):
+    #CALCULATE CURVATURE WITHIN ROI
+    ROI_start = 15
+    ROI_end = 80
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+
+    pc3_rescale = pc3 * np.std(curv_metric) / np.std(pc3)
+    fig, axs = plt.subplots(2,1, constrained_layout=True, figsize=(18,12))
+    axs[0].plot(curv_metric, label='Curvature')
+    axs[0].plot(pc3_rescale, label='PC3, rescaled')
+    axs[0].legend()
+    axs[0].set_xlabel('Frames')
+    axs[0].set_ylabel('Inverse body lengths')
+    axs[1].plot(np.abs(curv_metric - pc3_rescale), label="residual")
+    axs[1].legend()
+    return
+
+def debug_findPhaseShift(vsmooth, velo, vel, clIndices, clTime, curv, folder=''):
+    plt.figure()
+    plt.plot(vsmooth)
+    from prediction import provenance as prov
+    prov.stamp(plt.gca(), .9, .15, __file__)
+
+    plt.figure()
+    time = clTime
+    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
+    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
+    plt.xlabel('Time (s)')
+    plt.legend()
+
+    comsmooth = gaussian_filter1d(vel, sigma=6, axis=0)
+    norm_eigvel = velo * np.std(vsmooth) / np.std(velo)
+    norm_com = comsmooth*np.std(vsmooth) / np.std(comsmooth)
+
+    fig, axs = plt.subplots(2,1, constrained_layout=True, figsize=(18,12))
+    time = clTime
+    axs[0].plot(time, vsmooth, label= 'phase shift')
+    axs[0].plot(time, norm_eigvel, label='eigenworm velo (rescaled)')
+    axs[0].plot(time[clIndices], norm_com, label='center of mass like (rescaled)')
+    axs[0].set_xlim([0, np.max(time[clIndices])])
+    axs[0].set_xlabel('Approximate Time (s) assuming 50 fps')
+    axs[0].set_ylabel('Velocity (body lengths / s )')
+    axs[0].legend()
+    secax = axs[0].twiny()
+    secax.set_xlabel('Centerline Frame')
+    mainticks = axs[0].get_xticks()
+    secax.set_xticks(np.interp(mainticks, time[clIndices], clIndices))
+    axs[1].plot(clIndices, np.std([np.squeeze(vsmooth[clIndices]), np.squeeze(norm_com), np.squeeze(norm_eigvel[clIndices])], axis=0))
+    axs[1].set_xlim([0, np.max(clIndices)])
+    axs[1].set_xlabel('Centerline Frame')
+    axs[1].set_ylabel('Standard Deviation')
+    axs[1].set_title('Degree of potential concern')
+
+
+    plt.figure(figsize=(8,18))
+    plt.imshow(curv, vmin=-np.percentile(curv,99), vmax=np.percentile(curv,99), aspect='auto')
+    plt.ylabel('Centerline Frame')
+    plt.xlabel('Position along Centerlne (<-Head ... Tail->)')
+    print("done..")
+    # plt.show()
+
+    file = os.path.join(folder, "centerline_velocity_analysis.pdf")
+    print("Beginning to save centerline debugging plots: " + file)
+    import matplotlib.backends.backend_pdf
+    pdf = matplotlib.backends.backend_pdf.PdfPages(file)
+    for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+        pdf.savefig(fig)
+        plt.close(fig)
+    pdf.close()
+    print("Centerline debugging plots saved.")
+    return
+
+def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
+    # Find the phase shift by shifting in x the the n'th frame and comparing it
+    # to the (n+1)th frame and recording the shi      ft that gets the best fit.
+    #
+    # The curvature data is low pass filtered with sigma specified by sigma.
+    # Additionally, to filter out noise, the nth frame is averaged with the
+    # (n-1)th frame according to a weighting factor, alpha.
+    # Moreover the head is cropped a certain porectange according to headCrop,
+    # and a percentage of the tail is cropped according to tailCrop.
+    #
+    # original by Marc Gershow. Modified by Andrew Leifer ca 2010.
+    # https://github.com/samuellab/mindcontrol-analysis/blob/master/findPhaseShift.m
+    # Python port 2021
+    # Marc used to use an alpha of .85 I don't find the weighting useufl.
+
+    #Gaussian filter curvature of each frame
+    from scipy.ndimage import gaussian_filter1d
+    curvsmooth = gaussian_filter1d(curv,sigma=sigma,axis=1)
+
+    #Get the indices; and cropped indices for only the ROI
+    inds = np.arange(curvsmooth.shape[1])
+    roi = inds[np.arange(np.floor(curv.shape[1] * headCrop), np.ceil(curv.shape[1]*(1-tailCrop)), dtype=int)]
+
+    from scipy.optimize import least_squares
+    from scipy import interpolate
+    bounds = [-np.floor(len(inds) * headCrop), np.floor(len(inds) * tailCrop)]
+    dx = 0 #initial guess for interframe shift
+    ps = np.zeros(curvsmooth.shape[0]) #output
+    curvaccumulated = np.copy(curvsmooth[0,:])
+    for j, newframe in enumerate(curvsmooth):
+        res = least_squares(residualFromShift, np.round(dx, decimals=2), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
+        dx = res.x
+        shiftaccum = interpolate.interp1d(inds, curvaccumulated, fill_value="extrapolate")  # function that allows you to shift
+        curvaccumulated = alpha * shiftaccum(inds - dx) + (1 - alpha) * newframe #slowly update the new template
+        if False: #np.mod(j,1000) == 0:
+            plt.figure()
+            plt.plot(newframe, label="newframe")
+            plt.plot(curvaccumulated, label="curvaccumulated")
+            plt.title(dx)
+            plt.show()
+        #curvaccumulated=np.copy(newframe)
+        ps[j] = dx
+    return ps
+
+
+
+
+
+def getPhaseVel(centerlines, dt):
+    '''Given'''
+

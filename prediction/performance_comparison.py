@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-behavior= 'velocity'
+behavior= 'curvature'
 outfile = 'performance_comparison_deriv_rho21_' + behavior + '_l10.pdf'
 
 pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
@@ -103,3 +103,6 @@ from scipy import stats
 t, p = stats.ttest_ind(slm_rho, slm_rho_g, equal_var=False)
 print('Welchs unequal variance t-test from population GCAMP to population GFP:')
 print(p)
+
+print('mean pop GCAMP:', np.mean(slm_rho), 'mean pop GFP:', np.mean(slm_rho_g))
+print('median pop GCAMP:', np.median(slm_rho), 'medain pop GFP:', np.median(slm_rho_g))

@@ -52,14 +52,34 @@ activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
 time = dset['Neurons']['I_Time_crop_noncontig']
 
 numNeurons = activity.shape[0]
-vel = dset['Behavior_crop_noncontig']['AngleVelocity']
-comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
+velnc = dset['Behavior_crop_noncontig']['AngleVelocity']
+comVelnc = dset['Behavior_crop_noncontig']['CMSVelocity']
 curv = dset['Behavior_crop_noncontig']['Eigenworm3']
+vel = dset['BehaviorFull']['AngleVelocity']
+comVel = dset['BehaviorFull']['CMSVelocity']
+X = dset['BehaviorFull']['X']  # Get the X position
+Y = dset['BehaviorFull']['Y']  # Get they Y position
+
+crude_vel=np.sqrt(np.square(np.diff(np.squeeze(X)))+np.square(np.diff(np.squeeze(Y))))
 
 import matplotlib.pyplot as plt
 
+Factor = 200 #The CMSvelocity seems to be off of mm/s by a factor of 200
+from scipy.ndimage import gaussian_filter1d
+#muptiply by 6 to get in mm/ s, gaussian smooth by three
+mycomVel = gaussian_filter1d(crude_vel*6,3)
+comVel = comVel* Factor
+
 plt.figure()
-plt.plot(vel, comVel, 'o');
+plt.axhline(0, color='black')
+plt.axvline(0, color='black')
+plt.plot(vel, comVel, 'o', color='black', alpha=0.1)
 plt.xlabel('Eigen Velocity')
 plt.ylabel('Center of Mass Velocity')
+
+m, b = np.polyfit(vel, comVel, 1)
+plt.plot(vel, m*vel + b, 'r--')
 plt.show()
+
+
+print("done")
