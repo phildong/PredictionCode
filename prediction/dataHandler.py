@@ -278,6 +278,24 @@ def transformEigenworms(pcs, dataPars):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta, accel
 
+def decorrelateNeuronsLinear(red_nan, green_nan):
+        #Xinwei Yu's linear motion correction algorithm
+        #Implemented by Matthew Creamer
+        green_minus_best_red = np.zeros(red_nan.shape)
+        red = red_nan.copy()
+        usable_red = np.logical_not(np.any(np.isnan(red_nan), axis=1))
+        green = green_nan.copy()
+        usable_green = np.logical_not(np.any(np.isnan(green_nan), axis=1))
+        usable_data = usable_green & usable_red
+        red = red[usable_data, :]
+        green = green[usable_data, :]
+        for n in range(red.shape[1]):
+            red_column = np.expand_dims(red[:, n], axis=1)
+            green_column = np.expand_dims(green[:, n], axis=1)
+            red_with_ones = np.concatenate([red_column, np.ones(red_column.shape)], axis=1)
+            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, green_column, rcond=None)
+            green_minus_best_red[:, n] = green_nan[:, n] - (best_fit[0] * red_nan[:, n] )
+        return green_minus_best_red
 
 def decorrelateNeuronsICA(R, G):
     """use ICA to remove covariance in Green and Red signals.
@@ -527,7 +545,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
 
     #Reject noise common to both Red and Green Channels using ICA
-    I = decorrelateNeuronsICA(R, G)
+    #I = decorrelateNeuronsICA(R, G)
+    I = decorrelateNeuronsLinear(R, G)
     print("After ICA",np.nanmean(I))
 
     #Apply Gaussian Smoothing (and interpolate for free)
