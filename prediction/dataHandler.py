@@ -294,7 +294,7 @@ def decorrelateNeuronsLinear(red_nan, green_nan):
             green_column = np.expand_dims(green[:, n], axis=1)
             red_with_ones = np.concatenate([red_column, np.ones(red_column.shape)], axis=1)
             best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, green_column, rcond=None)
-            green_minus_best_red[:, n] = green_nan[:, n] - (best_fit[0] * red_nan[:, n] + best_fit[1])
+            green_minus_best_red[:, n] = green_nan[:, n] - (best_fit[0] * red_nan[:, n] )
         return green_minus_best_red
 
 def decorrelateNeuronsICA(R, G):
