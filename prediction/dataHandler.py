@@ -278,24 +278,31 @@ def transformEigenworms(pcs, dataPars):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta, accel
 
-def decorrelateNeuronsLinear(red_nan, green_nan):
-        #Xinwei Yu's linear motion correction algorithm
-        #Implemented by Matthew Creamer
-        green_minus_best_red = np.zeros(red_nan.shape)
-        red = red_nan.copy()
-        usable_red = np.logical_not(np.any(np.isnan(red_nan), axis=1))
-        green = green_nan.copy()
-        usable_green = np.logical_not(np.any(np.isnan(green_nan), axis=1))
-        usable_data = usable_green & usable_red
-        red = red[usable_data, :]
-        green = green[usable_data, :]
-        for n in range(red.shape[1]):
-            red_column = np.expand_dims(red[:, n], axis=1)
-            green_column = np.expand_dims(green[:, n], axis=1)
+def decorrelateNeuronsLinear(R, G):
+        # Xinwei Yu's linear motion correction algorithm
+        # Re-implemented by Andrew Leifer, based on an implimentation by Matthew Creamer
+        I = np.empty(G.shape)
+        I[:] = np.nan  # initialize it with nans
+
+        # the fits can't handle the nans, so we gotta tempororaily exclude them
+        # we won't interpolate, we will just remove them than add them back
+        nanmask = np.logical_or(np.isnan(R), np.isnan(G))
+
+        for n in range(R.shape[0]): #for each neuron
+            red_column = np.expand_dims(R[n, ~nanmask[n]].T, axis=1)
             red_with_ones = np.concatenate([red_column, np.ones(red_column.shape)], axis=1)
-            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, green_column, rcond=None)
-            green_minus_best_red[:, n] = green_nan[:, n] - (best_fit[0] * red_nan[:, n] )
-        return green_minus_best_red
+            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, G[n, ~nanmask[n]].T, rcond=None)
+            I[n, :] = G[n, :] - (best_fit[0] * R[n, :] + best_fit[1])
+
+            if False:
+                plt.figure()
+                plt.plot(I[n,:], label='I')
+                plt.plot(G[n,:]-np.nanmean(G[n,:]), label='G')
+                plt.legend()
+        return I
+
+
+
 
 def decorrelateNeuronsICA(R, G):
     """use ICA to remove covariance in Green and Red signals.
