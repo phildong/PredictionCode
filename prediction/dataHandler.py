@@ -278,24 +278,31 @@ def transformEigenworms(pcs, dataPars):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta, accel
 
-def decorrelateNeuronsLinear(red_nan, green_nan):
-        #Xinwei Yu's linear motion correction algorithm
-        #Implemented by Matthew Creamer
-        green_minus_best_red = np.zeros(red_nan.shape)
-        red = red_nan.copy()
-        usable_red = np.logical_not(np.any(np.isnan(red_nan), axis=1))
-        green = green_nan.copy()
-        usable_green = np.logical_not(np.any(np.isnan(green_nan), axis=1))
-        usable_data = usable_green & usable_red
-        red = red[usable_data, :]
-        green = green[usable_data, :]
-        for n in range(red.shape[1]):
-            red_column = np.expand_dims(red[:, n], axis=1)
-            green_column = np.expand_dims(green[:, n], axis=1)
+def decorrelateNeuronsLinear(R, G):
+        # Xinwei Yu's linear motion correction algorithm
+        # Re-implemented by Andrew Leifer, based on an implimentation by Matthew Creamer
+        I = np.empty(G.shape)
+        I[:] = np.nan  # initialize it with nans
+
+        # the fits can't handle the nans, so we gotta tempororaily exclude them
+        # we won't interpolate, we will just remove them than add them back
+        nanmask = np.logical_or(np.isnan(R), np.isnan(G))
+
+        for n in range(R.shape[0]): #for each neuron
+            red_column = np.expand_dims(R[n, ~nanmask[n]].T, axis=1)
             red_with_ones = np.concatenate([red_column, np.ones(red_column.shape)], axis=1)
-            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, green_column, rcond=None)
-            green_minus_best_red[:, n] = green_nan[:, n] - (best_fit[0] * red_nan[:, n] )
-        return green_minus_best_red
+            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, G[n, ~nanmask[n]].T, rcond=None)
+            I[n, :] = G[n, :] - (best_fit[0] * R[n, :] + best_fit[1])
+
+            if False:
+                plt.figure()
+                plt.plot(I[n,:], label='I')
+                plt.plot(G[n,:]-np.nanmean(G[n,:]), label='G')
+                plt.legend()
+        return I
+
+
+
 
 def decorrelateNeuronsICA(R, G):
     """use ICA to remove covariance in Green and Red signals.
@@ -518,7 +525,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
 
         if debug:
-
             nplots=2
             chosen = np.round(np.random.rand(nplots)*R.shape[0]).astype(int)
             import matplotlib.pyplot as plt
@@ -547,10 +553,12 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #Reject noise common to both Red and Green Channels using ICA
     #I = decorrelateNeuronsICA(R, G)
     I = decorrelateNeuronsLinear(R, G)
-    print("After ICA",np.nanmean(I))
+    print("After motion correction",np.nanmean(I))
 
-    #Apply Gaussian Smoothing (and interpolate for free)
-    I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+    #Apply Gaussian Smoothing (and interpolate for free) #Keep the raw green around so we can use it to set heatmap values laters
+    I_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+    G_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in G])
+
 
     print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
 
@@ -559,6 +567,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #Reinstate the NaNs
     I_smooth = np.copy(I_smooth_interp)
     I_smooth[np.isnan(I)]=np.nan
+    G_smooth = np.copy(G_smooth_interp)
+    G_smooth[np.isnan(G)] = np.nan
 
 
     #Get the  preferred order  of the neruons,
@@ -610,18 +620,21 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     valid_map_identity = valid_map[valid_map > cutVolume]
 
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
+    G_smooth_interp_crop_noncontig_data = np.copy(G_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
+
+
 
     print(np.mean(I_smooth_interp_crop_noncontig_data))
     #<DEPRECATED>
 
     # load neural data
-    R = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
-    G = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    RedMatlab = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    GreenMatlab = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
     #
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
-    Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
+    Y, dR, GS, RS, RM = preprocessNeuralData(RedMatlab, GreenMatlab, dataPars)
 
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
@@ -664,9 +677,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     nonNan_identities = nonNan[nonNan > cutVolume]
 
     #</deprecated>
-
-
-
 
     #Setup time axis
     time = np.squeeze(data['hasPointsTime'])
@@ -731,14 +741,19 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     # Andys improved photobleaching correction, mean- and variance-preserved variables
 
-    dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I'] = I[order][:,idx_data] # linear motion corrected (mean 0, variance preserved) , w/ NaNs,  outlier removed, photobleach corrected
     dataDict['Neurons']['I_Time'] = time[idx_data] #corresponding time axis
-    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, has nans, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
-    dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED , has nans, linear motion corrected (mean 0, variance preserved) ,, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED,linear motion corrected (mean 0, variance preserved) , outlier removed, photobleach corrected
+    dataDict['Neurons']['G'] = G[order][:,idx_data] # outlier removed, photobleach corrected
+    dataDict['Neurons']['G_smooth'] = G_smooth[order][:,idx_data] # SMOOTHED has nans,  outlier removed, photobleach corrected
+    dataDict['Neurons']['G_smooth_interp'] = G_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED, outlier removed, photobleach corrected
+
+    dataDict['Neurons']['RedMatlab'] = RedMatlab[order] #outlier removed, photobleach corrected
+    dataDict['Neurons']['GreenMatlab'] = GreenMatlab[order] #outlier removed, photobleach corrected
 
     dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
+    dataDict['Neurons']['G_smooth_interp_crop_noncontig'] = G_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED, linear motion correction (mean 0 var preserved), , outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
     dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
