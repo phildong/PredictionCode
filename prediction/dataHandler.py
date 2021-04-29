@@ -170,7 +170,7 @@ def estimateEigenwormError(folder, eigenworms, show=False):
     """use the high resolution behavior to get a variance estimate.
     This will be wrong or meaningless if the centerlines were copied between frames."""
     # calculate centerline projections for full movie
-    clFull, clIndices = loadCenterlines(folder, full = True)
+    clFull, clIndices, clTime = loadCenterlines(folder, full = True)
     print 'done loading'
     pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
     print 'done projecting'
@@ -250,7 +250,7 @@ def loadCenterlines(folder, full = False, wormcentered = False):
 #    for cl in clNew[::10]:
 #        plt.plot(cl[:,0], cl[:,1])
 #    plt.show()
-    return cl ,clIndices.astype(int)
+    return cl ,clIndices.astype(int), clTime
     
 def transformEigenworms(pcs, dataPars):
     """interpolate, smooth Eigenworms and calculate associated metrics like velocity."""
@@ -277,6 +277,31 @@ def transformEigenworms(pcs, dataPars):
  #   for pcindex, pc in enumerate(pcs):
  #       pcs[pcindex] = gaussian_filter1d(pc, dataPars['medianWindow'])
     return pcs, velo, theta, accel
+
+def decorrelateNeuronsLinear(R, G):
+        # Xinwei Yu's linear motion correction algorithm
+        # Re-implemented by Andrew Leifer, based on an implimentation by Matthew Creamer
+        I = np.empty(G.shape)
+        I[:] = np.nan  # initialize it with nans
+
+        # the fits can't handle the nans, so we gotta tempororaily exclude them
+        # we won't interpolate, we will just remove them than add them back
+        nanmask = np.logical_or(np.isnan(R), np.isnan(G))
+
+        for n in range(R.shape[0]): #for each neuron
+            red_column = np.expand_dims(R[n, ~nanmask[n]].T, axis=1)
+            red_with_ones = np.concatenate([red_column, np.ones(red_column.shape)], axis=1)
+            best_fit, _, _, _ = np.linalg.lstsq(red_with_ones, G[n, ~nanmask[n]].T, rcond=None)
+            I[n, :] = G[n, :] - (best_fit[0] * R[n, :] + best_fit[1])
+
+            if False:
+                plt.figure()
+                plt.plot(I[n,:], label='I')
+                plt.plot(G[n,:]-np.nanmean(G[n,:]), label='G')
+                plt.legend()
+        return I
+
+
 
 
 def decorrelateNeuronsICA(R, G):
@@ -401,9 +426,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
         cutVolume = np.max(vel.size)
 
     # get centerlines with full temporal resolution of 50Hz
-    clFull, clIndices = loadCenterlines(folder, full=True)
+    clFull, clIndices, clTimes = loadCenterlines(folder, full=True)
     curv = getCurvature(clFull)
-    #findPhaseShift(curv)
 
 
     # load new eigenworms
@@ -415,10 +439,17 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     # do Eigenworm transformations and calculate velocity etc. 
     pcs, velo, theta, accel = transformEigenworms(pcsFull, dataPars)
 
-    debug_findPhaseShift(curv, velo, vel, clIndices)
+    #calculate phase velocity, this is the velocity of the body bends as tehy propogate along the worm's body in units of bodylengths / s
+    vel_ps = findPhaseVelocity(curv, clTimes, sigma=50)
+    curv_metric = get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6)
+
+    debug_findPhaseShift(vel_ps, velo, vel, clIndices, clTimes, curv, folder=folder)
+    #debug_curvature_metrics(curv, pcs[0,:])
 
     #downsample to 6 volumes/sec
     pc3, pc2, pc1 = pcs[:,clIndices]
+    vel_ps_downsampled = vel_ps[clIndices]
+    curv_metric_dowsampled = curv_metric[clIndices]
 
     velo = velo[clIndices]*50. # to get it in per Volume units -> This is radians per sec
     accel = accel[clIndices]*50
@@ -494,7 +525,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
 
         if debug:
-
             nplots=2
             chosen = np.round(np.random.rand(nplots)*R.shape[0]).astype(int)
             import matplotlib.pyplot as plt
@@ -521,11 +551,14 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
 
     #Reject noise common to both Red and Green Channels using ICA
-    I = decorrelateNeuronsICA(R, G)
-    print("After ICA",np.nanmean(I))
+    #I = decorrelateNeuronsICA(R, G)
+    I = decorrelateNeuronsLinear(R, G)
+    print("After motion correction",np.nanmean(I))
 
-    #Apply Gaussian Smoothing (and interpolate for free)
-    I_smooth_interp =np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+    #Apply Gaussian Smoothing (and interpolate for free) #Keep the raw green around so we can use it to set heatmap values laters
+    I_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
+    G_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in G])
+
 
     print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
 
@@ -534,6 +567,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #Reinstate the NaNs
     I_smooth = np.copy(I_smooth_interp)
     I_smooth[np.isnan(I)]=np.nan
+    G_smooth = np.copy(G_smooth_interp)
+    G_smooth[np.isnan(G)] = np.nan
 
 
     #Get the  preferred order  of the neruons,
@@ -585,18 +620,21 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     valid_map_identity = valid_map[valid_map > cutVolume]
 
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
+    G_smooth_interp_crop_noncontig_data = np.copy(G_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
+
+
 
     print(np.mean(I_smooth_interp_crop_noncontig_data))
     #<DEPRECATED>
 
     # load neural data
-    R = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
-    G = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    RedMatlab = np.array(data['rPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
+    GreenMatlab = np.array(data['gPhotoCorr'])[:, :len(np.array(data['hasPointsTime']))]
     #
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
-    Y, dR, GS, RS, RM = preprocessNeuralData(R, G, dataPars)
+    Y, dR, GS, RS, RM = preprocessNeuralData(RedMatlab, GreenMatlab, dataPars)
 
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
@@ -640,9 +678,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #</deprecated>
 
-
-
-
     #Setup time axis
     time = np.squeeze(data['hasPointsTime'])
     # Set zero to be first non-nan time value
@@ -666,9 +701,10 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['BehaviorFull'] = {}
     dataDict['Behavior_crop_noncontig'] = {}
     print RM.shape
-    tmpData = [vel[:,0], pc1, pc2, pc3, velo, accel, theta, etho, xPos, yPos]
+    tmpData = [vel[:,0], pc1, pc2, pc3, vel_ps_downsampled, curv_metric_dowsampled, velo, accel, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
+        'PhaseShiftVelocity', 'Curvature',\
                 'AngleVelocity', 'AngleAccel', 'Theta', 'Ethogram', 'X', 'Y']):
 
         dataDict['Behavior'][key] = tmpData[kindex][nonNan_data] #Deprecated
@@ -705,14 +741,19 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     # Andys improved photobleaching correction, mean- and variance-preserved variables
 
-    dataDict['Neurons']['I'] = I[order][:,idx_data] # common noise rejected, w/ NaNs, mean- and var-preserved, outlier removed, photobleach corrected
+    dataDict['Neurons']['I'] = I[order][:,idx_data] # linear motion corrected (mean 0, variance preserved) , w/ NaNs,  outlier removed, photobleach corrected
     dataDict['Neurons']['I_Time'] = time[idx_data] #corresponding time axis
-    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED common noise rejected, has nans, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected
-    dataDict['Neurons']['R'] = R[order] #outlier removed, photobleach corrected
-    dataDict['Neurons']['G'] = G[order] #outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth'] = I_smooth[order][:,idx_data] # SMOOTHED , has nans, linear motion corrected (mean 0, variance preserved) ,, outlier removed, photobleach corrected
+    dataDict['Neurons']['I_smooth_interp'] = I_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED,linear motion corrected (mean 0, variance preserved) , outlier removed, photobleach corrected
+    dataDict['Neurons']['G'] = G[order][:,idx_data] # outlier removed, photobleach corrected
+    dataDict['Neurons']['G_smooth'] = G_smooth[order][:,idx_data] # SMOOTHED has nans,  outlier removed, photobleach corrected
+    dataDict['Neurons']['G_smooth_interp'] = G_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED, outlier removed, photobleach corrected
+
+    dataDict['Neurons']['RedMatlab'] = RedMatlab[order] #outlier removed, photobleach corrected
+    dataDict['Neurons']['GreenMatlab'] = GreenMatlab[order] #outlier removed, photobleach corrected
 
     dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
+    dataDict['Neurons']['G_smooth_interp_crop_noncontig'] = G_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED, linear motion correction (mean 0 var preserved), , outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
     dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
@@ -1172,54 +1213,132 @@ def residualFromShift(dx, template, newframe, inds, roi):
     shifted = shiftfn(roi+dx) #look up the values  at the indices specified by the roi shifted by dx
     return template[roi] - shifted  #return the residual
 
-def debug_findPhaseShift(curv, velo, vel, clIndices):
-    #try with no weighted average
-    print("alpha=0...")
+def findPhaseVelocity(curv, clTimes, sigma=50):
+    #Find the phase shift
     ps_a0 = findPhaseShift(curv, alpha=0)
-    print("alpha=0.85")
-    ps_a85 = findPhaseShift(curv, alpha=0.85)
-    print("plotting..")
-    plt.figure()
-    plt.plot(ps_a0, label='alpha=0')
-    plt.plot(ps_a85, label='alpha=0.85')
-    plt.legend()
 
     # ps is in units of number of segments per frame
     # we want it in body lengths per second
-    FPS = 50 # number of frames per second
     NUMSEGS = curv.shape[1] #number of segments per body length
-    v = ps_a0 * FPS / NUMSEGS
-    vsmooth = gaussian_filter1d(v, sigma=50)
+    v = np.append(0, ps_a0[1:] / (NUMSEGS * np.diff(clTimes)))
+    # UNITS: (# segs / frame)  / ( (# seconds / frame) * ( # segs / bodylength)    )  = (bodylengths/second)
+    # Note the first element of ps_a0 is NOT real, its just always zero because of the way findPhaseVelocity deals with the fact that it is taking a derivative
+    # Thats why we have this funny 0 in front
+    ps_vel_smooth = gaussian_filter1d(v, sigma=sigma)
+    # Note in the future it woudl be better to interpolate onto an even spaced timeline before gaussian smoothing.. but we will ignore that for now.
+    return ps_vel_smooth
+
+
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+    https://stackoverflow.com/a/6520696/200688
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+def get_curv_metric(curv, ROI_start=15, ROI_end=80, num_stds=6):
+    #Calculate mean curvature within an ROI.
+    # Identify outliers (default 6 sigma)  and interpolate over them.
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+    return curv_metric
+
+
+def debug_curvature_metrics(curv, pc3, num_stds=6):
+    #CALCULATE CURVATURE WITHIN ROI
+    ROI_start = 15
+    ROI_end = 80
+    curv_metric = np.mean(curv[:, ROI_start:ROI_end], axis=1)
+    #Find outliers & interpolate over them
+    outlier_ind = np.where(abs(curv_metric - np.mean(curv_metric)) > num_stds * np.std(curv_metric))
+    curv_metric[outlier_ind] = np.nan
+    nans, x = nan_helper(curv_metric)
+    curv_metric[nans] = np.interp(x(nans), x(~nans), curv_metric[~nans])
+
+    pc3_rescale = pc3 * np.std(curv_metric) / np.std(pc3)
+    fig, axs = plt.subplots(2,1, constrained_layout=True, figsize=(18,12))
+    axs[0].plot(curv_metric, label='Curvature')
+    axs[0].plot(pc3_rescale, label='PC3, rescaled')
+    axs[0].legend()
+    axs[0].set_xlabel('Frames')
+    axs[0].set_ylabel('Inverse body lengths')
+    axs[1].plot(np.abs(curv_metric - pc3_rescale), label="residual")
+    axs[1].legend()
+    return
+
+def debug_findPhaseShift(vsmooth, velo, vel, clIndices, clTime, curv, folder=''):
     plt.figure()
-    plt.plot(v)
     plt.plot(vsmooth)
+    from prediction import provenance as prov
+    prov.stamp(plt.gca(), .9, .15, __file__)
 
     plt.figure()
-    time = np.true_divide(np.arange(curv.shape[0]), FPS)
+    time = clTime
     plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
     plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
-    plt.xlabel('Time (s) assuming 50 fps')
+    plt.xlabel('Time (s)')
     plt.legend()
 
     comsmooth = gaussian_filter1d(vel, sigma=6, axis=0)
-    plt.figure()
-    time = np.true_divide(np.arange(curv.shape[0]), FPS)
-    plt.plot(time, vsmooth, label= 'phase shift bodylengths/s')
-    plt.plot(time, velo * np.std(vsmooth) / np.std(velo), label='eigenworm velo (rescaled)')
-    plt.plot(time[clIndices], comsmooth*np.std(vsmooth) / np.std(comsmooth), label='center of mass like')
-    plt.xlabel('Time (s) assuming 50 fps')
-    plt.legend()
+    norm_eigvel = velo * np.std(vsmooth) / np.std(velo)
+    norm_com = comsmooth*np.std(vsmooth) / np.std(comsmooth)
 
-    plt.figure()
+    fig, axs = plt.subplots(2,1, constrained_layout=True, figsize=(18,12))
+    time = clTime
+    axs[0].plot(time, vsmooth, label= 'phase shift')
+    axs[0].plot(time, norm_eigvel, label='eigenworm velo (rescaled)')
+    axs[0].plot(time[clIndices], norm_com, label='center of mass like (rescaled)')
+    axs[0].set_xlim([0, np.max(time[clIndices])])
+    axs[0].set_xlabel('Approximate Time (s) assuming 50 fps')
+    axs[0].set_ylabel('Velocity (body lengths / s )')
+    axs[0].legend()
+    secax = axs[0].twiny()
+    secax.set_xlabel('Centerline Frame')
+    mainticks = axs[0].get_xticks()
+    secax.set_xticks(np.interp(mainticks, time[clIndices], clIndices))
+    axs[1].plot(clIndices, np.std([np.squeeze(vsmooth[clIndices]), np.squeeze(norm_com), np.squeeze(norm_eigvel[clIndices])], axis=0))
+    axs[1].set_xlim([0, np.max(clIndices)])
+    axs[1].set_xlabel('Centerline Frame')
+    axs[1].set_ylabel('Standard Deviation')
+    axs[1].set_title('Degree of potential concern')
+
+
+    plt.figure(figsize=(8,18))
     plt.imshow(curv, vmin=-np.percentile(curv,99), vmax=np.percentile(curv,99), aspect='auto')
-
+    plt.ylabel('Centerline Frame')
+    plt.xlabel('Position along Centerlne (<-Head ... Tail->)')
     print("done..")
-    plt.show()
+    # plt.show()
+
+    file = os.path.join(folder, "centerline_velocity_analysis.pdf")
+    print("Beginning to save centerline debugging plots: " + file)
+    import matplotlib.backends.backend_pdf
+    pdf = matplotlib.backends.backend_pdf.PdfPages(file)
+    for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+        pdf.savefig(fig)
+        plt.close(fig)
+    pdf.close()
+    print("Centerline debugging plots saved.")
     return
 
 def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
     # Find the phase shift by shifting in x the the n'th frame and comparing it
-    # to the (n+1)th frame and recording the shift that gets the best fit.
+    # to the (n+1)th frame and recording the shi      ft that gets the best fit.
     #
     # The curvature data is low pass filtered with sigma specified by sigma.
     # Additionally, to filter out noise, the nth frame is averaged with the
@@ -1246,7 +1365,6 @@ def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
     dx = 0 #initial guess for interframe shift
     ps = np.zeros(curvsmooth.shape[0]) #output
     curvaccumulated = np.copy(curvsmooth[0,:])
-    numloops = 0
     for j, newframe in enumerate(curvsmooth):
         res = least_squares(residualFromShift, np.round(dx, decimals=2), bounds=bounds, args=(curvaccumulated, newframe, inds, roi))
         dx = res.x
