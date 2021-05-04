@@ -53,10 +53,10 @@ def getCurvature(centerlines):
     curv= curv * numcurvpts     #To get cuvarture in units of 1/L
     return curv
 
-fold = '/projects/LEIFER/PanNeuronal/decoding_analysis/worm_data/AKS297.51_moving/BrainScanner20200310_142022_MS'
+fold = '/projects/LEIFER/PanNeuronal/decoding_analysis/worm_data/AML32_moving/BrainScanner20200309_151024_MS'
 clFull, clIndices = loadCenterlines(fold, full=True)
 curv = getCurvature(clFull)
 
 plt.figure()
-plt.imshow(curv, vmin=-np.percentile(curv,99), vmax=np.percentile(curv,99), aspect='auto')
+plt.imshow(curv, vmin=-np.percentile(np.abs(curv),99.5), vmax=np.percentile(np.abs(curv),99.5), aspect='auto')
 plt.show()
