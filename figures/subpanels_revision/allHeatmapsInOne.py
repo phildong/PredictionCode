@@ -105,14 +105,17 @@ def main():
             I_smooth = dset['Neurons']['I_smooth']
             I_smooth_interp_crop_noncontig_wnans = np.copy(I_smooth)
             I_smooth_interp_crop_noncontig_wnans[:] = np.nan
+            G = np.copy(I_smooth)
+            G[:] = np.nan
+
 
             valid_map = dset['Neurons']['I_valid_map']
             I_smooth_interp_crop_noncontig_wnans[:, valid_map] = dset['Neurons']['I_smooth_interp_crop_noncontig']
+            G[:, valid_map] = dset['Neurons']['G_smooth_interp_crop_noncontig']
+            import numpy.matlib
+            Gmeansub = G - np.matlib.repmat(np.nanmean(G, axis=1), G.shape[1], 1).T
 
 
-
-
-            Iz = dset['Neurons']['ActivityFull']
             time = dset['Neurons']['I_Time']
 
             # Cluster on Z-scored interpolated data to get indices
@@ -122,6 +125,7 @@ def main():
             idx_clust = np.array(d['leaves'])
 
             prcntile = 99.7
+            prcntile = 99
 
 
             ax = fig.add_subplot(gs[sp_indx, :])
@@ -129,8 +133,10 @@ def main():
             ax.set_title('data[' + key + '][' + idn + ']')
 
             num_Neurons = I_smooth_interp_crop_noncontig_wnans.shape[0]
-            vmin = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1)
-            vmax = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile)
+
+
+            vmax = np.nanpercentile(np.abs(Gmeansub), prcntile)
+            vmin = -vmax
 
             pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans[idx_clust,:], aspect='auto',
                             interpolation='none', vmin=vmin, vmax=vmax,
@@ -138,7 +144,6 @@ def main():
             ax.set_ylim(-.5, num_Neurons+.5)
             ax.set_yticks(np.arange(0, num_Neurons, 25))
             ax.set_xticks(np.arange(0, time[-1], 60))
-            #ax.set_title('I_smooth_interp_crop_noncontig_wnans  (smooth,  interpolated, common noise rejected, w/ large NaNs, mean- and var-preserved, outlier removed, photobleach corrected)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Neuron')
             from matplotlib import ticker
