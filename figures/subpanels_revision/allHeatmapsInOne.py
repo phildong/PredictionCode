@@ -135,9 +135,6 @@ def main():
             num_Neurons = I_smooth_interp_crop_noncontig_wnans.shape[0]
 
 
-            vmin = np.nanpercentile(Gmeansub, 100 - prcntile) #Andy check whether i have the axes right
-            vmax = np.nanpercentile(Gmeansub, prcntile) #andy also i probably have to repmat
-
             vmax = np.nanpercentile(np.abs(Gmeansub), prcntile)
             vmin = -vmax
 
