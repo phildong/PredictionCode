@@ -70,7 +70,7 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
     'normalize': True,
     'parallelize': True,
     'max_depth': 1,
-    'alphas': np.logspace(-2.5, 0.5, 7),
+    'alphas': np.logspace(-3.0, 0.5, 7),
     'l1_ratios': [.001, .003, .01, 0.03, .1],
     'sigma': 14,
     'derivative_weight': 10,
