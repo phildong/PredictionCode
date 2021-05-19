@@ -145,6 +145,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
 	cmsvelocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
+   
 
         phasevelocity = dataSets[key]['Behavior_crop_noncontig']['PhaseShiftVelocity']
         grosscurvature = dataSets[key]['Behavior_crop_noncontig']['Curvature']
@@ -182,5 +183,5 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         data[key] = {'time': time, 'neurons': neurons, 'velocity': velocity, 'cmsvelocity': cmsvelocity, 'curvature': curvature, 'head_bend': phase_interp, 'phase_velocity': phasevelocity, 'gross_curvature': grosscurvature}
 
 import pickle
-with open('neuron_data.dat', 'wb') as handle:
+with open('neuron_data_bothmc_nb.dat', 'wb') as handle:
     pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
