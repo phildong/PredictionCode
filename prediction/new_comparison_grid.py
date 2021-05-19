@@ -20,27 +20,19 @@ for key in data.keys():
     print("Running "+key)
     time = data[key]['time']
     neurons = data[key]['neurons']
-    neurons_ica = data[key]['neurons_ica']
-    velocity = data[key]['velocity']
-    curvature = data[key]['curvature']
-    phasevelocity = data[key]['phase_velocity']
-    grosscurvature = data[key]['gross_curvature']
+    velocity = data[key]['cmsvelocity']
+    curvature = data[key]['gross_curvature']
 
     _, _, nderiv = rectified_derivative(neurons)
     neurons_and_derivs = np.vstack((neurons, nderiv))
-    _, _, nderiv_ica = rectified_derivative(neurons_ica)
-    neurons_and_derivs_ica = np.vstack((neurons_ica, nderiv_ica))
 
     results[key] = {}
     results[key]['velocity'] = {}
     results[key]['curvature'] = {}
-    for ica in [True, False]:
-        for nb in [True, False]:
-            for bsn in [True, False]:
-                print(ica, nb, bsn)
-                neur = neurons_and_derivs_ica if ica else neurons_and_derivs
-                results[key]['velocity'][(ica, nb, bsn)] = SLM.optimize_slm(time, neur, phasevelocity if nb else velocity, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
-                results[key]['curvature'][(ica, nb, bsn)] = SLM.optimize_slm(time, neur, grosscurvature if nb else curvature, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
+    for bsn in [True, False]:
+        results[key]['velocity'][bsn] = SLM.optimize_slm(time, neurons_and_derivs, velocity, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
+        results[key]['curvature'][bsn] = SLM.optimize_slm(time, neurons_and_derivs, curvature, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
+        print(results[key]['velocity'][bsn]['scorespredicted'][1], results[key]['curvature'][bsn]['scorespredicted'][1])
     
 with open('new_comparison_aml18.dat', 'wb') as f:
     pickle.dump(results, f)
