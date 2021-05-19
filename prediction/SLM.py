@@ -85,6 +85,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
     if options['normalize']:
         Xmean = np.mean(Xfullunn, axis = 1)[:, np.newaxis]
         Xstd = np.std(Xfullunn, axis = 1)[:, np.newaxis]
+        Ymean = np.mean(Yfullunn)
+        Ystd = np.std(Yfullunn)
         Xfull = (Xfullunn-Xmean)/Xstd
         Yfull = (Yfullunn-np.mean(Yfullunn))/np.std(Yfullunn)
     else:
@@ -149,6 +151,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(P, f, X, Y)[0,1],
                         'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -199,6 +203,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(P, f, X, Y)[0,1],
                         'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -237,6 +243,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
                         'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -283,6 +291,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
                         'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -340,6 +350,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                 'corr'           : corr_train,
                 'corrpredicted'  : corr_test,
                 'signal'         : Yfull,
+                'signal_mean'    : Ymean,
+                'signal_std'     : Ystd,
                 'output'         : prediction_full,
                 'res_pos'        : res1,
                 'res_neg'        : res2,

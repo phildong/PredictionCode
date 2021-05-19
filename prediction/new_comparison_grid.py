@@ -11,7 +11,7 @@ import matplotlib.backends.backend_pdf
 import os
 import userTracker
 
-with open('neuron_data_bothmc_nb_aml18.dat', 'rb') as f:
+with open('neuron_data_bothmc_nb.dat', 'rb') as f:
     data = pickle.load(f)
     
 results = {}
@@ -34,5 +34,5 @@ for key in data.keys():
         results[key]['curvature'][bsn] = SLM.optimize_slm(time, neurons_and_derivs, curvature, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
         print(results[key]['velocity'][bsn]['scorespredicted'][1], results[key]['curvature'][bsn]['scorespredicted'][1])
     
-with open('new_comparison_aml18.dat', 'wb') as f:
+with open('new_comparison.dat', 'wb') as f:
     pickle.dump(results, f)
