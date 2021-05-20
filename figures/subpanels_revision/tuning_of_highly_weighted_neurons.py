@@ -48,7 +48,8 @@ def get_pval_from_cdf(x,  rhos, cum_prob):
         p = 1 - np.interp(x, rhos, cum_prob)
     if x <= 0:
         p = np.interp(x, rhos, cum_prob)
-    return p
+    min_pval=np.true_divide(1,cum_prob.shape[0]) # we can't claim probability is less than one over the number of shuffles
+    return np.max([p, min_pval])
 
 from scipy.fftpack import fft, ifft
 def phaseScrambleTS(ts):
@@ -123,7 +124,7 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
 def main():
     #behavior = 'curvature'
     behavior = 'velocity'
-    pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+    pickled_data = '/home/sdempsey/new_comparison.dat'
     with open(pickled_data, 'rb') as handle:
         data = pickle.load(handle)
 
@@ -140,6 +141,7 @@ def main():
     deriv_neuron_data = {}
     time_data = {}
     beh_data = {}
+    import os
     for typ_cond in ['AKS297.51_moving']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
@@ -162,9 +164,9 @@ def main():
             time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
             neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
             if behavior == 'velocity':
-                beh = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+                beh = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
             elif behavior == "curvature":
-                beh = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
+                beh = dataSets[key]['Behavior_crop_noncontig']['Curvature']
             else:
                 assert False
 
@@ -191,8 +193,9 @@ def main():
     pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(),'figures','subpanels_revision','generatedFigs', outfilename))
 
     #Sort neurons by abs value weight
-    slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size / 2]
-    slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size / 2:]
+    w = data[key]['velocity'][False]['weights']
+    slm_weights_raw = w[:w.size / 2]
+    slm_weights_raw_deriv = w[w.size / 2:]
     highly_weighted_neurons = np.flipud(np.argsort(np.abs(slm_weights_raw)))
     highly_weighted_neurons_deriv = np.flipud(np.argsort(np.abs(slm_weights_raw_deriv)))
     num_neurons=len(highly_weighted_neurons)
@@ -220,7 +223,7 @@ def main():
 
 
             #Calculate bins for box plot and split data up into subarrays based on bin
-            nbins = 10
+            nbins = 11
             plus_epsilon = 1.00001
             bin_edges = np.linspace(np.nanmin(beh_data[key]) * plus_epsilon, np.nanmax(beh_data[key]) * plus_epsilon, nbins)
             binwidth = np.diff(bin_edges)
@@ -251,6 +254,7 @@ def main():
                         medianprops=medianprops, labels=labels, manage_xticks=False,
                         capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops)
             plt.locator_params(nbins=4)
+            f1_ax1.axhline(linewidth=0.2, color='k')
 
             f1_ax2 = fig1.add_subplot(gs[0,1:], xlabel='time (s)', ylabel='Activity')
             f1_ax2.plot(time_data[key], activity, color=color)

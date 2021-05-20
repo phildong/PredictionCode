@@ -242,7 +242,7 @@ for fig in xrange(1, numFigs): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
-print("Saved.")
+print("Saved.", filename)
 
 
 

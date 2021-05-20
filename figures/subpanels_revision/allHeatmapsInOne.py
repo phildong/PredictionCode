@@ -120,7 +120,10 @@ def main():
 
             # Cluster on Z-scored interpolated data to get indices
             from scipy.cluster.hierarchy import linkage, dendrogram
-            Z = linkage(dset['Neurons']['Activity'])
+            activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+            from scipy import stats
+            zactivity = stats.zscore(activity, axis=1)
+            Z = linkage(zactivity)
             d = dendrogram(Z, no_plot=True)
             idx_clust = np.array(d['leaves'])
 
@@ -167,7 +170,7 @@ def main():
                 ax.set_yticks(yt)
                 ax.set_yticklabels(ytl)
 
-            beh = dset['BehaviorFull']['AngleVelocity']
+            beh = dset['BehaviorFull']['CMSVelocity']
             time = dset['Neurons']['TimeFull']
 
             axbeh = fig.add_subplot(gs[sp_indx,:])
@@ -183,7 +186,7 @@ def main():
             from prediction import provenance as prov
             #prov.stamp(plt.gca(), .9, .15, __file__)
 
-            curv = dset['BehaviorFull']['Eigenworm3']
+            curv = dset['BehaviorFull']['Curvature']
             axbeh = fig.add_subplot(gs[sp_indx,:])
             sp_indx=sp_indx+1
             axbeh.plot(time, curv, linewidth=1.5, color='brown')
@@ -200,12 +203,13 @@ def main():
     plt.tight_layout()
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps_clustered.pdf"))
+    outfile = os.path.join(outputFolder, "heatmaps_clustered.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(outfile)
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
     pdf.close()
-    print("Saved heatmaps.")
+    print("Saved heatmaps.", outfile)
 
 
 
