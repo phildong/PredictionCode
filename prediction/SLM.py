@@ -70,7 +70,7 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
     'normalize': True,
     'parallelize': True,
     'max_depth': 1,
-    'alphas': np.logspace(-2.5, 0.5, 7),
+    'alphas': np.logspace(-3.0, 0.5, 7),
     'l1_ratios': [.001, .003, .01, 0.03, .1],
     'sigma': 14,
     'derivative_weight': 10,
@@ -85,6 +85,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
     if options['normalize']:
         Xmean = np.mean(Xfullunn, axis = 1)[:, np.newaxis]
         Xstd = np.std(Xfullunn, axis = 1)[:, np.newaxis]
+        Ymean = np.mean(Yfullunn)
+        Ystd = np.std(Yfullunn)
         Xfull = (Xfullunn-Xmean)/Xstd
         Yfull = (Yfullunn-np.mean(Yfullunn))/np.std(Yfullunn)
     else:
@@ -149,6 +151,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(P, f, X, Y)[0,1],
                         'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -199,6 +203,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(P, f, X, Y)[0,1],
                         'corrpredicted'  : rho(P, f, Xtest, Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull, P),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -230,13 +236,15 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'error'          : best_neuron_error,
                         'alpha'          : 0,
                         'l1_ratio'       : 0,
-                        'scores'         : scores(best_neuron_params, f, X, Y),
-                        'scorespredicted': scores(best_neuron_params, f, Xtest, Ytest),
+                        'scores'         : scores(best_neuron_params, f, X[best_neuron_idx,:], Y),
+                        'scorespredicted': scores(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest),
                         'score'          : best_neuron_R2,
                         'scorepredicted' : R2(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest, width=options['time_shift']),
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
                         'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -283,6 +291,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                         'corr'           : rho(best_neuron_params, f, X[best_neuron_idx,:], Y)[0,1],
                         'corrpredicted'  : rho(best_neuron_params, f, Xtest[best_neuron_idx,:], Ytest)[0,1],
                         'signal'         : Yfull,
+                        'signal_mean'    : Ymean,
+                        'signal_std'     : Ystd,
                         'output'         : f(Xfull[best_neuron_idx,:], best_neuron_params),
                         'time'           : time,
                         'train_idx'      : train_idx,
@@ -340,6 +350,8 @@ def optimize_slm(time, Xfullunn, Yfullunn, options = None):
                 'corr'           : corr_train,
                 'corrpredicted'  : corr_test,
                 'signal'         : Yfull,
+                'signal_mean'    : Ymean,
+                'signal_std'     : Ystd,
                 'output'         : prediction_full,
                 'res_pos'        : res1,
                 'res_neg'        : res2,
