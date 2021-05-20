@@ -92,20 +92,27 @@ def main():
 
             valid_map = dset['Neurons']['I_valid_map']
             I_smooth_interp_crop_noncontig_wnans[:, valid_map] = dset['Neurons']['I_smooth_interp_crop_noncontig']
+            G = np.copy(I_smooth)
+            G[:] = np.nan
 
 
+            G[:, valid_map] = dset['Neurons']['G_smooth_interp_crop_noncontig']
+            import numpy.matlib
+            Gmeansub = G - np.matlib.repmat(np.nanmean(G, axis=1), G.shape[1], 1).T
 
 
-            Iz = dset['Neurons']['ActivityFull']
             time = dset['Neurons']['I_Time']
 
             # Cluster on Z-scored interpolated data to get indices
             from scipy.cluster.hierarchy import linkage, dendrogram
-            Z = linkage(dset['Neurons']['Activity'])
+            activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+            from scipy import stats
+            zactivity = stats.zscore(activity, axis=1)
+            Z = linkage(zactivity)
             d = dendrogram(Z, no_plot=True)
             idx_clust = np.array(d['leaves'])
 
-            prcntile = 99.7
+            prcntile = 99
             fig = plt.figure(figsize=(18,12), constrained_layout=False)
             import matplotlib.gridspec as gridspec
             gs = gridspec.GridSpec(ncols=1, nrows=3, figure=fig, height_ratios=[2, .7, .7], width_ratios=[5])
@@ -113,8 +120,8 @@ def main():
 
             ax = fig.add_subplot(gs[0, :])
             num_Neurons = I_smooth_interp_crop_noncontig_wnans.shape[0]
-            vmin = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans,0.1)
-            vmax = np.nanpercentile(I_smooth_interp_crop_noncontig_wnans.flatten(), prcntile)
+            vmax = np.nanpercentile(np.abs(Gmeansub), prcntile)
+            vmin = -vmax
 
             pos = ax.imshow(I_smooth_interp_crop_noncontig_wnans[idx_clust,:], aspect='auto',
                             interpolation='none', vmin=vmin, vmax=vmax,
@@ -146,7 +153,7 @@ def main():
                 ax.set_yticks(yt)
                 ax.set_yticklabels(ytl)
 
-            beh = dset['BehaviorFull']['AngleVelocity']
+            beh = dset['BehaviorFull']['CMSVelocity']
             time = dset['Neurons']['TimeFull']
 
             axbeh = fig.add_subplot(gs[1,:])
@@ -157,32 +164,35 @@ def main():
 
             axbeh.set_title('Velocity')
             axbeh.set_xlabel('Time (s)')
-            axbeh.set_ylabel('Body Bend Velocity (radians per second)')
+            axbeh.set_ylabel(r'$v$ (mm s$^{-1}$)')
             from prediction import provenance as prov
             prov.stamp(plt.gca(), .9, .15, __file__)
 
-            curv = dset['BehaviorFull']['Eigenworm3']
+            curv = dset['BehaviorFull']['Curvature']
             axbeh = fig.add_subplot(gs[2,:])
             axbeh.plot(time, curv, linewidth=1.5, color='brown')
             fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=.5, color='k')
+            axbeh.set_yticks([-2*np.pi, 0, 2*np.pi])
+            axbeh.set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
             axbeh.set_xlim(ax.get_xlim())
 
-            axbeh.set_title('Velocity')
+            axbeh.set_title('Curvature')
             axbeh.set_xlabel('Time (s)')
-            axbeh.set_ylabel('Curvature (arb units)')
+            axbeh.set_ylabel('$\kappa$ \n (rad bodylength$^{-1}$)')
             from prediction import provenance as prov
             prov.stamp(plt.gca(), .9, .15, __file__)
 
 
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps_clustered.pdf"))
+    filename = os.path.join(outputFolder, "heatmaps_clustered.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
     pdf.close()
-    print("Saved heatmaps.")
+    print("Saved heatmaps.", filename)
 
 
 

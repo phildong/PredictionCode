@@ -127,7 +127,6 @@ def main():
             d = dendrogram(Z, no_plot=True)
             idx_clust = np.array(d['leaves'])
 
-            prcntile = 99.7
             prcntile = 99
 
 
