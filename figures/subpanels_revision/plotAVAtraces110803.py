@@ -58,9 +58,8 @@ dset = data[key]['input'][idn]
 activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
 time = dset['Neurons']['I_Time_crop_noncontig']
 numNeurons = activity.shape[0]
-vel = dset['Behavior_crop_noncontig']['AngleVelocity']
 comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
-curv = dset['Behavior_crop_noncontig']['Eigenworm3']
+curv = dset['Behavior_crop_noncontig']['Curvature']
 
 
 
@@ -91,15 +90,13 @@ if False:
     plt.figure(figsize=[10,10])
     plt.plot(vel, comVel)
 
-UseEigVol = True
+UseEigVol = False
 if UseEigVol:
     velName = 'Eigenworm Velocity'
     velocity = vel
 else:
     velName = 'COM Velocity'
     velocity = comVel
-
-
 
 
 from prediction.Classifier import rectified_derivative

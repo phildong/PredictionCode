@@ -71,9 +71,10 @@ for  key, idn, neuron in itertools.izip(keys, idns, neurons):
     time = dset['Neurons']['I_Time_crop_noncontig']
 
     numNeurons = activity.shape[0]
-    vel = dset['Behavior_crop_noncontig']['AngleVelocity']
     comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
-    curv = dset['Behavior_crop_noncontig']['Eigenworm3']
+    vel = comVel
+    curv = dset['Behavior_crop_noncontig']['Curvature']
+    psvel = dset['Behavior_crop_noncontig']['PhaseShiftVelocity']
 
     from scipy import stats
     z_activity = np.append(z_activity, stats.zscore(activity[neuron]))
@@ -112,7 +113,7 @@ print("plotting aggregate figure")
 import matplotlib.pyplot as plt
 
 # Calculate bins for box plot and split data up into subarrays based on bin
-nbins = 10
+nbins = 13
 plus_epsilon = 1.00001
 bin_edges = np.linspace(np.nanmin(vel_bucket) * plus_epsilon, np.nanmax(vel_bucket) * plus_epsilon, nbins)
 binwidth = np.diff(bin_edges)
@@ -146,9 +147,9 @@ plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwid
                medianprops=medianprops, labels=labels, manage_xticks=False,
                capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops, zorder=20)
 plt.locator_params(nbins=5)
-
-plt.xlim([-2.1, 3])
-plt.xlabel('Body bend velocity (rad/s)')
+plt.axhline(color='k', linewidth=.5)
+plt.xlim([-.2, 0.3])
+plt.xlabel('v (mm^-1 s)')
 plt.ylabel('AVA activity (z-score(' + type + '))')
 plt.legend()
 plt.show()
