@@ -205,20 +205,35 @@ def main():
     activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
     rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf)
 
+    #Make plot to populate with cumulative distribution function of rho
+    fig_cdf = plt.figure()
+    ax_cdf = fig_cdf.add_subplot(111)
+
+
+    #Main Loop Through all neurons
     for type in ['F', 'dF/dt']:
+        rho = np.zeros(num_neurons)
+        pval = np.zeros(num_neurons)
+        relevant_weighted_neurons = np.nan
+
         for rank in np.arange(num_neurons):
             if type == 'F':
-                neuron = highly_weighted_neurons[rank]
+                relevant_weighted_neurons = highly_weighted_neurons
+                neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw[neuron]
                 activity = neuron_data[key][neuron]
                 color = u'#1f77b4'
+
             elif type == 'dF/dt':
-                neuron = highly_weighted_neurons_deriv[rank]
+                relevant_weighted_neurons = highly_weighted_neurons_deriv
+                neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw_deriv[neuron]
                 activity = deriv_neuron_data[key][neuron]
                 color = u'#ff7f0e'
             else:
                 assert False
+
+
 
 
 
@@ -232,14 +247,14 @@ def main():
             for k, each in enumerate(np.unique(assigned_bin)):
                 activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
-            rho=nancorrcoef(beh_data[key], activity)[0,1]
-            pval = get_pval_from_cdf(rho, rhos, cum_prob)
+            rho[rank] = nancorrcoef(beh_data[key], activity)[0,1]
+            pval[rank] = get_pval_from_cdf(rho[rank], rhos, cum_prob)
             fig1 = plt.figure(constrained_layout=True, figsize=[10, 5.3])
             gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
             plt.rc('xtick', labelsize=17)
             plt.rc('ytick', labelsize=17)
 
-            ax_blank=fig1.add_subplot(gs[1,0], title=key + '  ' + type + '\n Neuron: %d,\n Weight Rank: %d, Weight = %.4f\n rho= %.2f, p=%.2E' % (neuron, rank, weight, rho, pval))
+            ax_blank=fig1.add_subplot(gs[1,0], title=key + '  ' + type + '\n Neuron: %d,\n Weight Rank: %d, Weight = %.4f\n rho= %.2f, p=%.2E' % (neuron, rank, weight, rho[rank], pval[rank]))
 
             #Generate scatter plot and then box plot
             f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + type + ')')
@@ -248,13 +263,15 @@ def main():
             capprops = dict(linewidth=.5)
             whiskerprops = dict(linewidth=.5)
             flierprops = dict(linewidth=.2, markersize=1, marker='+')
-            medianprops = dict(linewidth=2, color='#67eb34')
+            medianprops = dict(linewidth=2, color='k')#color='#67eb34')
             labels = [''] * len(activity_bin)
             f1_ax1.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
                         medianprops=medianprops, labels=labels, manage_xticks=False,
                         capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops)
             plt.locator_params(nbins=4)
-            f1_ax1.axhline(linewidth=0.2, color='k')
+            f1_ax1.axhline(linewidth=0.5, color='k')
+            f1_ax1.tick_params(axis="x", labelsize=8)
+            f1_ax1.tick_params(axis="y", labelsize=8)
 
             f1_ax2 = fig1.add_subplot(gs[0,1:], xlabel='time (s)', ylabel='Activity')
             f1_ax2.plot(time_data[key], activity, color=color)
@@ -267,6 +284,30 @@ def main():
             prov.stamp(f1_ax3, .55, .35, __file__ + '\n' + pickled_data)
             pdf.savefig(fig1)
 
+        #Plot summary of rho vs pvalue
+        fig_sum = plt.figure(constrained_layout=True, figsize=[14, 5])
+        ax = fig_sum.add_subplot(111)
+        ax.plot(rho,pval,'o', color=color)
+        ax.set_title(type)
+        ax.set_ylabel('p value')
+        ax.set_xlabel(r'$\rho$')
+        ax.set_yscale('log')
+        ax.set_xlim(left=-.75,right=.75)
+        ax.axhline(np.true_divide(0.05,2*num_neurons), linestyle='--',color='red', linewidth=1)
+        pdf.savefig(fig_sum)
+        for i in np.arange(rho.shape[0]):
+            ax.annotate(str(relevant_weighted_neurons[i]), (rho[i], pval[i] * (1+np.random.lognormal(.001))))
+        pdf.savefig(fig_sum)
+        fig_sum.clf()
+
+        #Calculate and Plot CDF of rho
+        cum_dist = np.argsort(np.abs(rho))
+        ax_cdf.plot(np.abs(rho[cum_dist]), np.true_divide(np.arange(rho.shape[0]),rho.shape[0]), color=color, label=type)
+        ax_cdf.set_ylabel('CDF')
+        ax_cdf.set_xlabel(r'$|\rho|$')
+
+
+    pdf.savefig(fig_cdf)
     pdf.close()
     print("wrote " + outfilename)
     pass

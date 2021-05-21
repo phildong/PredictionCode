@@ -112,6 +112,13 @@ def main():
             d = dendrogram(Z, no_plot=True)
             idx_clust = np.array(d['leaves'])
 
+            #Write out a CSV file with mapping from neuron index to clustered neuron index
+            csv_out = os.path.join(outputFolder,  idn + 'indices.csv')
+            import pandas as pd
+            df = pd.DataFrame(idx_clust)
+            df.to_csv(csv_out, index=True, header='clustered index')
+            print('generated', csv_out)
+
             prcntile = 99
             fig = plt.figure(figsize=(18,12), constrained_layout=False)
             import matplotlib.gridspec as gridspec
