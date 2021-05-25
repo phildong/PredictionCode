@@ -5,7 +5,7 @@ from matplotlib import gridspec
 import matplotlib.backends.backend_pdf
 import prediction.userTracker as userTracker
 import prediction.provenance as prov
-behavior = 'velocity'
+behavior = 'curvature'
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving']#, 'AML32_moving']
 outfilename = 'figures/subpanels_revision/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
@@ -118,14 +118,19 @@ for i, key in enumerate(keys):
         range_covered_test[model, i] = frac_range_covered(beh[res['test_idx']], pred[res['test_idx']])
 
         #Plot the time series of the prediction and true
+        if behavior is 'curvature':
+            measured_color='#C1804A'
         ts[model] = fig.add_subplot(gs[model, :], sharex=ts[0], sharey=ts[0])
-        ts[model].plot(res['time'], beh, 'k', lw=1.5)
+        ts[model].plot(res['time'], beh, 'k', color=measured_color, lw=1.5)
         ts[model].plot(res['time'], pred, color=pred_color, lw=1.5)
         ts[model].set_xlabel('Time (s)')
         ts[model].set_ylabel(behavior)
         ts[model].fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(beh), np.max(beh), facecolor=test_color, alpha=.05)
         ts[model].set_xticks(np.arange(0, res['time'][-1], 60))
         ts[model].axhline(linewidth=0.5, color='k')
+        if behavior is 'curvature':
+            ts[model].set_yticks([-2*np.pi, 0, 2*np.pi])
+            ts[model].set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
 
         # plot scatter of prediction vs true
         sc[model] = fig2.add_subplot(gs2[0, model], xlabel='Measured '+ behavior, ylabel='Predicted '+ behavior,  sharex=sc[0], sharey=sc[0])
@@ -135,6 +140,11 @@ for i, key in enumerate(keys):
         sc[model].set_title(figtype + r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % rho2_adj[model, i])
         sc[model].legend()
         sc[model].set_aspect('equal', adjustable='box')
+        if behavior is 'curvature':
+            sc[model].set_yticks([-2*np.pi, 0, 2*np.pi])
+            sc[model].set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
+            sc[model].set_xticks([-2*np.pi, 0, 2*np.pi])
+            sc[model].set_xticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
 
         #plot histogram of predicted and true values for held-out test set
         low_lim = -4
