@@ -122,8 +122,8 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
 
 
 def main():
-    #behavior = 'curvature'
-    behavior = 'velocity'
+    behavior = 'curvature'
+    #behavior = 'velocity'
     pickled_data = '/home/sdempsey/new_comparison.dat'
     with open(pickled_data, 'rb') as handle:
         data = pickle.load(handle)

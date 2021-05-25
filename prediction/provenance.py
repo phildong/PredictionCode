@@ -10,22 +10,29 @@ leifer@princeton.edu
 
 import git
 
+def collectGitInfo():
+    import git
+    repo = git.Repo(search_parent_directories=True)
+    from datetime import datetime
+
+    info = dict(
+        hash=str(repo.head.object.hexsha),
+        gitpath=repo._working_tree_dir,
+        giturl=repo.remotes.origin.url,
+        gitbranch=str(repo.active_branch),
+        timestamp=str(datetime.today().strftime('%Y-%m-%d %H:%M'))
+    )
+    return info
+
+
 def getStampString():
     """
-
     :return: string with date, time, hash, url and path of current code
     """
     ## Stamp with code version and date info
-    import git
-    repo = git.Repo(search_parent_directories=True)
-    hash = repo.head.object.hexsha
-    gitpath = repoPath = repo._working_tree_dir
-    giturl = repo.remotes.origin.url
-    gitbranch = repo.active_branch
-    from datetime import datetime
-    timestamp = datetime.today().strftime('%Y-%m-%d %H:%M')
+    info = collectGitInfo()
+    return info['timestamp'] + '\n' + info['hash'] + '\n' + info['giturl'] + '\n' + info['gitpath'] + '\nBranch: ' + info['gitbranch']
 
-    return str(timestamp + '\n' + str(hash) + '\n' + giturl + '\n' + gitpath + '\nBranch: ' + str(gitbranch))
 
 import matplotlib.pyplot as plt
 
@@ -47,3 +54,13 @@ def stamp(ax=plt.gca(), x =.1, y =.5,  notes=''):
     except:
         ax.text2D(x, y, getStampString()+'\n'+notes, transform=ax.transAxes, fontsize=8, verticalalignment='top', bbox=props)
 
+
+def pdf_metadata(notes=''):
+    #For example:
+    # plt.savefig(file2,backend='pdf', bbox_inches="tight", format='pdf', metadata=prov.pdf_metadata(__file__))
+    info = collectGitInfo()
+    metadata = dict(
+        Author = info['giturl'] + ' '  + info['hash']  + ' ' + info['gitbranch'],
+        Subject = notes,
+    )
+    return metadata

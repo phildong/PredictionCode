@@ -14,7 +14,7 @@ print("Loading data..")
 codePath = userTracker.codePath()
 outputFolder = os.path.join(codePath,'figures/Debugging')
 
-DERIV = False
+DERIV = True
 
 data = {}
 for typ in ['AKS297.51']:
@@ -141,7 +141,7 @@ boxprops = dict(linewidth=.5)
 capprops = dict(linewidth=.5)
 whiskerprops = dict(linewidth=.5)
 flierprops = dict(linewidth=.2, markersize=1, marker='+')
-medianprops = dict(linewidth=2, color='#67eb34')
+medianprops = dict(linewidth=2, color='k')#'#67eb34')
 labels = [''] * len(activity_bin)
 plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
                medianprops=medianprops, labels=labels, manage_xticks=False,
@@ -149,7 +149,7 @@ plt.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwid
 plt.locator_params(nbins=5)
 plt.axhline(color='k', linewidth=.5)
 plt.xlim([-.2, 0.3])
-plt.xlabel('v (mm^-1 s)')
+plt.xlabel('velocity (mm^-1 s)')
 plt.ylabel('AVA activity (z-score(' + type + '))')
 plt.legend()
 plt.show()

@@ -215,6 +215,8 @@ for neuron in np.array([AVAR, AVAL]): #np.arange(numNeurons):
 
     ax[4].plot(time, curv)
     ax[4].set_ylabel('Curvature')
+    ax[4].set_yticks([-2 * np.pi, 0, 2 * np.pi])
+    ax[4].set_yticklabels([r'$-2\pi$', '0', r'$2\pi$'])
     ax[4].set_xlabel('Time (s)')
     ax[4].axhline(linewidth=0.5, color='k')
 

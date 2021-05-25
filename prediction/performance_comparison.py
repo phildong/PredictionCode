@@ -2,15 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 behavior= 'curvature'
-outfile = 'performance_comparison_deriv_rho21_' + behavior + '_l10.pdf'
+outfile = '../figures/subpanels_revision/generatedFigs/fig3_performance_comparison_' + behavior + '.pdf'
 
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+#pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+pickled_data = '/home/sdempsey/new_comparison.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
 SHOW_GFP = True
 if SHOW_GFP:
-    pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_' + behavior + '_l10.dat'
+    #pickled_data_GFP = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_aml18_' + behavior + '_l10.dat'
+    pickled_data_GFP = '/home/sdempsey/new_comparison_aml18.dat'
     with open(pickled_data_GFP, 'rb') as handle:
         dataGFP = pickle.load(handle)
 
@@ -20,13 +22,20 @@ offset = .7
 ax.set_xticks([0-delta, 1+delta, offset+2-delta, offset+3+delta])
 ax.set_xticklabels(['BSN', 'Population', 'BSN (GFP control)', 'Population (GFP control)'])
 ax.set_ylabel(r'$\rho^2_{\mathrm{adj},\mathrm{test}}$', fontsize=20)
-ax.set_ylim(-0.5, 1)
+ax.set_ylim(-0.75, 1)
 ax.set_yticks([ -.5,  0,  .5,  1])
 ax.tick_params(axis='both', which='major', labelsize=19)
 
-def calc_rho2_adj2(data, key, type='slm_with_derivs'):
+def calc_rho2_adj2(data, key, behavior, type='slm_with_derivs'):
+    if type is 'slm_with_derivs':
+        type = False
+    elif type is 'bsn_deriv':
+        type = True
+    else:
+        assert False
+
     # Calculate rho2adj  (code snippet from comparison_grid_display.py)
-    res = data[key][type]
+    res = data[key][behavior][type]
     y = res['signal'][res['test_idx']]
     yhat = res['output'][res['test_idx']]
 
@@ -49,8 +58,8 @@ medianprops = dict(linewidth=6, color='k')
 bsn_rho=np.zeros(len(data.keys()))
 slm_rho=np.zeros(len(data.keys()))
 for k, key in enumerate(data.keys()): #Comparison line plot
-    bsn_rho[k] = calc_rho2_adj2(data, key, 'bsn_deriv')
-    slm_rho[k] = calc_rho2_adj2(data, key, 'slm_with_derivs')
+    bsn_rho[k] = calc_rho2_adj2(data, key, behavior, type='bsn_deriv')
+    slm_rho[k] = calc_rho2_adj2(data, key, behavior, type='slm_with_derivs')
     ax.plot([0, 1], [bsn_rho[k], slm_rho[k]], markersize=5, linewidth=2.5)
 ax.boxplot([bsn_rho, slm_rho], positions=[0-delta, 1+delta],
            manage_xticks=False, medianprops=medianprops,
@@ -64,8 +73,8 @@ if SHOW_GFP:
     print("GFP:")
     cmap = plt.cm.get_cmap('gist_earth')
     for k, key in enumerate(dataGFP.keys()):
-        bsn_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'bsn_deriv')
-        slm_rho_g[k] = calc_rho2_adj2(dataGFP, key, 'slm_with_derivs')
+        bsn_rho_g[k] = calc_rho2_adj2(dataGFP, key, behavior, type='bsn_deriv')
+        slm_rho_g[k] = calc_rho2_adj2(dataGFP, key, behavior, type='slm_with_derivs')
         thiscolor = cmap(.1+.8*np.true_divide(k,len(dataGFP.keys())))
         ax.plot(offset+np.array([2, 3]), [bsn_rho_g[k], slm_rho_g[k]], markersize=5, linewidth=2.5, color=thiscolor)
     ax.boxplot([bsn_rho_g, slm_rho_g], positions=offset+np.array([2-delta, 3+delta]),
@@ -74,10 +83,10 @@ if SHOW_GFP:
     print("Total GFP datasets:")
     print(k+1)
 
-#import prediction.provenance as prov
+import prediction.provenance as prov
 #prov.stamp(ax,.55,.35,__file__)
 ax.set_title(outfile)
-fig.savefig(outfile)
+fig.savefig(outfile, backend='pdf', format='pdf', metadata=prov.pdf_metadata(__file__))
 print(outfile)
 
 from scipy.stats import wilcoxon
