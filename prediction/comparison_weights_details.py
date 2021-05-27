@@ -11,8 +11,8 @@ import prediction.provenance as prov
 
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving', 'AML32_moving']
-behavior = 'curvature' #'velocity' #'curvature'
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+behavior = 'velocity' #'velocity' #'curvature'
+pickled_data = '/home/sdempsey/new_comparison.dat' #'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
 
@@ -138,13 +138,24 @@ keys.sort()
 figtypes = ['bsn_deriv', 'slm_with_derivs']
 
 import os
-outfilename = os.path.splitext(os.path.basename(pickled_data))[0] + '_weights.pdf'
+outfilename = os.path.splitext(os.path.basename(pickled_data))[0] + '_'+ behavior + '_weights.pdf'
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename), metadata=prov.pdf_metadata(__file__))
 
-def calc_rho2_adj1(data, key, type='slm_with_derivs'):
-    # Calculate rho2adj  (code snippet from comparison_grid_display.py)
-    res = data[key][type]
+def  type_helper(in_type):
+    if in_type is 'slm_with_derivs':
+        return False
+    elif in_type is 'bsn_deriv':
+        return True
+    else:
+        assert False
+    return
+
+def calc_rho2_adj(data, key, behavior, type='slm_with_derivs'):
+    type = type_helper(type)
+
+    # Calculate rho2adj  (code snippet from com ison_grid_display.py)
+    res = data[key][behavior][type]
     y = res['signal'][res['test_idx']]
     yhat = res['output'][res['test_idx']]
 
@@ -154,8 +165,10 @@ def calc_rho2_adj1(data, key, type='slm_with_derivs'):
 
     truesigma = np.std(y)
     predsigma = np.std(yhat)
-    rho2_adj_1 = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
-    return rho2_adj_1
+    rho2_adj = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
+    print(key + ': %.2f' % rho2_adj)
+    return rho2_adj
+
 
 
 Frac_dFdt = np.zeros(len(keys))
@@ -166,8 +179,8 @@ for i, key in enumerate(keys):
     gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
 
     for row, figtype in enumerate(figtypes):
-        rho2_adj1[row, i] = calc_rho2_adj1(data, key, figtype)
-        res = data[key][figtype]
+        rho2_adj1[row, i] = calc_rho2_adj(data, key, behavior, figtype)
+        res = data[key][behavior][type_helper(figtype)]
 
         ts = fig.add_subplot(gs[row, 0])
         ts.plot(res['time'], res['signal'], 'k', lw=1)
@@ -190,10 +203,10 @@ for i, key in enumerate(keys):
     fig2 = plt.figure(figsize=[7,7])
     ax2 = fig2.add_subplot(111, xlabel=r'$\rho$', ylabel='Weight')
 
-    slm_weights_raw = data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size/2]
-    slm_weights_raw_deriv = data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size/2:]
-    correlations = [np.corrcoef(x, data[key]['slm_with_derivs']['signal'])[0,1] for x in neuron_data[key]]
-    deriv_correlations = [np.corrcoef(x, data[key]['slm_with_derivs']['signal'])[0,1] for x in deriv_neuron_data[key]]
+    slm_weights_raw = data[key][behavior][type_helper('slm_with_derivs')]['weights'][:data[key][behavior][type_helper('slm_with_derivs')]['weights'].size/2]
+    slm_weights_raw_deriv = data[key][behavior][type_helper('slm_with_derivs')]['weights'][data[key][behavior][type_helper('slm_with_derivs')]['weights'].size/2:]
+    correlations = [np.corrcoef(x, data[key][behavior][type_helper('slm_with_derivs')]['signal'])[0,1] for x in neuron_data[key]]
+    deriv_correlations = [np.corrcoef(x, data[key][behavior][type_helper('slm_with_derivs')]['signal'])[0,1] for x in deriv_neuron_data[key]]
 
     Frac_dFdt[i] = np.sum(np.abs(slm_weights_raw_deriv)) /  (np.sum( np.abs(slm_weights_raw)) + np.sum(np.abs(slm_weights_raw_deriv) ))
 
@@ -244,8 +257,9 @@ for i, key in enumerate(keys):
     h.scatter(slm_weights_raw, slm_weights_raw_deriv, color='black')
     h.axhline(color='black')
     h.axvline(color='black')
-    h.set_xlim(-largest_weight, largest_weight)
-    h.set_ylim(-largest_weight, largest_weight)
+    win_scalar=1.05
+    h.set_xlim(-largest_weight*win_scalar, largest_weight*win_scalar)
+    h.set_ylim(-largest_weight*win_scalar, largest_weight*win_scalar)
     #prov.stamp(ax2, .55, .35, __file__ + '\n' + pickled_data)
     pdf.savefig(f)
 
