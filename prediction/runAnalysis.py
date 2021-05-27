@@ -42,20 +42,13 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
 
     #original data parameters
-    dataPars = {'medianWindow':50,  # smooth eigenworms with gauss filter of that size, must be odd
-            'gaussWindow':100,  # gauss window for angle velocity derivative. Acts on full (50Hz) data
-            'rotate':False,  # rotate Eigenworms using previously calculated rotation matrix
-            'windowGCamp': 6,  # gauss window for red and green channel
-            'interpolateNans': 6,  #interpolate gaps smaller than this of nan values in calcium data
-            'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
-               }
 
 
 # data parameters
     dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
             'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
             'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
-            'windowGCamp': 3,  # gauss window for red and green channel
+            'windowGCamp': 5,  # gauss window for red and green channel
             'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
@@ -97,15 +90,11 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     #
     ##############################################
     createIndicesTest = 1#True
-    periodogram = 0
-    half_period = 0
     hierclust = 0
-    bta = 0
     pca = 1#False
     kato_pca = 0#False
     half_pca = 0
     corr = 1
-    predNeur = 0
     predPCA = 0
     svm = 0
     lasso = 0
@@ -115,8 +104,6 @@ def actuallyRun(typ='AML32', condition = 'moving'):
     lagregression = 0
     # this requires moving animals
     if condition != 'immobilized':
-        predNeur = 0 #moniika had this at 1, but i'm setting it to zero
-        svm = 0
         lasso = 0
         elasticnet = 0 #Normally True, but turning off because Ross now runs this seperately Aug 2020
         slm = 0 #Normally True, but turning off because Ross now runs this seperately Aug 2020
@@ -156,23 +143,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
         print "Done generating trainingsets"
 
-    ###############################################
-    #
-    # calculate the periodogram of the neural signals
-    #
-    ##############################################
-    if periodogram:
-        print 'running periodogram(s)'
-        raise RuntimeError("Periodogram routines were called, but these have not been updated to use the latest activity traces.")
-        for kindex, key in enumerate(keyList):
-            resultDict[key]['Period'] = dr.runPeriodogram(dataSets[key], pars, testset = None)
-    # for half the sample each
-    if half_period:
-        print 'running half periodogram(s)'
-        for kindex, key in enumerate(keyList):
-            splits = resultDict[key]['Training']
-            resultDict[key]['Period1Half'] = dr.runPeriodogram(dataSets[key], pars, testset = splits[behaviors[0]]['Train'])
-            resultDict[key]['Period2Half'] = dr.runPeriodogram(dataSets[key], pars, testset = splits[behaviors[0]]['Test'])
+
 
     ###############################################
     #
@@ -186,18 +157,6 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             #half1 =  resultDict[key]['Training'][behaviors[0]]['Train']
             #resultDict[key]['CorrelationHalf'] = dr.behaviorCorrelations(dataSets[key], behaviors, subset = half1)
 
-    ###############################################
-    #
-    # run svm to predict discrete behaviors
-    #
-    ##############################################
-    #TODO: Remove SVM entirely from codebase
-    if svm:
-        for kindex, key in enumerate(keyList):
-            print 'running SVM.'
-            raise RuntimeError("SVM was called. but this have not been updated to use the latest activity traces.")
-            splits = resultDict[key]['Training']
-            resultDict[key]['SVM'] = dr.discreteBehaviorPrediction(dataSets[key], pars, splits )
 
     ###############################################
     #
@@ -214,40 +173,8 @@ def actuallyRun(typ='AML32', condition = 'moving'):
 
             #correlate behavior and PCA
             #resultDict[key]['PCACorrelation']=dr.PCACorrelations(dataSets[key],resultDict[key], behaviors, flag = 'PCA', subset = None)
-    ###############################################
-    #
-    # run Kato PCA
-    #
-    ##############################################
-    #%%
-    if kato_pca:
-        raise RuntimeError("running Kato style PCA is no longer supported.")
-        # TODO: LOW PRIORITY Remove Kato PCA entirely from codebase
-        print 'running Kato et. al PCA'
-        for kindex, key in enumerate(keyList):
-            resultDict[key]['katoPCA'] = dr.runPCANormal(dataSets[key], pars, deriv = True)
-            splits = resultDict[key]['Training']
-            resultDict[key]['katoPCAHalf1'] = dr.runPCANormal(dataSets[key], pars, whichPC=0, testset = splits['Half']['Train'], deriv=True)
 
-            resultDict[key]['katoPCAHalf2'] = dr.runPCANormal(dataSets[key], pars, whichPC=0, testset = splits['Half']['Test'], deriv=True)
-
-    ###############################################
-    #
-    # run split first-second half PCA
-    #
-    ##############################################
-    #%%
-    if half_pca:
-        raise RuntimeError("running half-split PCA is no longer supported.")
-        # TODO: LOW PRIORITY Remove half-PCA entirely from codebase
-        print 'half-split PCA'
-        for kindex, key in enumerate(keyList):
-            # run PCA on each half
-            splits = resultDict[key]['Training']
-            resultDict[key]['PCAHalf1'] = dr.runPCANormal(dataSets[key], pars, whichPC=0, testset = splits['Half']['Train'])
-            resultDict[key]['PCAHalf2'] = dr.runPCANormal(dataSets[key], pars, whichPC=0, testset =splits['Half']['Test'])
-            resultDict[key]['PCArankCorr'] = dr.rankCorrPCA(resultDict[key])
-    #%%
+     #%%
     ###############################################
     #
     # predict behavior from PCA
@@ -260,19 +187,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             resultDict[key]['PCAPred'] = dr.predictBehaviorFromPCA(dataSets[key], \
                         splits, pars, behaviors)
     #%%
-    ###############################################
-    #
-    # predict neural dynamics from behavior
-    #
-    ##############################################
-    if predNeur:
-        for kindex, key in enumerate(keyList):
-            raise RuntimeError("predicting neural dynamics from beahvior is no longer supported.")
-            print 'predicting neural dynamics from behavior'
-            splits = resultDict[key]['Training']
-            resultDict[key]['RevPred'] = dr.predictNeuralDynamicsfromBehavior(dataSets[key], splits, pars)
-        plt.show()
-    #%%
+
     ###############################################
     #
     # use agglomerative clustering to connect similar neurons
@@ -284,18 +199,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             print 'running clustering'
             resultDict[key]['clust'] = dr.runHierarchicalClustering(dataSets[key], pars)
     #%%
-    ###############################################
-    #
-    # use behavior triggered averaging to create non-othogonal axes
-    #
-    ##############################################
-    if bta:
-        raise RuntimeError("BTA is no longer supported.")
-        # TODO: LOW PRIORITY Remove BTA from codebase
-        for kindex, key in enumerate(keyList):
-            print 'running BTA'
-            resultDict[key]['BTA'] =dr.runBehaviorTriggeredAverage(dataSets[key], pars)
-    #%%
+
     ###############################################
     #
     # linear regression using LASSO
@@ -348,48 +252,7 @@ def actuallyRun(typ='AML32', condition = 'moving'):
             subset['Eigenworm3'] = np.where(np.abs(resultDict[key]['ElasticNet']['AngleVelocity']['weights'])>0)[0]
             resultDict[key]['ConversePredictionEN'] = dr.runLinearModel(dataSets[key], resultDict[key], pars, splits, plot = False, behaviors = ['AngleVelocity', 'Eigenworm3'], fitmethod = 'ElasticNet', subset = subset)
 
-            # run scrambled control
-            #print 'Running Elastic Net scrambled'
-            #resultDict[key]['ElasticNetRandomized'] = dr.runElasticNet(dataSets[key], pars,splits, plot=0, behaviors = behaviors, scramble=True)
 
-    # ANDY COMMENTED THIS OUT BECAUSE as of Aug 2020 Ross Now runs the SLM seperately.
-    # #%%
-    # ###############################################
-    # #
-    # # linear regression using SLM.py
-    # #
-    # ##############################################
-    # if slm:
-    #     for kindex, key in enumerate(keyList):
-    #         print 'Running SLM',  key
-    #
-    #         splits = resultDict[key]['Training']
-    #
-    #         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
-    #         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-    #         velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
-    #         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
-    #
-    #         resultDict[key]['SLM'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature)}
-    #
-    # #%%
-    # ###############################################
-    # #
-    # # linear regression using SLM.py with decision shrub
-    # #
-    # ##############################################
-    # if slm_shrub:
-    #     for kindex, key in enumerate(keyList):
-    #         print 'Running SLM_shrub',  key
-    #
-    #         splits = resultDict[key]['Training']
-    #
-    #         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
-    #         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
-    #         velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
-    #         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
-    #
-    #         resultDict[key]['SLM_shrub'] = {'AngleVelocity': SLM.optimize_slm(time, neurons, velocity, options={'decision_tree': True}), 'Eigenworm3': SLM.optimize_slm(time, neurons, curvature, options={'decision_tree': True})}
 
 
 

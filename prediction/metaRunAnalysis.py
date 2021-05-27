@@ -18,7 +18,7 @@ analysis.actuallyRun('AML18','moving')
 #     analysis.actuallyRun('AML70','moving')
 #     analysis.actuallyRun('AML175','moving')
 
-# analysis.actuallyRun('AML32','chip')
+analysis.actuallyRun('AML32','chip')
 #     analysis.actuallyRun('Special','transition') #Note these are identicail..
 #                                                 # I copied and pasted the input files..
 #     analysis.actuallyRun('AML70','chip')

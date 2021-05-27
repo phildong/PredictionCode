@@ -80,61 +80,7 @@ def recrWorm(av, turns, thetaTrue, r, show = 0):
     y = -sign*np.sqrt(r-x**2)
     return x,y, turns
 
-def deconvolveCalcium(Y, show=False):
-    """deconvolve with GCamp6s response digitized from Nature volume 499, pages 295–300 (18 July 2013)
-        doi:10.1038/nature12354"""
-    # fit function -- fitted with least squares from digitized data
-    pars =  [ 0.38036106 , 0.00565365 , 1.00621729 , 0.31627363 ]
-    def fitfunc(x,A,m, tau1, s):
-        return A*erf((x-m)/s)*np.exp(-x/tau1)
-    gcampXN = np.linspace(0,Y.shape[1]/6., Y.shape[1])
-    gcampYN = fitfunc(gcampXN, *pars)
-    Ydec = np.real(np.fft.ifft(np.fft.fft(Y, axis = 1)/np.fft.fft(gcampYN)))*np.sum(gcampYN)
-    if show:
-        plt.subplot(221)
-        plt.plot(gcampX, gcampY)
-        plt.plot(gcampXN[:18], gcampYN[:18])
-        ax = plt.subplot(222)
-        frq, psGC = calcFFT(gcampYN, time_step=1/6.)
-        plt.plot(frq, psGC)
-        ax.set_yscale('log',nonposy='clip')
-        ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel("Power spectrum")
 
-        Ydec = []
-        
-        #     line by line fft of neural signal
-        frq, fft = calcFFT(Y, time_step=1/6.)
-        for line in fft:
-            plt.plot(frq, line, 'r', alpha=0.1)
-
-        ax.set_yscale('log',nonposy='clip')
-        ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel("Power spectrum")
-        plt.show()
-        vmax, vmin=1,0
-        ax = plt.subplot(223)
-        cax1 = ax.imshow(Y, aspect='auto', interpolation='none', origin='lower',vmax=vmax, vmin=vmin)
-        ax = plt.subplot(224)
-        pcax1 = ax.imshow(Ydec, aspect='auto', interpolation='none', origin='lower',vmax=vmax, vmin=vmin)
-        plt.show()
-    return Ydec
-
-def calcFFT(data, time_step=1/6.):
-    """plot frequency of data"""
-    fft = []
-    if len(data.shape)>1:
-        for line in data:
-            ps = np.abs(np.fft.fft(line))**2
-            freqs = np.fft.fftfreq(line.size, time_step)
-            idx = np.argsort(freqs)
-            fft.append(ps[idx])
-    else:
-        ps = np.abs(np.fft.fft(data))**2
-        freqs = np.fft.fftfreq(data.size, time_step)
-        idx = np.argsort(freqs)
-        fft = ps[idx]
-    return freqs[idx], fft
 
 def makeEthogram(anglevelocity, pc3):
     """use rotated Eigenworms to create a new Ethogram."""
@@ -166,35 +112,6 @@ def loadEigenBasis(filename, nComp=3, new = True):
     return eigenworms
 
 
-def estimateEigenwormError(folder, eigenworms, show=False):
-    """use the high resolution behavior to get a variance estimate.
-    This will be wrong or meaningless if the centerlines were copied between frames."""
-    # calculate centerline projections for full movie
-    clFull, clIndices, clTime = loadCenterlines(folder, full = True)
-    print 'done loading'
-    pcsFull, meanAngle, lengths, refPoint = calculateEigenwormsFromCL(clFull, eigenworms)
-    print 'done projecting'
-    # split array by indices into blocks corresponding to volumes
-    pcsSplit = np.split(pcsFull, clIndices, axis=1)
-    # calculate standard deviation and mean
-    pcsM = np.array([np.nanmean(p, axis=1) for p in pcsSplit]).T
-    pcsErr = np.array([np.nanstd(p, axis=1) for p in pcsSplit]).T
-    #length = np.array([len(p[0]) for p in pcs]).T
-    #
-    if show:
-        i=2 # which eigenworm
-        plt.figure('Eigenworm error')
-        plt.subplot(211)
-        plt.plot(pcsFull[i][clIndices], label='discret eigenworms')
-        plt.plot(pcsM[i], label='averaged eigenworms', color='r')
-        plt.fill_between(range(len(pcsM[i])), pcsM[i]-pcsErr[i], pcsM[i]+pcsErr[i], alpha=0.5, color='r')
-        plt.subplot(212)
-        m, err = np.sort(pcsM[i]), pcsErr[i][np.argsort(pcsM[i])]
-        plt.plot(np.sort(pcsFull[i][clIndices]), label='discret eigenworms')
-        plt.plot(m, label='averaged eigenworms', color='r')
-        plt.fill_between(range(len(pcsM[i])), m-err, m+err, alpha=0.5, color='r')
-        plt.show()
-    return pcsM, pcsErr, pcsFull[:,clIndices.astype(int)], pcsFull
 
 def calculateEigenwormsFromCL(cl, eigenworms):
     """takes (x,y) pairs from centerlines and returns eigenworm coefficients."""
@@ -304,107 +221,8 @@ def decorrelateNeuronsLinear(R, G):
 
 
 
-def decorrelateNeuronsICA(R, G):
-    """use ICA to remove covariance in Green and Red signals.
-    NaN'd values are excluded. Variance and mean is preserved.
-    """
-    I = np.empty(G.shape)
-    I[:] = np.nan  # initialize it with nans
-
-    ica = FastICA(n_components=2, random_state=42)
-
-    # the fits can't handle the nans, so we gotta tempororaily exclude them
-    # we won't interpolate, we will just remove them than add them back
-    nanmask = np.logical_or(np.isnan(R), np.isnan(G))
-
-    for li in range(len(R)):
-        Y = np.vstack([R[li, ~nanmask[li]], G[li, ~nanmask[li]]]).T
-        if Y.size <= 2: #If we don't have enough points, we can't remove motion artifact
-            continue #So just leave it as is
-        sclar2 = StandardScaler(copy=True, with_mean=True, with_std=True)
-        Y = sclar2.fit_transform(Y)
-        S = ica.fit_transform(Y)
-
-        # order components by max correlation with red signal
-        v = [np.corrcoef(s, R[li, ~nanmask[li]])[0, 1] for s in S.T]
-        idn = np.argmin(np.abs(v))
-        # check if signal needs to be inverted
-        sign = np.sign(np.corrcoef(S[:, idn], G[li, ~nanmask[li]])[0, 1])
-        signal = sign * (S[:, idn])
-
-        # Rescale and add back mean WARNING: this means that I values can be negative
-        rescaledSignalTrunc = (np.std(G[li, ~nanmask[li]]) / np.std(signal)) * signal + np.mean(G[li, ~nanmask[li]])
-
-        # until now we had been dealing with truncated variables because we cut out the nans.. now we need to add the nans back
-        I[li, ~nanmask[li]] = rescaledSignalTrunc
-
-        if False:  # Good for debugging
-            print(np.std(G[li]))
-            print(np.std(rescaledSignalTrunc))
-
-            plt.plot(G[li])
-            plt.show()
-
-            plt.plot(R[li])
-            plt.show()
-
-            plt.scatter(G[li, ~nanmask[li]], rescaledSignalTrunc)
-            plt.show()
-            raw_input('Hit enter to continue')
-    return np.array(I)
-
-def decorrelateNeuronsICA_deprecated(R, G):
-    """use ICA to remove covariance in Green and Red signals.
-    This is the old version that assumes no nans, and z-scales"""
-    Ynew = []
-    ica = FastICA(n_components = 2)
-    for li in range(len(R)):
-        Y = np.vstack([R[li], G[li]]).T
-        sclar2= StandardScaler(copy=True, with_mean=True, with_std=True)
-        Y = sclar2.fit_transform(Y)
-        S = ica.fit_transform(Y)
-        # order components by max correlation with red signal
-        v = [np.corrcoef(s,R[li])[0,1] for s in S.T]
-        idn = np.argmin(np.abs(v))
-        # check if signal needs to be inverted
-        sign = np.sign(np.corrcoef(S[:,idn],G[li])[0,1])
-        signal = sign*(S[:,idn])
-        Ynew.append(signal)
-    return np.array(Ynew)
 
 
-
-def preprocessNeuralData(R, G, dataPars):
-    """ DEPRECATED  zscore etc for neural data."""
-
-    # prep neural data by masking nans
-    mask = np.isnan(R)
-    R[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), R[~mask])
-    mask = np.isnan(G)
-    G[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), G[~mask])
-
-    # smooth with GCamp6 halftime = 1s
-    RS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in R])
-    GS =np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in G])
-    print("windowGCaMP:", str(dataPars['windowGCamp']))
-    try:
-        YN = decorrelateNeuronsICA_deprecated(R, G)
-    except ValueError:
-        YN = 0*R+1
-    YN = np.array([gaussian_filter1d(line,dataPars['windowGCamp']) for line in YN])
-    #$YN = GS/RS
-    # percentile scale
-    R0 = np.percentile(YN, [20], axis=1).T
-    dR = np.divide(YN-R0,np.abs(R0))
-    #dR = YN
-    # zscore values
-    YN = preprocessing.scale(YN.T).T
-    R0 = np.percentile(GS/RS, [20], axis=1).T
-    RM = np.divide(GS/RS-R0,np.abs(R0))
-
-#    plt.imshow(dR, aspect='auto')
-#    plt.show()
-    return  YN, dR, GS, RS, RM
 
 def loadData(folder, dataPars, ew=1, cutVolume = None):
     """load matlab data."""
@@ -634,49 +452,24 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
-    Y, dR, GS, RS, RM = preprocessNeuralData(RedMatlab, GreenMatlab, dataPars)
 
     Ratio = np.array(data['Ratio2'])[:, :len(np.array(data['hasPointsTime']))]
 
-    try:
-        dY = np.array(data['Ratio2D']).T
-    except KeyError:
-        dY = np.zeros(Y.shape)
-
-
-    # get rid of predominantly nan neurons
-    #fracNans = np.sum(np.isnan(Ratio), axis=1)/1.0/len(Ratio[0])
-    
-    #order = order[np.where(fracNans<0.1)]
-    #lets interpolate small gaps but throw out larger gaps.
-    # make a map with all nans smoothed out if larger than some window    
-    nanmask =[np.repeat(np.nanmean(chunky_window(line, window= dataPars['interpolateNans']), axis=1), dataPars['interpolateNans']) for line in Ratio]
-    nanmask = np.array(nanmask)[:,:Y.shape[1]]
+    # lets interpolate small gaps but throw out larger gaps.
+    # make a map with all nans smoothed out if larger than some window
+    nanmask = [np.repeat(np.nanmean(chunky_window(line, window=dataPars['interpolateNans']), axis=1),
+                         dataPars['interpolateNans']) for line in Ratio]
+    nanmask = np.array(nanmask)[:, :Ratio.shape[1]]
     if 'flagged_volumes' in data.keys():
-        if len(data['flagged_volumes'])>0:
+        if len(data['flagged_volumes']) > 0:
             print data['flagged_volumes']
-            nanmask[:,np.array(data['flagged_volumes'][0])] = np.nan
-    Rfull = np.copy(Y)
-    Rfull[np.isnan(nanmask)] =np.nan
-
-
-
-
-    Y = Y[order]
-    dR = dR[order]
-    RM = RM[order]
-    #deconvolved data
-    YD = deconvolveCalcium(Y)
-    #regularized derivative
-    dY = dY[order]
-
+            nanmask[:, np.array(data['flagged_volumes'][0])] = np.nan
 
     # store relevant indices -- crop out the long gaps of nans adn flagged timepoints
     nonNan  = np.where(np.any(np.isfinite(nanmask),axis=0))[0]
     nonNan_data = nonNan[nonNan <= cutVolume]
     nonNan_identities = nonNan[nonNan > cutVolume]
 
-    #</deprecated>
 
     #Setup time axis
     time = np.squeeze(data['hasPointsTime'])
@@ -700,7 +493,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['Behavior'] = {}
     dataDict['BehaviorFull'] = {}
     dataDict['Behavior_crop_noncontig'] = {}
-    print RM.shape
     tmpData = [vel[:,0], pc1, pc2, pc3, vel_ps_downsampled, curv_metric_dowsampled, velo, accel, theta, etho, xPos, yPos]
     for kindex, key in enumerate(['CMSVelocity', 'Eigenworm1', 'Eigenworm2', \
     'Eigenworm3',\
@@ -719,13 +511,6 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     #<deprecated>
     dataDict['Neurons']['TimeFull'] =  time[idx_data] # actual time
-    dataDict['Neurons']['ActivityFull'] =  Rfull[order][:,idx_data] # full activity
-    dataDict['Neurons']['Activity'] = preprocessing.scale(Y[:,nonNan_data].T).T # redo because nans
-    dataDict['Neurons']['RawActivity'] = dR[:,nonNan_data]
-    dataDict['Neurons']['derivActivity'] = dY[:,nonNan_data]
-    dataDict['Neurons']['deconvolvedActivity'] = YD[:,nonNan_data]
-    dataDict['Neurons']['Ratio'] = RM[:,nonNan_data]
-    
     dataDict['Neurons']['rRaw'] = (rRaw[:, idx_data])[order,:]
     dataDict['Neurons']['gRaw'] = (gRaw[:, idx_data])[order,:]
     # dataDict['Neurons']['RedRaw'] = RS
@@ -845,20 +630,9 @@ def loadNeuronPositions(filename):
     indices = np.where((y<-2.3)&(x<0.1))
     return np.stack((neuronID[indices],x[indices],y[indices],z[indices]))
 
-def rankTransform(neuroMap):
-    """takes a matrix and transforms values into rank within the colum. ie. neural dynamics: for each neuron
-    calculate its rank at the current time."""
-    temp = neuroMap.argsort(axis=0)
-    rank = temp.argsort(axis=0)
-    return rank
 
 
-def rolling_window(a, window):
-    a = np.pad(a, (0,window), mode="constant", constant_values=(np.nan,))
-    shape = a.shape[:-1] + (a.shape[-1] - window, window)
-    strides = a.strides + (a.strides[-1],)
-    
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
     
 def chunky_window(a, window):
     xp =  np.r_[a, np.nan + np.zeros((-len(a) % window,))]
@@ -1389,7 +1163,4 @@ def  findPhaseShift(curv, headCrop=0.2, tailCrop=0.05, alpha=0, sigma=5):
 
 
 
-
-def getPhaseVel(centerlines, dt):
-    '''Given'''
 

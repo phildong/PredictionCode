@@ -418,38 +418,7 @@ def PCACorrelations(data,results, behaviors, flag = 'PCA', subset = None):
 # estimate signal/ periodogram
 #
 ##############################################
-def runPeriodogram(data, pars, testset = None):
-    """run a welch periodogram to estimate the PSD of neural activity."""
-    Neuro = np.copy(data['Neurons']['Activity'])
-    time = data['Neurons']['Time']
-    B = np.array(data['Behavior']['Ethogram'], dtype=float)
-    
-    if testset is not None:
-        Neuro = np.array(Neuro)[:,testset]
-        time = time[testset]
-        B = B[testset]
-    Neuro -=np.mean(Neuro, axis=0)
-    Neuro /=np.std(Neuro, axis=0)
-    B -=np.mean(B)
-    B/= np.std(B)
-    autocorr = np.array([fftconvolve(y, y[::-1], mode='full')/len(y) for y in Neuro])
-    periods = np.arange(-len(y), len(y)-1)/6. # in seconds
-    # behavior
-    autocorrB = np.array(fftconvolve(B, B[::-1], mode='full')/len(B))
-    # get only relevant subset
-    Indices = np.rint(np.interp(pars['periods'], periods, np.arange(len(periods)))).astype(int)
-#    plt.plot(np.mean(autocorr[:,Indices], axis=0))
-#    plt.show()
-#    plt.plot(periods[Indices],np.mean(autocorr, axis = 0)[Indices])
-#    plt.plot(periods[Indices],autocorrB[Indices])
-
-#    plt.show()
-    results = {}
-    results['BehaviorACorr'] = autocorrB[Indices]
-    results['NeuronACorr'] = autocorr[:,Indices]
-    results['Periods'] = periods[Indices]
-    return results
-###############################################    
+###############################################
 # 
 # hierarchical clustering
 #
@@ -485,93 +454,8 @@ def runHierarchicalClustering(data, pars, subset):
     clustres['threshold'] = Z[-(k-1),2]  
 
     return clustres
-###############################################    
-# 
-# predict discrete behaviors
-#
-##############################################
-    
-def discreteBehaviorPrediction(data, pars, splits):
-    """use a svm to predict discrete behaviors from the data."""
-    # modify data to be like scikit likes it
-    if pars['useRank']:
-            X = data['Neurons']['rankActivity'].T
-    else:
-        X = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
-    # use ethogram for behavior
-    Y = data['Behavior']['Ethogram']
-    label = 'AngleVelocity'
-    trainingsInd, testInd = splits[label]['Train'], splits[label]['Test']
-    # create a linear SVC
-    lin_clf = svm.LinearSVC(penalty='l1',dual=False, class_weight='balanced', C=10)
-    lin_clf.fit(X[trainingsInd], Y[trainingsInd]) 
-    Ypred = lin_clf.predict(X[testInd])
-    
-    print classification_report(Y[testInd], Ypred)
-    pcs = lin_clf.coef_
-    indices = np.argsort(pcs[0])
-    
-    comp = np.zeros((4, len(X)))
-    # show temporal components
-    for wi, weights in enumerate(pcs):
-        comp[wi] = np.dot(X, weights)
-    #print f1_score(Y[testInd], Ypred, average='micro')
-    recision, recall, fscore, support = precision_recall_fscore_support(Y[testInd], Ypred, labels=[-1,0,1,2])
-    print fscore
-    pcares = {}
-    pcares['nComp'] =  4
-    pcares['expVariance'] =  fscore
-    pcares['neuronWeights'] =  pcs.T
-    pcares['neuronOrderPCA'] =  indices
-    pcares['pcaComponents'] =  comp
-    T = testInd
-    ax1 = plt.subplot(211)
-    mp.plotEthogram(ax1, T, Y[testInd], alpha = 0.5, yValMax=1, yValMin=0, legend=0)
-    ax1 = plt.subplot(212)
-    mp.plotEthogram(ax1, T, Ypred, alpha = 0.5, yValMax=1, yValMin=0, legend=0)
-    return pcares
-###############################################    
-# 
-# projection using behavior triggered averages
-#
-##############################################  
-def runBehaviorTriggeredAverage(data, pars):
-    """use averaging of behaviors to get neural activity corresponding."""
-    # modify data to be like scikit likes it
-    if pars['useRank']:
-            Y = data['Neurons']['rankActivity'].T
-    if pars['useClust']:
-        clustres = runHierarchicalClustering(data, pars)
-        Y = clustres['Activity'].T
-    else:
-        Y = np.copy(data['Neurons']['Activity']).T # transpose to conform to nsamples*nfeatures
-    # use ethogram for behavior
-    X = data['Behavior']['Ethogram']
-    
-    orderFwd = np.argsort(np.std(Y, axis=0))
-    pcs = np.zeros((4, Y.shape[1]))
-    for index, bi in enumerate([1,-1, 2, 0]):
-        indices = np.where(X==bi)[0]
-        Ynew = Y[indices]
-        pcs[index] = np.mean(Ynew, axis=0)
-    # project data onto components
-    comp = np.zeros((4, len(Y)))
-    for wi, weights in enumerate(pcs):
-        comp[wi] = np.dot(Y, weights)
-        # backcalculate explained variance
-        
-    # calculate explained variance
-    #explained_variance_score()
-    # write to a results dictionary
-    pcares = {}
-    pcares['nComp'] =  4
-    pcares['expVariance'] =  np.arange(4)
-    pcares['neuronWeights'] =  pcs.T
-    pcares['neuronOrderPCA'] =  orderFwd
-    pcares['pcaComponents'] =  comp
-    return pcares
 
-###############################################    
+###############################################
 # 
 # Linear Model
 #
@@ -1291,91 +1175,6 @@ def reorganizeLinModel(data, results, splits, pars, fitmethod = 'LASSO', behavio
     return pcares
 
 
-###############################################    
-# 
-# predict neural dynamics from behavior
-#
-##############################################
-def predictNeuralDynamicsfromBehavior(data,  splits, pars):
-    """use linear model to predict the neural data from behavior and estimate what worm is thinking about."""
-    raise RunTimeError("This hasn't been updated yet. It still uses the old activity traces.")
-    label = 'AngleVelocity'
-    train, test = splits[label]['Train'], splits[label]['Test']
-    # create dimensionality-reduced behavior - pca with 10 eigenworms
-    cl = data['CL']
-    eigenworms = dh.loadEigenBasis(filename = os.path.join(userTracker.codePath(),'utility/Eigenworms.dat'), nComp=4, new=True)
-    pcsNew, meanAngle, lengths, refPoint = dh.calculateEigenwormsFromCL(cl, eigenworms)
-    behavior = pcsNew.T
-    # nevermind, use the behaviors we use for lasso instead
-    behavior = np.vstack([data['Behavior']['AngleVelocity'], behavior.T]).T
-    # scale behavior to same 
-    behavior = preprocessing.scale(behavior)
-    blabels = np.array(['Wave velocity', 'Eigenworm 3', 'Eigenworm 2', 'Eigenworm 1', 'Eigenworm 4'])
-
-    #pcsNew are new eigenworms directly from the centerlines. 
-    # also reduce dimensionality of the neural dynamics.
-    nComp = 10#pars['nCompPCA']
-    pca = PCA(n_components = nComp)
-    Neuro = np.copy(data['Neurons']['Activity']).T
-    pcs = pca.fit_transform(Neuro)
-    #comp = pca.components_.T
-    #now we use a linear model to train and test our predictions
-    #here we will simply use a 50/50 split for now
-    half = int((len(Neuro))/2.)
-    tmp = np.arange(2*half)
-    test = tmp[int(half/2.):int(3*half/2.)]
-    train = np.setdiff1d(tmp, test)
-    
-    #train = np.arange(half)
-    #test = np.arange(half,2*half)
-    # lets build a linear model
-    lin = linear_model.LinearRegression(normalize=False)
-    lin.fit(behavior[train], pcs[train])
-    
-    # some fit diagnostics
-#    for i in range(nComp):
-    print 'Train R2: ', lin.score(behavior[train],pcs[train])
-    print 'Test R2: ', lin.score(behavior[test],pcs[test])
-    # recreate the PCA components of the neural map from these predictions
-    predN = lin.predict(behavior)
-    print predN.shape, 'predicted neurons in pca space', behavior.shape
-    
-    indices = np.argsort(explained_variance_score(pcs[test],predN[test],multioutput ='raw_values'))[::-1]
-    r2 = [explained_variance_score(pcs[test,i], predN[test,i]) for i in indices]    
-    # weightorder
-    weightorder = np.arange(lin.coef_.shape[1])[np.argsort(np.abs(lin.coef_[indices[0]]))][::-1]
-    # reverse the PCA
-    newHM = pca.inverse_transform(predN).T
-    # order the weights for each behavior
-    #orderedWeights = lin.coef_[:,weightorder]
-    # variance explained with each PC prediction
-    expScore = []
-    for i in range(len(weightorder)):
-        tmpBeh = behavior[:,weightorder]
-        tmpBeh[:,i+1:] = 0
-        predictedNeurons = lin.predict(tmpBeh)
-        tmpHM = pca.inverse_transform(predictedNeurons)
-        # compare to full neural data
-        #expScore.append(explained_variance_score(data['Neurons']['Activity'][test], tmpHM[test]))
-        # compare to nComp recornstructed data
-        print pca.inverse_transform(pcs).shape, tmpHM.shape
-        expScore.append(explained_variance_score(pca.inverse_transform(pcs)[test], tmpHM[test]))
-    # store results
-    pcares = {}
-    pcares['nComp'] =  nComp
-    pcares['lowDimNeuro'] = pca.inverse_transform(pcs).T# smaller dimension neural data
-    pcares['behavior'] = behavior # stacked behavioral vectors
-    pcares['expVariance'] =  expScore
-    pcares['behaviorWeights'] =  lin.coef_# actual fitted weights for each behavior
-    pcares['behaviorOrder'] =  weightorder # indices of behaviors if ordered by fit weight
-    pcares['predictedNeuralPCS'] =  predN
-    pcares['NeuralPCS'] =  pcs
-    pcares['behaviorLabels'] = blabels    
-    pcares['predictedNeuralDynamics'] = newHM
-    pcares['PCA_indices'] = indices
-    pcares['R2_test'] = r2# r2 for predicting neural PCS testset only()
-
-    return pcares
 
 
 ###############################################    

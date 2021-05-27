@@ -5,16 +5,16 @@ from matplotlib import gridspec
 import matplotlib.backends.backend_pdf
 import prediction.userTracker as userTracker
 import prediction.provenance as prov
-behavior = 'velocity'
+behavior = 'curvature'
 #conditions = ['AML18_moving']
 conditions = ['AKS297.51_moving']#, 'AML32_moving']
 outfilename = 'figures/subpanels_revision/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
-pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
-neural_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/neuron_data.dat'
+pickled_data = '/home/sdempsey/new_comparison.dat' #'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+#neural_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/neuron_data.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
-with open(neural_data, 'rb') as handle:
-    ndata = pickle.load(handle)
+#with open(neural_data, 'rb') as handle:
+#    ndata = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
 excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]], 
@@ -28,12 +28,25 @@ keys = list(data.keys())
 keys.sort()
 
 figtypes = ['bsn_deriv', 'slm_with_derivs']
-import os
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
 
-def calc_rho2_adj1(data, key, type='slm_with_derivs'):
+import os
+import prediction.provenance as prov
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename), metadata=prov.pdf_metadata(__file__))
+
+def  type_helper(in_type):
+    if in_type is 'slm_with_derivs':
+        return False
+    elif in_type is 'bsn_deriv':
+        return True
+    else:
+        assert False
+    return
+
+def calc_rho2_adj(data, key, behavior, type='slm_with_derivs'):
+    type = type_helper(type)
+
     # Calculate rho2adj  (code snippet from comparison_grid_display.py)
-    res = data[key][type]
+    res = data[key][behavior][type]
     y = res['signal'][res['test_idx']]
     yhat = res['output'][res['test_idx']]
 
@@ -46,6 +59,7 @@ def calc_rho2_adj1(data, key, type='slm_with_derivs'):
     rho2_adj = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
     print(key + ': %.2f' % rho2_adj)
     return rho2_adj
+
 
 def calc_pdf(x, low_lim, high_lim, nbins):
     counts, bin_edges = np.histogram(x, np.linspace(low_lim, high_lim, nbins))
@@ -75,7 +89,7 @@ test_color = u'#2ca02c'
 pred_color = u'#1f77b4'
 alpha = .5
 alpha_test = .3
-rho2_adj1 = np.zeros([len(figtypes), len(keys)])
+rho2_adj = np.zeros([len(figtypes), len(keys)])
 range_covered = np.zeros([len(figtypes), len(keys)])
 range_covered_test = np.zeros([len(figtypes), len(keys)])
 
@@ -94,32 +108,43 @@ for i, key in enumerate(keys):
     sc = [None] * 2
     his = [None] * 2
     for model, figtype in enumerate(figtypes):
-        rho2_adj1[model, i] = calc_rho2_adj1(data, key, figtype)
-        beh = ndata[key][behavior]
-        res = data[key][figtype] # the model results are for the z-scored velocity or curvature
+        rho2_adj[model, i] = calc_rho2_adj(data, key, behavior,  figtype)
+        beh_struct = data[key][behavior][type_helper(figtype)]
+        beh = beh_struct['signal']*beh_struct['signal_std']+beh_struct['signal_mean']
+        res = data[key][behavior][type_helper(figtype)] # the model results are for the z-scored velocity or curvature
         pred = np.sqrt(np.var(beh)) * res['output'] + np.mean(beh) #rescale and offset the results
 
         range_covered[model, i] = frac_range_covered(beh, pred)
         range_covered_test[model, i] = frac_range_covered(beh[res['test_idx']], pred[res['test_idx']])
 
         #Plot the time series of the prediction and true
+        if behavior is 'curvature':
+            measured_color='#C1804A'
         ts[model] = fig.add_subplot(gs[model, :], sharex=ts[0], sharey=ts[0])
-        ts[model].plot(res['time'], beh, 'k', lw=1.5)
+        ts[model].plot(res['time'], beh, 'k', color=measured_color, lw=1.5)
         ts[model].plot(res['time'], pred, color=pred_color, lw=1.5)
         ts[model].set_xlabel('Time (s)')
         ts[model].set_ylabel(behavior)
         ts[model].fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(beh), np.max(beh), facecolor=test_color, alpha=.05)
         ts[model].set_xticks(np.arange(0, res['time'][-1], 60))
         ts[model].axhline(linewidth=0.5, color='k')
+        if behavior is 'curvature':
+            ts[model].set_yticks([-2*np.pi, 0, 2*np.pi])
+            ts[model].set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
 
         # plot scatter of prediction vs true
         sc[model] = fig2.add_subplot(gs2[0, model], xlabel='Measured '+ behavior, ylabel='Predicted '+ behavior,  sharex=sc[0], sharey=sc[0])
         sc[model].plot(beh[res['train_idx']], pred[res['train_idx']], 'o', color=pred_color, label='Train', rasterized=False, alpha=alpha)
         sc[model].plot(beh[res['test_idx']], pred[res['test_idx']], 'o', color=test_color, label='Test', rasterized=False, alpha=alpha_test)
         sc[model].plot([min(beh), max(beh)], [min(beh), max(beh)], 'k-.')
-        sc[model].set_title(figtype + r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % rho2_adj1[model, i])
+        sc[model].set_title(figtype + r' $\rho^2_{\mathrm{adj},2}$ = %0.3f' % rho2_adj[model, i])
         sc[model].legend()
         sc[model].set_aspect('equal', adjustable='box')
+        if behavior is 'curvature':
+            sc[model].set_yticks([-2*np.pi, 0, 2*np.pi])
+            sc[model].set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
+            sc[model].set_xticks([-2*np.pi, 0, 2*np.pi])
+            sc[model].set_xticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
 
         #plot histogram of predicted and true values for held-out test set
         low_lim = -4
@@ -144,25 +169,25 @@ for i, key in enumerate(keys):
     pdf.savefig(fig3)
 
 fig4=plt.figure()
-plt.xlabel('Population Performance (Rho2_adj1)')
+plt.xlabel('Population Performance (Rho2_adj)')
 plt.ylabel('Fraction covered')
-plt.plot(rho2_adj1[1, :], range_covered_test[1, :], 'o', label='Population, Test Set')
-plt.plot(rho2_adj1[1, :], range_covered_test[0, :], '+', label='BSN, Test Set')
+plt.plot(rho2_adj[1, :], range_covered_test[1, :], 'o', label='Population, Test Set')
+plt.plot(rho2_adj[1, :], range_covered_test[0, :], '+', label='BSN, Test Set')
 plt.legend()
 pdf.savefig(fig4)
 
 fig4andhalf=plt.figure()
-plt.xlabel('Population Performance - BSN performance (Rho2_adj1)')
+plt.xlabel('Population Performance - BSN performance (Rho2_adj)')
 plt.ylabel('Fraction covered')
-plt.plot(rho2_adj1[1, :] - rho2_adj1[0, :], range_covered_test[1, :], 'o', label='Population, Test Set')
-plt.plot(rho2_adj1[1, :] - rho2_adj1[0, :], range_covered_test[0, :], '+', label='BSN, Test Set')
+plt.plot(rho2_adj[1, :] - rho2_adj[0, :], range_covered_test[1, :], 'o', label='Population, Test Set')
+plt.plot(rho2_adj[1, :] - rho2_adj[0, :], range_covered_test[0, :], '+', label='BSN, Test Set')
 plt.legend()
 pdf.savefig(fig4andhalf)
 
 fig4andthreequarters=plt.figure()
-plt.xlabel('Population Performance - BSN performance (Rho2_adj1)')
+plt.xlabel('Population Performance - BSN performance (Rho2_adj)')
 plt.ylabel('POP Fraction covered - BSN FRaction Covered')
-POPminusBSN_rho = rho2_adj1[1, :] - rho2_adj1[0, :]
+POPminusBSN_rho = rho2_adj[1, :] - rho2_adj[0, :]
 POPminusBSN_range = range_covered_test[1, :]-range_covered_test[0, :]
 plt.plot(POPminusBSN_rho, POPminusBSN_range, 'o')
 print("POPminusBSN_range[POPminusBSN_rho>0]")
@@ -184,8 +209,8 @@ pdf.savefig(fig5)
 
 
 fig6=plt.figure()
-plt.plot(rho2_adj1[1, :], range_covered[1, :], 'o', label='Population, Train + Test')
-plt.plot(rho2_adj1[1, :], range_covered[0, :], '+', label='BSN, Train + Test')
+plt.plot(rho2_adj[1, :], range_covered[1, :], 'o', label='Population, Train + Test')
+plt.plot(rho2_adj[1, :], range_covered[0, :], '+', label='BSN, Train + Test')
 plt.legend()
 pdf.savefig(fig6)
 

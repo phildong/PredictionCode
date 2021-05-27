@@ -77,6 +77,9 @@ def main():
 
     Nrecs=0
     lengths=[]
+    curv_ylims=[-9, 9]
+    vel_ylims=[-.2, .3]
+
     for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
         dset = data[key]['input']
         # For each recording
@@ -93,6 +96,9 @@ def main():
 
     print("Plotting heatmaps.....")
     sp_indx = 0
+    cb1 = [0]*Nrecs
+    cb2 = [0]*Nrecs
+    k=0
     for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
         dset = data[key]['input']
         # For each recording
@@ -120,11 +126,13 @@ def main():
 
             # Cluster on Z-scored interpolated data to get indices
             from scipy.cluster.hierarchy import linkage, dendrogram
-            Z = linkage(dset['Neurons']['Activity'])
+            activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+            from scipy import stats
+            zactivity = stats.zscore(activity, axis=1)
+            Z = linkage(zactivity)
             d = dendrogram(Z, no_plot=True)
             idx_clust = np.array(d['leaves'])
 
-            prcntile = 99.7
             prcntile = 99
 
 
@@ -167,15 +175,18 @@ def main():
                 ax.set_yticks(yt)
                 ax.set_yticklabels(ytl)
 
-            beh = dset['BehaviorFull']['AngleVelocity']
+            beh = dset['BehaviorFull']['CMSVelocity']
             time = dset['Neurons']['TimeFull']
 
             axbeh = fig.add_subplot(gs[sp_indx,:])
             sp_indx=sp_indx+1
             axbeh.plot(time, beh, linewidth=1.5, color='k')
-            fig.colorbar(pos, ax=axbeh)
+            cb2[k]=fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=0.5, color='k')
+            axbeh.set_ylabel('Velocity\n' r'(mm s$^{-1})$')
+            axbeh.set_xticks(np.arange(0, time[-1], 60))
             axbeh.set_xlim(ax.get_xlim())
+            axbeh.set_ylim(vel_ylims)
 
             #axbeh.set_title('Velocity')
             #axbeh.set_xlabel('Time (s)')
@@ -183,29 +194,37 @@ def main():
             from prediction import provenance as prov
             #prov.stamp(plt.gca(), .9, .15, __file__)
 
-            curv = dset['BehaviorFull']['Eigenworm3']
+            curv = dset['BehaviorFull']['Curvature']
             axbeh = fig.add_subplot(gs[sp_indx,:])
             sp_indx=sp_indx+1
-            axbeh.plot(time, curv, linewidth=1.5, color='brown')
-            fig.colorbar(pos, ax=axbeh)
+            axbeh.plot(time, curv, linewidth=1.5, color='#C1804A')
+            cb1[k]=fig.colorbar(pos, ax=axbeh)
             axbeh.axhline(linewidth=.5, color='k')
             axbeh.set_xlim(ax.get_xlim())
-
-            axbeh.set_title('Velocity')
+            axbeh.set_yticks([-2*np.pi, 0, 2*np.pi])
+            axbeh.set_yticklabels([r'$-2\pi$', '0',  r'$2\pi$'])
+            axbeh.set_ylim(curv_ylims)
+            axbeh.set_xticks(np.arange(0, time[-1], 60))
             axbeh.set_xlabel('Time (s)')
-            #axbeh.set_ylabel('Curvature (arb units)')
+            axbeh.set_ylabel('Curvature\n' r'(mm s$^{-1}$)')
+            k=k+1
+
             from prediction import provenance as prov
             #prov.stamp(plt.gca(), .9, .15, __file__)
 
     plt.tight_layout()
+    [c.remove() for c in cb1]
+    [c.remove() for c in cb2]
     print("Beginning to save heat maps")
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, "heatmaps_clustered.pdf"))
+    import prediction.provenance as prov
+    outfile = os.path.join(outputFolder, "heatmaps_clustered.pdf")
+    pdf = matplotlib.backends.backend_pdf.PdfPages(outfile, metadata=prov.pdf_metadata(__file__))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)
     pdf.close()
-    print("Saved heatmaps.")
+    print("Saved heatmaps.", outfile)
 
 
 

@@ -9,8 +9,9 @@ import os
 from scipy.ndimage import gaussian_filter
 from sklearn.preprocessing import MinMaxScaler
 
-filename = 'correlates_of_performance_velocity_l10.pdf'
-with open('/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_velocity_l10.dat', 'rb') as handle:
+behavior = 'curvature'
+filename = 'correlates_of_performance_' + behavior + '.pdf'
+with open('/home/sdempsey/new_comparison.dat', 'rb') as handle:
     data = pickle.load(handle)
 
 excludeSets = ['BrainScanner20200309_154704', 'BrainScanner20181129_120339', 'BrainScanner20200130_103008']
@@ -42,15 +43,27 @@ G_R_percentile_ratio_percentile_neuron = []
 G_R_mean_ratio_percentile_neuron = []
 G_R_mean_ratio_percentile2_neuron = []
 mean_vel = []
+mean_psspeed = []
 vel_std = []
 std_test_train_ratio = []
 std_vel_test = []
 vel_pdf_mse = []
 vel_pdf_kl =  []
 
-def calc_rho2_adj1(data, key, type='slm_with_derivs'):
+def  type_helper(in_type):
+    if in_type is 'slm_with_derivs':
+        return False
+    elif in_type is 'bsn_deriv':
+        return True
+    else:
+        assert False
+    return
+
+def calc_rho2_adj(data, key, behavior, type='slm_with_derivs'):
+    type = type_helper(type)
+
     # Calculate rho2adj  (code snippet from comparison_grid_display.py)
-    res = data[key][type]
+    res = data[key][behavior][type]
     y = res['signal'][res['test_idx']]
     yhat = res['output'][res['test_idx']]
 
@@ -61,6 +74,7 @@ def calc_rho2_adj1(data, key, type='slm_with_derivs'):
     truesigma = np.std(y)
     predsigma = np.std(yhat)
     rho2_adj = (res['corrpredicted'] ** 2 - (alpha + beta**2) ** 2 / (truesigma * predsigma) ** 2)
+    print(key + ': %.2f' % rho2_adj)
     return rho2_adj
 
 
@@ -109,7 +123,8 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     return MSE#, KL
 
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+import prediction.provenance as prov
+pdf = matplotlib.backends.backend_pdf.PdfPages(filename, metadata=prov.pdf_metadata(__file__))
 
 for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
     path = userTracker.dataPath()
@@ -133,13 +148,13 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_raw = dataSets[key]['Neurons']['I_smooth']
-        R = dataSets[key]['Neurons']['R']
-        G = dataSets[key]['Neurons']['G']
-        vel = dataSets[key]['BehaviorFull']['AngleVelocity']
-        res = data[key]['slm_with_derivs']
-        vel_train = res['signal'][res['train_idx']]
-        vel_test = res['signal'][res['test_idx']]
-
+        R = dataSets[key]['Neurons']['RedMatlab']
+        G = dataSets[key]['Neurons']['GreenMatlab']
+        vel = dataSets[key]['BehaviorFull']['CMSVelocity']
+        res = data[key][behavior][type_helper('slm_with_derivs')]
+        beh = res['signal'][res['train_idx']]
+        beh_test = res['signal'][res['test_idx']]
+        ps_vel = dataSets[key]['Behavior']['PhaseShiftVelocity']
 
 
 
@@ -151,8 +166,8 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         
         neuron_data[key] = neurons
 
-        rho2_adj.append(calc_rho2_adj1(data, key, 'slm_with_derivs'))
-        bsn_rho2_adj.append(calc_rho2_adj1(data, key, 'bsn_deriv'))
+        rho2_adj.append(calc_rho2_adj(data, key, behavior, 'slm_with_derivs'))
+        bsn_rho2_adj.append(calc_rho2_adj(data, key, behavior, 'bsn_deriv'))
 
 
 
@@ -174,11 +189,12 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         G_R_mean_ratio_percentile_neuron.append(np.nanmean(np.true_divide(np.nanpercentile(G, 90, axis=1), np.nanpercentile(R, 90, axis=1))))
         G_R_mean_ratio_percentile2_neuron.append(np.nanmean(np.true_divide(np.nanpercentile(G, 95, axis=1), np.nanpercentile(R, 95, axis=1))))
 
+        mean_psspeed.append(np.nanmean(np.abs(ps_vel)))
         mean_vel.append(np.nanmean(vel))
         vel_std.append(np.nanstd(vel))
-        std_test_train_ratio.append(np.nanstd(vel_test) / np.nanstd(vel_train))
-        std_vel_test.append(np.nanstd(vel_test))
-        mse = compare_pdf(vel_test, vel_train, alabel="test", blabel="train", suplabel=key + "rho2 = %.2f " % data[key]['slm_with_derivs']['scorespredicted'][2], PDF=pdf)
+        std_test_train_ratio.append(np.nanstd(beh_test) / np.nanstd(beh))
+        std_vel_test.append(np.nanstd(beh_test))
+        mse = compare_pdf(beh_test, beh, alabel="test", blabel="train", suplabel=key + "rho2 = %.2f " % data[key][behavior][type_helper('slm_with_derivs')]['scorespredicted'][2], PDF=pdf)
         vel_pdf_mse.append(mse)
         #vel_pdf_kl.append(kl)
 
@@ -231,10 +247,11 @@ plot_candidate(R_mean_fano_factor, 'R mean fano factor', labels=label, PDF=pdf)
 plot_candidate(G_mean_fano_factor, 'G mean fano factor', labels=label, PDF=pdf)
 plot_candidate(G_mean, 'G mean ', labels=label, PDF=pdf)
 plot_candidate(mean_vel, 'Mean Velocity', labels=label, PDF=pdf)
+plot_candidate(mean_psspeed, 'Mean Phase Shift Speed', labels=label, PDF=pdf)
 plot_candidate(vel_std, 'std(vel)', labels=label, PDF=pdf)
 plot_candidate(std_test_train_ratio, 'std(vel_test) / std(vel_train)', labels=label, PDF=pdf)
 plot_candidate(std_vel_test, 'std(vel_test)', labels=label, PDF=pdf)
-plot_candidate(vel_pdf_mse, 'MSE of Train vs Test Velocity PDF', labels=label, PDF=pdf)
+plot_candidate(vel_pdf_mse, 'MSE of Train vs Test' + behavior + ' PDF', labels=label, PDF=pdf)
 plot_candidate(G_R_ratio, " mean of per neuron mean of G/R", labels=label, PDF=pdf)
 plot_candidate(G_R_percentile_ratio, " 90th all G / 90th perecentile all R", labels=label, PDF=pdf)
 plot_candidate(G_R_percentile_ratio_percentile_neuron, " 90th percentile neuron of 90th percentile G / 90th perecentile R", labels=label, PDF=pdf)
