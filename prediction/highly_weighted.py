@@ -3,7 +3,8 @@ from matplotlib import animation
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
-datafolder = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/'
+datafolder = '/home/sdempsey/'
+outfolder = 'figures/subpanels_revision/generatedFigs/'
 
 def rho_adj(y, yhat):
     truemean = np.mean(y)
@@ -35,22 +36,18 @@ def rectified_derivative(neurons):
 
     return deriv_pos, deriv_neg, deriv
 
-pickled_data = datafolder+'comparison_results_velocity_l10.dat'
+pickled_data = datafolder+'new_comparison.dat'
 with open(pickled_data, 'rb') as handle:
-    vel_data = pickle.load(handle)#, encoding = 'bytes')
+    data = pickle.load(handle)#, encoding = 'bytes')
 
-pickled_data = datafolder+'comparison_results_curvature_l10.dat'
-with open(pickled_data, 'rb') as handle:
-    curv_data = pickle.load(handle)#, encoding = 'bytes')
-
-with open(datafolder+'neuron_data.dat', 'rb') as f:
+with open(datafolder+'neuron_data_bothmc_nb.dat', 'rb') as f:
     neuron_data = pickle.load(f)#, encoding = 'bytes')
 
 nKeys=11
 fig, ax = plt.subplots(3, 4, figsize = (25, 15))
-keys = sorted(vel_data.keys(), key = lambda x: -vel_data[x][b'slm_with_derivs'][b'scorespredicted'][1])
-rho2_adj_vel = np.array([vel_data[keys[x]]['slm_with_derivs']['scorespredicted'][1] for x in np.arange(nKeys)])
-rho2_adj_curv = np.array([curv_data[keys[x]]['slm_with_derivs']['scorespredicted'][1] for x in np.arange(nKeys)])
+keys = sorted(data.keys(), key = lambda x: -data[x]['velocity'][False]['scorespredicted'][1])
+rho2_adj_vel = np.array([data[keys[x]]['velocity'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
+rho2_adj_curv = np.array([data[keys[x]]['curvature'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
 
 #preallocate arrays for plotting later
 n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(nKeys), np.zeros(nKeys), np.zeros(nKeys)
@@ -62,8 +59,8 @@ for ii, dataset in enumerate(keys[:nKeys]):
     row = ii // 4
     col = ii % 4
 
-    vel_res = vel_data[dataset][b'slm_with_derivs']   
-    curv_res = curv_data[dataset][b'slm_with_derivs']   
+    vel_res = data[dataset]['velocity'][False]
+    curv_res = data[dataset]['curvature'][False]
 
     neurons_unn = neuron_data[dataset][b'neurons']
     _, _, nderiv = rectified_derivative(neurons_unn)
@@ -140,7 +137,11 @@ for ii, dataset in enumerate(keys[:nKeys]):
 
 
 fig.tight_layout(pad=3, w_pad=4, h_pad=4)
-fig.savefig('highly_weighted.pdf')
+import os
+import prediction.provenance as prov
+import userTracker as userTracker
+outpath = os.path.join(userTracker.codePath(), outfolder)
+fig.savefig(os.path.join(outpath,'highly_weighted.pdf'), metadata=prov.pdf_metadata(__file__))
 
 fig3=plt.figure(figsize=[4,4])
 plt.plot(rho2_adj_vel, n_impact_vel, '^', markersize=10, color='blue', fillstyle='none', label='Velocity')
@@ -153,8 +154,8 @@ plt.yticks(fontsize=16)
 
 plt.xlim(0,1)
 plt.legend()
+fig3.savefig(os.path.join(outpath,'nneurons_rho.pdf'), metadata=prov.pdf_metadata(__file__))
 
-fig3.savefig('nneurons_rho.pdf')
 
 #Plot the Number of NEurons
 import matplotlib.pyplot as plt
@@ -165,7 +166,8 @@ axnew = sns.boxplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap])
 axnew = sns.swarmplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap], color=".2")
 plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
-fig2.savefig('number_of_neurons.pdf')
+fig2.savefig(os.path.join(outpath,'number_of_neurons.pdf'), metadata=prov.pdf_metadata(__file__))
+
 
 print(np.median(n_impact_vel), np.median(n_impact_curv), np.median(n_impact_overlap))
 

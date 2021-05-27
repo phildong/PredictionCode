@@ -143,7 +143,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
-	cmsvelocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
+        cmsvelocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
         curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
    
 

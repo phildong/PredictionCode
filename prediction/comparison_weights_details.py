@@ -10,6 +10,10 @@ from scipy.ndimage import gaussian_filter
 import prediction.provenance as prov
 
 #conditions = ['AML18_moving']
+outfolder = 'figures/subpanels_revision/generatedFigs/'
+import userTracker as userTracker
+
+
 conditions = ['AKS297.51_moving', 'AML32_moving']
 behavior = 'velocity' #'velocity' #'curvature'
 pickled_data = '/home/sdempsey/new_comparison.dat' #'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
@@ -235,8 +239,9 @@ for i, key in enumerate(keys):
     ax2.set_title(key + ',  %.2f Percent of Weights come from derivatives' % Frac_dFdt[i])
     ax2.legend()
 
+    win_scalar=1.05
     largest_weight = np.nanmax(np.abs([slm_weights_raw, slm_weights_raw_deriv]))
-    ax2.set_ylim(-largest_weight, largest_weight)
+    ax2.set_ylim(-largest_weight*win_scalar, largest_weight*win_scalar)
     ax2.spines["top"].set_visible(True)
     ax2.spines["right"].set_visible(True)
     ax2.tick_params(labelsize=17)
@@ -257,7 +262,6 @@ for i, key in enumerate(keys):
     h.scatter(slm_weights_raw, slm_weights_raw_deriv, color='black')
     h.axhline(color='black')
     h.axvline(color='black')
-    win_scalar=1.05
     h.set_xlim(-largest_weight*win_scalar, largest_weight*win_scalar)
     h.set_ylim(-largest_weight*win_scalar, largest_weight*win_scalar)
     #prov.stamp(ax2, .55, .35, __file__ + '\n' + pickled_data)
