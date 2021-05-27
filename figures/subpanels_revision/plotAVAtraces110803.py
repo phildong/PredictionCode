@@ -58,9 +58,8 @@ dset = data[key]['input'][idn]
 activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
 time = dset['Neurons']['I_Time_crop_noncontig']
 numNeurons = activity.shape[0]
-vel = dset['Behavior_crop_noncontig']['AngleVelocity']
 comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
-curv = dset['Behavior_crop_noncontig']['Eigenworm3']
+curv = dset['Behavior_crop_noncontig']['Curvature']
 
 
 
@@ -91,15 +90,13 @@ if False:
     plt.figure(figsize=[10,10])
     plt.plot(vel, comVel)
 
-UseEigVol = True
+UseEigVol = False
 if UseEigVol:
     velName = 'Eigenworm Velocity'
     velocity = vel
 else:
     velName = 'COM Velocity'
     velocity = comVel
-
-
 
 
 from prediction.Classifier import rectified_derivative
@@ -218,6 +215,8 @@ for neuron in np.array([AVAR, AVAL]): #np.arange(numNeurons):
 
     ax[4].plot(time, curv)
     ax[4].set_ylabel('Curvature')
+    ax[4].set_yticks([-2 * np.pi, 0, 2 * np.pi])
+    ax[4].set_yticklabels([r'$-2\pi$', '0', r'$2\pi$'])
     ax[4].set_xlabel('Time (s)')
     ax[4].axhline(linewidth=0.5, color='k')
 
@@ -245,7 +244,7 @@ for fig in xrange(1, numFigs): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
-print("Saved.")
+print("Saved.", filename)
 
 
 

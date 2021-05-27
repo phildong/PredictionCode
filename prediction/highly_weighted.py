@@ -44,9 +44,9 @@ with open(datafolder+'neuron_data_bothmc_nb.dat', 'rb') as f:
 
 nKeys=11
 fig, ax = plt.subplots(3, 4, figsize = (25, 15))
-keys = sorted(vel_data.keys(), key = lambda x: -data[x]['velocity'][False]['scorespredicted'][1])
-rho2_adj_vel = np.array([vel_data[keys[x]]['velocity'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
-rho2_adj_curv = np.array([curv_data[keys[x]]['curvature'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
+keys = sorted(data.keys(), key = lambda x: -data[x]['velocity'][False]['scorespredicted'][1])
+rho2_adj_vel = np.array([data[keys[x]]['velocity'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
+rho2_adj_curv = np.array([data[keys[x]]['curvature'][False]['scorespredicted'][1] for x in np.arange(nKeys)])
 
 #preallocate arrays for plotting later
 n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(nKeys), np.zeros(nKeys), np.zeros(nKeys)
