@@ -94,8 +94,8 @@ for ii, dataset in enumerate(keys[:nKeys]):
 
         curv_lines[i,:] = poly1d_fn(output)
 
-    vel_rhos = np.array([rho_adj(vel_res[b'signal'][vel_res[b'test_idx']], vel_lines[i,:][vel_res[b'test_idx']]) for i in range(vel_order.size)])
-    curv_rhos = np.array([rho_adj(curv_res[b'signal'][curv_res[b'test_idx']], curv_lines[i,:][curv_res[b'test_idx']]) for i in range(curv_order.size)])
+    vel_rhos = np.array([rho_adj(vel_res[b'signal'], vel_lines[i,:]) for i in range(vel_order.size)])
+    curv_rhos = np.array([rho_adj(curv_res[b'signal'], curv_lines[i,:]) for i in range(curv_order.size)])
 
     ax[row][col].set_title(dataset[12:] + ' N=%d' %nn)
     ax[row][col].set_xlim((0, 1))
