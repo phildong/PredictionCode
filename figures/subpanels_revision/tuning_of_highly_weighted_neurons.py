@@ -122,8 +122,8 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
 
 
 def main():
-    behavior = 'curvature'
-    #behavior = 'velocity'
+    #behavior = 'curvature'
+    behavior = 'velocity'
     pickled_data = '/home/sdempsey/new_comparison.dat'
     with open(pickled_data, 'rb') as handle:
         data = pickle.load(handle)
@@ -142,7 +142,10 @@ def main():
     time_data = {}
     beh_data = {}
     import os
-    for typ_cond in ['AKS297.51_moving']:
+    strain = 'AML32_moving' #'AKS297.51_moving'
+    numShuffles = 5000 #standard
+    numShuffles =500 #quick and dirty
+    for typ_cond in ['AML32_moving']:
         path = userTracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -186,8 +189,8 @@ def main():
 
 
 
-    key='BrainScanner20200130_110803'
-
+    #key='BrainScanner20200130_110803'
+    key = 'BrainScanner20170424_105620'
     import os
     outfilename = key + '_highweight_tuning_' + behavior + '.pdf'
     import prediction.provenance as prov
@@ -204,7 +207,7 @@ def main():
 
     #Calculate distribution of corrcoeff's on shuffled data for getting p-values
     activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
-    rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf)
+    rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf,n=numShuffles)
 
     #Make plot to populate with cumulative distribution function of rho
     fig_cdf = plt.figure()

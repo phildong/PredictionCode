@@ -106,8 +106,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
-        neurons_ZScore = dataSets[key]['Neurons']['ActivityFull'] # Z scored neurons to use to look at calcium traces
-        velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+        velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
 
         # Only consider neurons that have timepoints present for at least 75% of the time during immobilization
         frac_nan_during_imm = np.true_divide(np.sum(np.isnan(neurons_withNaN[:, im_start:]), axis=1),
@@ -116,11 +115,13 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         valid_imm = valid_imm[valid_imm != 115] #Have to remove neuron 115 because found a tracking error
 
         dset = dataSets[key]
-        Iz = neurons_ZScore
         # Cluster on Z-scored interpolated data to get indices
         # Cluster only on the immobile portion; and only consider neurons prsent for both moving and immobile
         from scipy.cluster.hierarchy import linkage, dendrogram
-        Z = linkage(dataSets[key]['Neurons']['Activity'][valid_imm,transition:])
+        rel_activity=dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][valid_imm,transition:]
+        from scipy import stats
+        rel_zactivity = stats.zscore(rel_activity, axis=1)
+        Z = linkage(rel_zactivity)
         d = dendrogram(Z, no_plot=True)
         idx_clust = np.array(d['leaves'])
 
