@@ -4,6 +4,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
 datafolder = '/home/sdempsey/'
+outfolder = 'figures/subpanels_revision/generatedFigs/'
 
 def rho_adj(y, yhat):
     truemean = np.mean(y)
@@ -136,7 +137,11 @@ for ii, dataset in enumerate(keys[:nKeys]):
 
 
 fig.tight_layout(pad=3, w_pad=4, h_pad=4)
-fig.savefig('highly_weighted.pdf')
+import os
+import prediction.provenance as prov
+import userTracker as userTracker
+outpath = os.path.join(userTracker.codePath(), outfolder)
+fig.savefig(os.path.join(outpath,'highly_weighted.pdf'), metadata=prov.pdf_metadata(__file__))
 
 fig3=plt.figure(figsize=[4,4])
 plt.plot(rho2_adj_vel, n_impact_vel, '^', markersize=10, color='blue', fillstyle='none', label='Velocity')
@@ -149,8 +154,8 @@ plt.yticks(fontsize=16)
 
 plt.xlim(0,1)
 plt.legend()
+fig3.savefig(os.path.join(outpath,'nneurons_rho.pdf'), metadata=prov.pdf_metadata(__file__))
 
-fig3.savefig('nneurons_rho.pdf')
 
 #Plot the Number of NEurons
 import matplotlib.pyplot as plt
@@ -161,7 +166,8 @@ axnew = sns.boxplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap])
 axnew = sns.swarmplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap], color=".2")
 plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
-fig2.savefig('number_of_neurons.pdf')
+fig2.savefig(os.path.join(outpath,'number_of_neurons.pdf'), metadata=prov.pdf_metadata(__file__))
+
 
 print(np.median(n_impact_vel), np.median(n_impact_curv), np.median(n_impact_overlap))
 

@@ -11,13 +11,25 @@ import prediction.provenance as prov
 
 
 
+
+
 behaviors = ['velocity', 'curvature']
 slm_weights_raw = [None] * 2
 slm_weights_raw_deriv = [None] * 2
 
+def  type_helper(in_type):
+    if in_type is 'slm_with_derivs':
+        return False
+    elif in_type is 'bsn_deriv':
+        return True
+    else:
+        assert False
+    return
+
+outfolder = 'figures/subpanels_revision/generatedFigs/'
 for k, behavior in enumerate(behaviors):
 
-    pickled_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
+    pickled_data = '/home/sdempsey/new_comparison.dat'# '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
     with open(pickled_data, 'rb') as handle:
         data = pickle.load(handle)
 
@@ -72,12 +84,14 @@ for k, behavior in enumerate(behaviors):
 
 
 
-    slm_weights_raw[k] = np.abs(data[key]['slm_with_derivs']['weights'][:data[key]['slm_with_derivs']['weights'].size / 2])
-    slm_weights_raw_deriv[k] = np.abs(data[key]['slm_with_derivs']['weights'][data[key]['slm_with_derivs']['weights'].size / 2:])
+    slm_weights_raw[k] = np.abs(data[key][behavior][type_helper('slm_with_derivs')]['weights'][:data[key][behavior][type_helper('slm_with_derivs')]['weights'].size / 2])
+    slm_weights_raw_deriv[k] = np.abs(data[key][behavior][type_helper('slm_with_derivs')]['weights'][data[key][behavior][type_helper('slm_with_derivs')]['weights'].size / 2:])
 
 import os
 outfilename = key + 'weights_vel_v_curve.pdf'
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfilename))
+
+import prediction.provenance as prov
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(), outfolder, outfilename), metadata=prov.pdf_metadata(__file__))
 
 
 fig1 = plt.figure(constrained_layout=True, figsize=[10, 10])

@@ -190,10 +190,11 @@ def main():
 
     import os
     outfilename = key + '_highweight_tuning_' + behavior + '.pdf'
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(),'figures','subpanels_revision','generatedFigs', outfilename))
+    import prediction.provenance as prov
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(userTracker.codePath(),'figures','subpanels_revision','generatedFigs', outfilename), metadata=prov.pdf_metadata(__file__))
 
     #Sort neurons by abs value weight
-    w = data[key]['velocity'][False]['weights']
+    w = data[key][behavior][False]['weights']
     slm_weights_raw = w[:w.size / 2]
     slm_weights_raw_deriv = w[w.size / 2:]
     highly_weighted_neurons = np.flipud(np.argsort(np.abs(slm_weights_raw)))
