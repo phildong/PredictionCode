@@ -548,7 +548,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     return dataDict
     
     
-def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
+def loadMultipleDatasets(dataLog, pathTemplate, nDatasets = None):
     """load matlab files containing brainscanner data. 
     string dataLog: file containing Brainscanner names with timestamps e.g. BrainScanner20160413_133747.
     path pathtemplate: relative or absoluet location of the dataset with a formatter replacing the folder name. e.g.
@@ -557,6 +557,13 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
     return: dict of dictionaries with neuron and behavior data
     """
     datasets={}
+    dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
+                'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
+                'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
+                'windowGCamp': 5,  # gauss window for red and green channel
+                'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
+                'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
+                }
     with open(dataLog, 'r') as f:
         lines = f.readlines()
         for lindex, sline in enumerate(lines):

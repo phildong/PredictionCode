@@ -85,14 +85,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     #dataLog = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/Special_transition_datasets.txt'
 
     # data parameters
-    dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
-            'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
-            'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
-            'windowGCamp': 5,  # gauss window for red and green channel
-            'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
-            'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
-            }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
     keyList = np.sort(dataSets.keys())
     theDataset = '193044'
     drug_application = 620
@@ -106,6 +100,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
+        G = dataSets[key]['Neurons']['G_smooth']
+        import numpy.matlib
+        Gmeansub = G - np.matlib.repmat(np.nanmean(G, axis=1), G.shape[1], 1).T
         velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
 
         # Only consider neurons that have timepoints present for at least 75% of the time during immobilization
@@ -144,8 +141,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     prcntile = 99.7
     num_Neurons=neurons_withNaN[valid_imm, :].shape[0]
-    vmin = np.nanpercentile(neurons_withNaN[valid_imm, :], 0.1)
-    vmax = np.nanpercentile(neurons_withNaN[valid_imm, :].flatten(), prcntile)
+    vmax = np.nanpercentile(np.abs(Gmeansub), prcntile)
+    vmin = -vmax
     pos = ax.imshow(neurons_withNaN[valid_imm[idx_clust], :], aspect='auto',
                     interpolation='none', vmin=vmin, vmax=vmax,
                     extent=[time_contig[0], time_contig[-1], -.5, num_Neurons - .5], origin='lower')
@@ -176,9 +173,11 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     ax.set_yticklabels(ytl)
 
 
-
+    curv_ylims=[-9, 9]
+    vel_ylims=[-.2, .3]
     axbeh = fig.add_subplot(gs[1, :], sharex=ax)
-    axbeh.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], linewidth=1.5, color='k')
+    beh = dset['BehaviorFull']['CMSVelocity']
+    axbeh.plot(dset['Neurons']['TimeFull'], beh, linewidth=1.5, color='k')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=0.5, color='k')
     axbeh.axvline(drug_app_time)
@@ -186,12 +185,16 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
     axbeh.set_xlim(0, end_time)
     axbeh.set_ylabel('Velocity')
+    axbeh.set_ylim(vel_ylims)
     axbeh.axes.get_xaxis().set_visible(False)
 
-    curv = dset['BehaviorFull']['Eigenworm3']
+    curv = dset['BehaviorFull']['Curvature']
     axbeh = fig.add_subplot(gs[2, :], sharex=ax)
     axbeh.plot(dset['Neurons']['TimeFull'], curv, linewidth=1.5, color='brown')
     axbeh.set_ylabel('Curvature')
+    axbeh.set_ylim(curv_ylims)
+    axbeh.set_yticks([-2 * np.pi, 0, 2 * np.pi])
+    axbeh.set_yticklabels([r'$-2\pi$', '0', r'$2\pi$'])
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=.5, color='k')
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
@@ -427,7 +430,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     plot_corrMatrices(cmat_mov, cmat_imm, AVAL=AVAL_ci, AVAR=AVAR_ci)
     print("Plotting.")
 
-    def boxdotplot(combined_data, labels=[''], title='', ylabel='', swarm=True):
+    def boxdotplot(combined_data, labels=[''], title='', ylabel='', swarm=True, ylims=None):
         import matplotlib.pyplot as plt
         import seaborn as sns
         plt.figure()
@@ -446,6 +449,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
         sns.despine()
         ax.set_title(title)
         ax.set_ylabel(ylabel)
+        if ylims is not None:
+            ax.set_ylim(ylims)
 
 
 
@@ -575,7 +580,7 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     AVA_mov = np.squeeze(cmat_mov[:, [AVAL_ci, AVAR_ci]].ravel())
     AVA_imm = np.squeeze(cmat_imm[:, [AVAL_ci, AVAR_ci]].ravel())
     _, p_ava=stats.wilcoxon(AVA_mov, AVA_imm)
-    boxdotplot([AVA_mov, AVA_imm], ['AVA mov', 'AVA imm'], 'Correlations to AVA, p= %.3f' % p_ava, 'rho')
+    boxdotplot([AVA_mov, AVA_imm], ['AVA mov', 'AVA imm'], 'Correlations to AVA, p= %.3f' % p_ava, 'rho', ylims=[-1.1, 1.1])
 
 
 
@@ -586,7 +591,8 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
 
     #Traces of Interest
     if HandPickedNeurons:
-        ofint = np.array([ci(78), ci(3), ci(AVAR), ci(AVAL),  ci(5), ci(47)]) #ci(76) is also good.
+        #ofint = np.array([ci(78), ci(3), 33, 22, ci(AVAR), ci(AVAL),  ci(5), ci(47)]) #ci(76) is also good.
+        ofint = np.array([ci(78),  33, ci(AVAR), ci(AVAL), ci(5), ci(47)])
     else:
         ofint = np.concatenate([np.squeeze(np.array([AVAL_ci, AVAR_ci])), np.union1d(topj_L, topj_R)])
     fig, axarr = plt.subplots(nrows=len(ofint), ncols=1, sharex=True)

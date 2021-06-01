@@ -99,7 +99,7 @@ def main():
     from scipy import stats
     t, p_gcamp = stats.ttest_ind(moving_gcamp, transition, equal_var=False)
 
-    labels = ["Moving to Moving", "Moving to Immobile", "Moving to Movin GFP"]
+    labels = ["Moving to Moving", "Moving to Immobile", "Moving to Moving GFP"]
 
     import matplotlib.pyplot as plt
     import seaborn as sns
