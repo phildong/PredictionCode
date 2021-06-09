@@ -150,15 +150,8 @@ def main():
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
 
-        # data parameters
-        dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
-                'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
-                'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
-                'windowGCamp': 5,  # gauss window for red and green channel
-                'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
-                'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
-                }
-        dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+
+        dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
         keyList = np.sort(dataSets.keys())
 
         for key in keyList:
@@ -191,6 +184,7 @@ def main():
 
     #key='BrainScanner20200130_110803'
     key = 'BrainScanner20170424_105620'
+    #key = 'BrainScanner20180709_100433'
     import os
     outfilename = key + '_highweight_tuning_' + behavior + '.pdf'
     import prediction.provenance as prov
@@ -207,7 +201,7 @@ def main():
 
     #Calculate distribution of corrcoeff's on shuffled data for getting p-values
     activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
-    rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf,n=numShuffles)
+    rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf,nShuffles=numShuffles)
 
     #Make plot to populate with cumulative distribution function of rho
     fig_cdf = plt.figure()
