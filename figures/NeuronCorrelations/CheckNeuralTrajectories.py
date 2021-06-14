@@ -176,8 +176,9 @@ for typ_cond in ['AKS297.51_transition']: #, 'AKS297.51_moving']:
     curv_ylims=[-9, 9]
     vel_ylims=[-.2, .3]
     axbeh = fig.add_subplot(gs[1, :], sharex=ax)
-    beh = dset['BehaviorFull']['CMSVelocity']
-    axbeh.plot(dset['Neurons']['TimeFull'], beh, linewidth=1.5, color='k')
+    #beh = dset['BehaviorFull']['CMSVelocity']
+    #axbeh.plot(dset['Neurons']['TimeFull'], beh, linewidth=1.5, color='k')
+    axbeh.plot(time, velocity, linewidth=1.5, color='k')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=0.5, color='k')
     axbeh.axvline(drug_app_time)

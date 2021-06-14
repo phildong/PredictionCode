@@ -121,10 +121,12 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
     return rhos, cum_prob
 
 
-def main():
+def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavior = 'velocity'):
     #behavior = 'curvature'
-    behavior = 'velocity'
-    pickled_data = '/home/sdempsey/new_comparison.dat'
+    if '18' in strain:
+        pickled_data = '/home/sdempsey/new_comparison_aml18.dat'
+    else:
+        pickled_data = '/home/sdempsey/new_comparison.dat'
     with open(pickled_data, 'rb') as handle:
         data = pickle.load(handle)
 
@@ -142,10 +144,10 @@ def main():
     time_data = {}
     beh_data = {}
     import os
-    strain = 'AML32_moving' #'AKS297.51_moving'
+    #strain = 'AML32_moving' #'AKS297.51_moving'
     numShuffles = 5000 #standard
     numShuffles =500 #quick and dirty
-    for typ_cond in ['AML32_moving']:
+    for typ_cond in [strain]:
         path = userTracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
@@ -183,7 +185,7 @@ def main():
 
 
     #key='BrainScanner20200130_110803'
-    key = 'BrainScanner20170424_105620'
+    key = recording #'BrainScanner20170424_105620'
     #key = 'BrainScanner20180709_100433'
     import os
     outfilename = key + '_highweight_tuning_' + behavior + '.pdf'
@@ -263,9 +265,12 @@ def main():
             flierprops = dict(linewidth=.2, markersize=1, marker='+')
             medianprops = dict(linewidth=2, color='k')#color='#67eb34')
             labels = [''] * len(activity_bin)
-            f1_ax1.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
+            try:
+                f1_ax1.boxplot(activity_bin, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
                         medianprops=medianprops, labels=labels, manage_xticks=False,
                         capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops)
+            except:
+                print('Boxplot plotting errored and failed.')
             plt.locator_params(nbins=4)
             f1_ax1.axhline(linewidth=0.5, color='k')
             f1_ax1.tick_params(axis="x", labelsize=8)
@@ -283,15 +288,21 @@ def main():
             pdf.savefig(fig1)
 
         #Plot summary of rho vs pvalue
+        thresh=np.true_divide(0.05, 2 * num_neurons)
+        sig_neg = np.sum((pval <= thresh) * (rho <= 0))
+        sig_neg_minthresh = np.sum((pval <= thresh) * (rho < -0.4))
+        sig_pos = np.sum((pval <= thresh) * (rho > 0))
+        sig_pos_minthresh = np.sum((pval <= thresh) * (rho > 0.4))
+
         fig_sum = plt.figure(constrained_layout=True, figsize=[14, 5])
         ax = fig_sum.add_subplot(111)
         ax.plot(rho,pval,'o', color=color)
-        ax.set_title(type)
+        ax.set_title(type + ' sig_neg=%d, sig_pos=%d\n also above thresh neg=%d, pos=%d' % (sig_neg, sig_pos, sig_neg_minthresh, sig_pos_minthresh) )
         ax.set_ylabel('p value')
         ax.set_xlabel(r'$\rho$')
         ax.set_yscale('log')
         ax.set_xlim(left=-.75,right=.75)
-        ax.axhline(np.true_divide(0.05,2*num_neurons), linestyle='--',color='red', linewidth=1)
+        ax.axhline(thresh, linestyle='--',color='red', linewidth=1)
         pdf.savefig(fig_sum)
         for i in np.arange(rho.shape[0]):
             ax.annotate(str(relevant_weighted_neurons[i]), (rho[i], pval[i] * (1+np.random.lognormal(.001))))
