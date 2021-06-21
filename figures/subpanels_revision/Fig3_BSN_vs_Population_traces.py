@@ -7,7 +7,6 @@ import prediction.userTracker as userTracker
 import prediction.provenance as prov
 behavior = 'curvature'
 #conditions = ['AML18_moving']
-conditions = ['AKS297.51_moving']#, 'AML32_moving']
 outfilename = 'figures/subpanels_revision/generatedFigs/Fig3_SLM_v_pop_traces_' + behavior + '.pdf'
 pickled_data = '/home/sdempsey/new_comparison.dat' #'/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/comparison_results_' + behavior + '_l10.dat'
 #neural_data = '/projects/LEIFER/PanNeuronal/decoding_analysis/analysis/neuron_data.dat'

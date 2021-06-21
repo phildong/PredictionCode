@@ -1,8 +1,12 @@
-file='AVAR_BFP.mat'
+file='AVAL_RFP.mat'
 dir='/projects/LEIFER/PanNeuronal/20200130/BrainScanner20200130_110803_XP/user_exported_tracking_frames/'
 blue_cmap = colorcet('L15');
 red_cmap = colorcet('L13');
-curr_cmap= blue_cmap;
+if contains(file, 'BFP')
+    curr_cmap= blue_cmap;
+else
+    curr_cmap=red_cmap;
+end
 
 load([dir, file])
 figure('Position', [50 50 550 200])
@@ -15,7 +19,11 @@ plot(inSliceXY(:,1),inSliceXY(:,2),'+w')
 set(gca,'YDir','normal')
 dx=0
 dy=3
-mat2clust_pyindx=[56,33,103,8,28,118,115,38,96,9,126,88,70,110,53,130,15,62,66,113,84,35,121,86,111,11,82,65,75,67,36,40,132,42,25,55,94,106,23,48,122,87,18,2,71,124,27,83,31,78,93,34,123,41,51,61,5,120,73,58,64,99,74,26,7,50,81,44,91,72,10,14,68,20,89,133,24,43,95,3,131,69,49,57,104,21,77,30,117,1,105,22,92,54,6,98,47,97,39,129,60,90,17,16,100,101,37,119,32,127,63,79,85,29,4,102,125,0,109,76,46,80,114,12,19,112,45,128,107,116,13,52,108,59];
+%Note each element is the clustered python  0-indexed neuron number
+%used displayed in the manuscript text and heatmaps
+% so for the 4th neuron in matlab (1-index), the 4th element of the
+% array gives the neuron number used in the manuscript
+mat2clust_pyindx=[97,36,70,66,10,14,26,12,51,67,108,38,33,100,99,107,60,62,16,88,56,41,63,28,86,15,59,123,5,29,42,64,110,9,6,11,121,55,46,68,126,23,113,132,133,104,19,103,21,79,118,39,127,130,128,96,3,44,92,78,47,17,93,8,131,7,124,76,72,85,18,24,20,40,37,111,73,115,119,0,109,1,94,112,69,98,80,74,125,4,101,50,65,27,90,54,30,122,13,105,34,35,48,61,81,45,43,82,83,106,75,31,25,114,2,71,91,49,95,53,117,32,57,87,22,89,77,102,120,52,58,129,84,116]
 cell_numeric_labels=num2cell(mat2clust_pyindx(closePointsIds));
 labels=cellfun(@num2str,cell_numeric_labels,'UniformOutput',false)
 text(x+dx, y+dy, labels, 'color','white');

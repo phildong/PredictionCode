@@ -82,15 +82,8 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
     #folder = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/'
     #dataLog = '/projects/LEIFER/PanNeuronal/decoding_analysis/old_worm_data/Special_transition/Special_transition_datasets.txt'
 
-    # data parameters
-    dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
-            'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
-            'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
-            'windowGCamp': 5,  # gauss window for red and green channel
-            'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
-            'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
-            }
-    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder, dataPars = dataPars)
+
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
     keyList = np.sort(dataSets.keys())
     theDataset = '134913'
     drug_application = 1500
@@ -104,8 +97,12 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
-        neurons_ZScore = dataSets[key]['Neurons']['ActivityFull'] # Z scored neurons to use to look at calcium traces
-        velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+        velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
+
+        G = dataSets[key]['Neurons']['G_smooth']
+        import numpy.matlib
+        Gmeansub = G - np.matlib.repmat(np.nanmean(G, axis=1), G.shape[1], 1).T
+
 
         # Only consider neurons that have timepoints present for at least 70% of the time during immobilization
         frac_nan_during_imm = np.true_divide(np.sum(np.isnan(neurons_withNaN[:, im_start:]), axis=1),
@@ -113,11 +110,15 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
         valid_imm = np.argwhere(frac_nan_during_imm < 0.3)[:, 0]
 
         dset = dataSets[key]
-        Iz = neurons_ZScore
         # Cluster on Z-scored interpolated data to get indices
         # Cluster only on the immobile portion; and only consider neurons prsent for both moving and immobile
         from scipy.cluster.hierarchy import linkage, dendrogram
-        Z = linkage(dataSets[key]['Neurons']['Activity'][valid_imm,transition:])
+
+        rel_activity = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig'][valid_imm, transition:]
+        from scipy import stats
+
+        rel_zactivity = stats.zscore(rel_activity, axis=1)
+        Z = linkage(rel_zactivity)
         d = dendrogram(Z, no_plot=True)
         idx_clust = np.array(d['leaves'])
 
@@ -140,8 +141,8 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
 
     prcntile = 99.7
     num_Neurons=neurons_withNaN[valid_imm, :].shape[0]
-    vmin = np.nanpercentile(neurons_withNaN[valid_imm, :], 0.1)
-    vmax = np.nanpercentile(neurons_withNaN[valid_imm, :].flatten(), prcntile)
+    vmax = np.nanpercentile(np.abs(Gmeansub), prcntile)
+    vmin = -vmax
     pos = ax.imshow(neurons_withNaN[valid_imm[idx_clust], :], aspect='auto',
                     interpolation='none', vmin=vmin, vmax=vmax,
                     extent=[time_contig[0], time_contig[-1], -.5, num_Neurons - .5], origin='lower')
@@ -174,22 +175,29 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
 
 
     axbeh = fig.add_subplot(gs[1, :], sharex=ax)
-    axbeh.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['AngleVelocity'], linewidth=1.5, color='k')
+    axbeh.plot(dset['Neurons']['TimeFull'], dset['BehaviorFull']['CMSVelocity'], linewidth=1.5, color='k')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=0.5, color='k')
     axbeh.axvline(drug_app_time)
     axbeh.axvline(imm_start_time)
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
     axbeh.set_xlim(0, end_time)
+    vel_ylims=[-.2, .3]
+    axbeh.set_ylim(vel_ylims)
     axbeh.set_ylabel('Velocity')
     axbeh.axes.get_xaxis().set_visible(False)
 
-    curv = dset['BehaviorFull']['Eigenworm3']
+    curv = dset['BehaviorFull']['Curvature']
     axbeh = fig.add_subplot(gs[2, :], sharex=ax)
     axbeh.plot(dset['Neurons']['TimeFull'], curv, linewidth=1.5, color='brown')
     axbeh.set_ylabel('Curvature')
     fig.colorbar(pos, ax=axbeh)
     axbeh.axhline(linewidth=.5, color='k')
+    curv_ylims=[-9, 9]
+    axbeh.set_ylim(curv_ylims)
+    axbeh.set_yticks([-2 * np.pi, 0, 2 * np.pi])
+    axbeh.set_yticklabels([r'$-2\pi$', '0', r'$2\pi$'])
+
     axbeh.set_xticks(np.arange(0, time_contig[-1], 60))
     axbeh.set_xlim(0, end_time)
     axbeh.axes.get_xaxis().set_visible(False)
@@ -261,7 +269,9 @@ for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
     
 
     theta, phi =None, None
-    theta, phi = 329, 73
+    #theta, phi = 329, 73
+    #theta, phi = 257, 343
+    theta, phi = 20, 291
     plot_trajectories(pcs, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (minimally processed)', theta=theta, phi=phi)
     plot_trajectories(pcs_z, drug_app_index, imm_start_index, im_end, key + '\n F  PCA (z-scored)', theta=theta, phi=phi)
     plot_trajectories(pcs_dFdt, drug_app_index, imm_start_index, im_end, key + '\n F  dF/dt PCA (minimally processed)', color="#ff7f0e", theta=theta, phi=phi)

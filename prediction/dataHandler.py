@@ -376,6 +376,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     #Apply Gaussian Smoothing (and interpolate for free) #Keep the raw green around so we can use it to set heatmap values laters
     I_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in I])
     G_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in G])
+    R_smooth_interp = np.array([gauss_filterNaN(line,dataPars['windowGCamp']) for line in R])
 
 
     print("After smoothing and interpolating", np.nanmean(I_smooth_interp))
@@ -387,7 +388,8 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     I_smooth[np.isnan(I)]=np.nan
     G_smooth = np.copy(G_smooth_interp)
     G_smooth[np.isnan(G)] = np.nan
-
+    R_smooth = np.copy(R_smooth_interp)
+    R_smooth[np.isnan(R)] = np.nan
 
     #Get the  preferred order  of the neruons,
     #   Jeff did this from Ratio2 in MATLAB:
@@ -439,6 +441,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
 
     I_smooth_interp_crop_noncontig_data = np.copy(I_smooth_interp[:, valid_map_data])
     G_smooth_interp_crop_noncontig_data = np.copy(G_smooth_interp[:, valid_map_data])
+    R_smooth_interp_crop_noncontig_data = np.copy(R_smooth_interp[:, valid_map_data])
     I_smooth_interp_crop_noncontig_identity = np.copy(I_smooth_interp[:, valid_map_identity])
 
 
@@ -533,12 +536,17 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     dataDict['Neurons']['G'] = G[order][:,idx_data] # outlier removed, photobleach corrected
     dataDict['Neurons']['G_smooth'] = G_smooth[order][:,idx_data] # SMOOTHED has nans,  outlier removed, photobleach corrected
     dataDict['Neurons']['G_smooth_interp'] = G_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED, outlier removed, photobleach corrected
+    dataDict['Neurons']['R'] = R[order][:,idx_data] # outlier removed, photobleach corrected
+    dataDict['Neurons']['R_smooth'] = R_smooth[order][:,idx_data] # SMOOTHED has nans,  outlier removed, photobleach corrected
+    dataDict['Neurons']['R_smooth_interp'] = R_smooth_interp[order][:,idx_data] # interpolated, nans added back in, SMOOTHED, outlier removed, photobleach corrected
+
 
     dataDict['Neurons']['RedMatlab'] = RedMatlab[order] #outlier removed, photobleach corrected
     dataDict['Neurons']['GreenMatlab'] = GreenMatlab[order] #outlier removed, photobleach corrected
 
     dataDict['Neurons']['I_smooth_interp_crop_noncontig'] = I_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED common noise rejected, mean- and var-preserved, outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
     dataDict['Neurons']['G_smooth_interp_crop_noncontig'] = G_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED, linear motion correction (mean 0 var preserved), , outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
+    dataDict['Neurons']['R_smooth_interp_crop_noncontig'] = R_smooth_interp_crop_noncontig_data[order] # interpolated, SMOOTHED, linear motion correction (mean 0 var preserved), , outlier removed, photobleach corrected, note strings of nans have been removed such that the DeltaT between elements is no longer constant
     dataDict['Neurons']['I_Time_crop_noncontig'] = time[valid_map_data]  # corresponding time axis
     dataDict['Neurons']['I_valid_map']=valid_map_data
 
@@ -548,7 +556,7 @@ def loadData(folder, dataPars, ew=1, cutVolume = None):
     return dataDict
     
     
-def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
+def loadMultipleDatasets(dataLog, pathTemplate, nDatasets = None):
     """load matlab files containing brainscanner data. 
     string dataLog: file containing Brainscanner names with timestamps e.g. BrainScanner20160413_133747.
     path pathtemplate: relative or absoluet location of the dataset with a formatter replacing the folder name. e.g.
@@ -557,6 +565,13 @@ def loadMultipleDatasets(dataLog, pathTemplate, dataPars, nDatasets = None):
     return: dict of dictionaries with neuron and behavior data
     """
     datasets={}
+    dataPars = {'medianWindow': 0,  # smooth eigenworms with gauss filter of that size, must be odd
+                'gaussWindow': 50,  # gaussianfilter1D is uesed to calculate theta dot from theta in transformEigenworms
+                'rotate': False,  # rotate Eigenworms using previously calculated rotation matrix
+                'windowGCamp': 5,  # gauss window for red and green channel
+                'interpolateNans': 6,  # interpolate gaps smaller than this of nan values in calcium data
+                'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
+                }
     with open(dataLog, 'r') as f:
         lines = f.readlines()
         for lindex, sline in enumerate(lines):
@@ -1108,7 +1123,7 @@ def debug_findPhaseShift(vsmooth, velo, vel, clIndices, clTime, curv, folder='')
     file = os.path.join(folder, "centerline_velocity_analysis.pdf")
     print("Beginning to save centerline debugging plots: " + file)
     import matplotlib.backends.backend_pdf
-    pdf = matplotlib.backends.backend_pdf.PdfPages(file)
+    pdf = matplotlib.backends.backend_pdf.PdfPages(file, metadata=prov.pdf_metadata(__file__))
     for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
         pdf.savefig(fig)
         plt.close(fig)

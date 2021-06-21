@@ -28,29 +28,17 @@ def main():
     outputFolder = os.path.join(codePath,'figures/subpanels_revision/generatedFigs')
 
     data = {}
-    for typ in ['AKS297.51', 'AML32', 'AML18']:
-        for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
+    for typ_cond in ['AKS297.51_moving','AKS297.51_immobile', 'AML32_moving', 'AML18_moving', 'AKS27.51_transition', 'AML32_chip']:
             path = userTracker.dataPath()
-            folder = os.path.join(path, '{}_{}/'.format(typ, condition))
-            dataLog = os.path.join(path, '{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition))
-            outLoc = os.path.join(path, 'Analysis/{}_{}_results.hdf5'.format(typ, condition))
-            outLocData = os.path.join(path, 'Analysis/{}_{}.hdf5'.format(typ, condition))
+            folder = os.path.join(path, '%s/' % typ_cond)
+            dataLog = os.path.join(path, '{0}/{0}_datasets.txt'.format(typ_cond))
+            dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
 
-            try:
-                # load multiple datasets
-                dataSets = dh.loadDictFromHDF(outLocData)
-                keyList = np.sort(dataSets.keys())
-                results = dh.loadDictFromHDF(outLoc)
-                # store in dictionary by typ and condition
-                key = '{}_{}'.format(typ, condition)
-                data[key] = {}
-                data[key]['dsets'] = keyList
-                data[key]['input'] = dataSets
-                data[key]['analysis'] = results
-            except IOError:
-                print typ, condition, 'not found.'
-                pass
-
+            keyList = np.sort(dataSets.keys())
+            key = typ_cond
+            data[key] = {}
+            data[key]['dsets'] = keyList
+            data[key]['input'] = dataSets
     print 'Done reading data.'
 
     import matplotlib.pyplot as plt

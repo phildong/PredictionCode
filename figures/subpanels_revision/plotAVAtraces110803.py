@@ -10,36 +10,24 @@ import numpy as np
 from prediction import userTracker
 import prediction.dataHandler as dh
 
+COMPARE_MOTION_CORRECTION = False
+PLOT_AVAL_PLUS_AVAR = False
 print("Loading data..")
 
 codePath = userTracker.codePath()
 outputFolder = os.path.join(codePath,'figures/Debugging')
 
 data = {}
-for typ in ['AKS297.51']: #, 'AML32', 'AML18']:
-    for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
-        path = userTracker.dataPath()
-        folder = os.path.join(path, '{}_{}/'.format(typ, condition))
-        dataLog = os.path.join(path, '{0}_{1}/{0}_{1}_datasets.txt'.format(typ, condition))
-        outLoc = os.path.join(path, 'Analysis/{}_{}_results.hdf5'.format(typ, condition))
-        outLocData = os.path.join(path, 'Analysis/{}_{}.hdf5'.format(typ, condition))
+for typ_cond in ['AKS297.51_moving']:
+    path = userTracker.dataPath()
+    folder = os.path.join(path, '%s/' % typ_cond)
+    dataLog = os.path.join(path, '{0}/{0}_datasets.txt'.format(typ_cond))
 
-        print("Loading " + folder + "...")
-        try:
-            # load multiple datasets
-            dataSets = dh.loadDictFromHDF(outLocData)
-            keyList = np.sort(dataSets.keys())
-            results = dh.loadDictFromHDF(outLoc)
-            # store in dictionary by typ and condition
-            key = '{}_{}'.format(typ, condition)
-            data[key] = {}
-            data[key]['dsets'] = keyList
-            data[key]['input'] = dataSets
-            data[key]['analysis'] = results
-        except IOError:
-            print typ, condition, 'not found.'
-            pass
-print('Done reading data.')
+    dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
+    keyList = np.sort(dataSets.keys())
+    data[typ_cond] = {}
+    data[typ_cond]['dsets'] = keyList
+    data[typ_cond]['input'] = dataSets
 
 
 
@@ -56,6 +44,8 @@ idn = 'BrainScanner20200130_110803'
 ### Get the relevant data.
 dset = data[key]['input'][idn]
 activity = dset['Neurons']['I_smooth_interp_crop_noncontig']
+raw = dset['Neurons']['G_smooth_interp_crop_noncontig']
+R = dset['Neurons']['R_smooth_interp_crop_noncontig']
 time = dset['Neurons']['I_Time_crop_noncontig']
 numNeurons = activity.shape[0]
 comVel = dset['Behavior_crop_noncontig']['CMSVelocity']
@@ -200,8 +190,14 @@ for neuron in np.array([AVAR, AVAL]): #np.arange(numNeurons):
 
     fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
 
-
-    ax[2].plot(time, activity[neuron, :], linewidth=1.5)
+    if PLOT_AVAL_PLUS_AVAR:
+        ax[2].plot(time, activity[AVAL, :]+activity[AVAR, :], linewidth=1.5, label=r'$F_{mc}$')
+    else:
+        ax[2].plot(time, activity[neuron, :], linewidth=1.5, label=r'$F_{mc}$')
+    if COMPARE_MOTION_CORRECTION:
+        ax[2].plot(time, raw[neuron, :]-np.nanmean(raw[neuron, :]), color='green', linewidth=1.5, label=r'$F_{GCaMP}$')
+        #ax[2].plot(time, R[neuron, :]-np.nanmean(R[neuron, :]), color='red', linewidth=1.5, label=r'$F_{RFP}$')
+        ax[2].legend()
     ax[2].set_ylabel('Activity')
     ax[2].set_xlabel('Time (s)')
 
@@ -224,8 +220,7 @@ for neuron in np.array([AVAR, AVAL]): #np.arange(numNeurons):
     ax[5].set_ylabel('dF/dt')
     ax[5].set_xlabel('Time (s)')
 
-    import prediction.provenance as prov
-    prov.stamp(ax[5], .55, .15)
+
 
 
 if UseEigVol:
@@ -237,7 +232,8 @@ print("Saving tuning curve plots to PDF...")
 filename = 'generatedFigs/' + key + "_" + idn + "_tuning_" + velStyle + ".pdf"
 print(filename)
 import matplotlib.backends.backend_pdf
-pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+import prediction.provenance as prov
+pdf = matplotlib.backends.backend_pdf.PdfPages(filename, metadata=prov.pdf_metadata(__file__))
 numFigs = plt.gcf().number + 1
 for fig in xrange(1, numFigs): ## will open an empty extra figure :(
     print("Saving Figure %d of %d" % (fig, numFigs))
