@@ -3,7 +3,7 @@ from matplotlib import animation
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import pickle
-datafolder = '/home/sdempsey/'
+datafolder = ''#'/home/sdempsey/'
 outfolder = 'figures/subpanels_revision/generatedFigs/'
 
 def rho_adj(y, yhat):
@@ -53,7 +53,7 @@ rho2_adj_curv = np.array([data[keys[x]]['curvature'][False]['scorespredicted'][1
 n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(nKeys), np.zeros(nKeys), np.zeros(nKeys)
 
 nnn=np.zeros(nKeys)
-for ii, dataset in enumerate(keys[:nKeys]):
+for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
     print(dataset)
     nnn[ii] = neuron_data[dataset]['neurons'].shape[0]
     row = ii // 4
@@ -109,6 +109,8 @@ for ii, dataset in enumerate(keys[:nKeys]):
     vel_counts = np.array([np.argmax(vel_rhos > t*vel_rhos[-1]) for t in thresh_vals])
     curv_counts = np.array([np.argmax(curv_rhos > t*curv_rhos[-1]) for t in thresh_vals])
     overlap_counts = np.array([np.intersect1d(vel_order[:vel_counts[i]],curv_order[:curv_counts[i]]).size for i in range(vel_counts.size)])
+
+    print(np.intersect1d(vel_order[:vel_counts[90]],curv_order[:curv_counts[90]]))
 
     impact_thresh = 0.9
     n_impact_vel[ii] = np.interp(impact_thresh, thresh_vals, vel_counts)

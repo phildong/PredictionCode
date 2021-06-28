@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
-beh = 'curvature'
-
 pickled_data = 'new_comparison.dat'
 with open(pickled_data, 'rb') as handle:
     data = pickle.load(handle)
@@ -32,8 +30,8 @@ medianprops = dict(linewidth=6, color='k')
 bsn_rho=np.zeros(len(data.keys()))
 slm_rho=np.zeros(len(data.keys()))
 for k, key in enumerate(data.keys()): #Comparison line plot
-    bsn_rho[k] = data[key][beh][True]['scorespredicted'][1]
-    slm_rho[k] = data[key][beh][False]['scorespredicted'][1]
+    bsn_rho[k] = data[key]['curvature'][(True, True, True)]['scorespredicted'][1]
+    slm_rho[k] = data[key]['curvature'][(True, True, False)]['scorespredicted'][1]
     ax.plot([0, 1], [bsn_rho[k], slm_rho[k]], markersize=5, linewidth=2.5)
 
 ax.boxplot([bsn_rho, slm_rho], positions=[0-delta, 1+delta],
@@ -48,14 +46,12 @@ if SHOW_GFP:
     print("GFP:")
     cmap = plt.cm.get_cmap('gist_earth')
     for k, key in enumerate(dataGFP.keys()):
-        bsn_rho_g[k] = dataGFP[key][beh][True]['scorespredicted'][1]
-        slm_rho_g[k] = dataGFP[key][beh][False]['scorespredicted'][1]
+        bsn_rho_g[k] = dataGFP[key]['curvature'][(True, True, True)]['scorespredicted'][1]
+        slm_rho_g[k] = dataGFP[key]['curvature'][(True, True, False)]['scorespredicted'][1]
         thiscolor = cmap(.1+.8*np.true_divide(k,len(dataGFP.keys())))
-        thislinestyle = 'solid'
         if "20210503" in key:
             thiscolor = 'red'
-            thislinestyle = 'dashed'
-        ax.plot(offset+np.array([2, 3]), [bsn_rho_g[k], slm_rho_g[k]], markersize=5, linewidth=2.5, color=thiscolor, linestyle=thislinestyle)
+        ax.plot(offset+np.array([2, 3]), [bsn_rho_g[k], slm_rho_g[k]], markersize=5, linewidth=2.5, color=thiscolor)
 
     ax.boxplot([bsn_rho_g, slm_rho_g], positions=offset+np.array([2-delta, 3+delta]),
                manage_xticks=False, medianprops=medianprops,
@@ -65,7 +61,7 @@ if SHOW_GFP:
 
 #import prediction.provenance as prov
 #prov.stamp(ax,.55,.35,__file__)
-outfile = 'cms_boxplots_%s.pdf' % beh
+outfile = 'cms_boxplots_curvature_ica.pdf'
 ax.set_title(outfile)
 fig.savefig(outfile)
 print(outfile)

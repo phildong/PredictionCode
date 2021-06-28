@@ -6,3 +6,6 @@ figures/movies/crawling_frames/
 *.pdf
 *.png
 *.dat
+*.pkl
+*.mat
+*.nb

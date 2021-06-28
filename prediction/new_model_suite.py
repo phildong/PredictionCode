@@ -17,7 +17,7 @@ with open('neuron_data_bothmc_nb.dat', 'rb') as f:
     
 results = {}
 
-for key in filter(lambda x: x[-6:] == '110803', data.keys()):
+for key in data.keys():
     print("Running "+key)
     time = data[key]['time']
     neurons = data[key]['neurons']
