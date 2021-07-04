@@ -2,10 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
-from Classifier import rectified_derivative
-
-def r2ms(y, yhat):
-    return 1-np.sqrt(np.var(y-yhat)/np.var(yhat))
+from utility import user_tracker
 
 def label_diff(ax, i,js,text,X,Y):
     sjs = sorted(js, key = lambda x: abs(i-x))
@@ -28,11 +25,11 @@ def boxplot(ax, x, ys):
            manage_xticks=False, medianprops=medianprops,
            boxprops=boxprops, capprops=capprops, whiskerprops=whiskerprops)
 
-with open('new_comparison.dat', 'rb') as handle:
-    data = pickle.load(handle)#, encoding = 'bytes')
+with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as f:
+    data = pickle.load(f)
 
-with open('neuron_data_bothmc_nb.dat', 'rb') as f:
-    neuron_data = pickle.load(f)#, encoding = 'bytes')
+with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as f:
+    neuron_data = pickle.load(f)
 
 bsns = {}
 for k in data.keys():
@@ -75,4 +72,4 @@ for i in range(5):
 
 label_diff(ax, 4, [0, 1, 2, 3], "*", range(5), np.max(cols, axis = 1))
 
-fig.savefig('bsn_nonlinear.pdf')
+fig.savefig('%s/figures/output/bsn_nonlinear.pdf' % user_tracker.codePath())

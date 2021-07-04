@@ -1,37 +1,27 @@
 import matplotlib.pyplot as plt
+import matplotlib.backends.backend_pdf
+
 import numpy as np
 from scipy.ndimage import gaussian_filter
-import pickle
 from scipy.signal import find_peaks, peak_widths
 
-def rectified_derivative(neurons):
-    nan_zero = np.copy(neurons)
-    nan_zero[np.isnan(neurons)] = 0
-    nan_zero_filtered = gaussian_filter(nan_zero, order = 1, sigma = (0, 7))
+from utility import user_tracker
 
-    flat = 0*neurons.copy()+1
-    flat[np.isnan(neurons)] = 0
-    flat_filtered = gaussian_filter(flat, order = 0, sigma = (0, 7))
-
-    deriv = nan_zero_filtered/flat_filtered
-    deriv_pos = np.copy(deriv)
-    deriv_neg = np.copy(deriv)
-    deriv_pos[deriv < 0] = 0
-    deriv_neg[deriv > 0] = 0
-
-    return deriv_pos, deriv_neg, deriv
+import pickle
 
 with open('new_comparison.dat', 'rb') as handle:
-    data = pickle.load(handle)#, encoding = 'bytes')
+    data = pickle.load(handle)
 
 with open('neuron_data_bothmc_nb.dat', 'rb') as f:
-    neuron_data = pickle.load(f)#, encoding = 'bytes')
+    neuron_data = pickle.load(f)
 
-for k in filter(lambda x: '134800' in x, data.keys()):
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(user_tracker.codePath(), 'figures/output/decoded_features.pdf'))
+
+for k in data.keys()
     fig, ax = plt.subplots(6, 2, figsize = (20, 15), sharex = True)
 
     neurons_unn = neuron_data[k]['neurons']
-    _, _, nderiv = rectified_derivative(neurons_unn)
+    nderiv = neuron_data[k]['neuron_derivatives']
     neurons_and_derivs = np.vstack((neurons_unn, nderiv))
 
     mean = np.mean(neurons_and_derivs, axis = 1)[:, np.newaxis]
@@ -79,4 +69,7 @@ for k in filter(lambda x: '134800' in x, data.keys()):
 
     fig.suptitle(k, fontsize = 18)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    fig.savefig('fig5_%s.png' % k)
+
+    pdf.savefig(fig)
+
+pdf.close()

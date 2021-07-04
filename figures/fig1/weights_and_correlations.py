@@ -77,7 +77,7 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
 
 outputFolder = os.path.join(user_tracker.codePath(), 'figures/output')
 
-with open('%s/trained_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
+with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
     data = pickle.load(handle)
 with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as handle:
     neuron_data = pickle.load(handle)
