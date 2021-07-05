@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pickle
 
 from scipy import stats
 
@@ -12,6 +13,8 @@ with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as f:
     neuron_data = pickle.load(f)
 
 outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
 ### AVA indices
 idns = ['BrainScanner20200130_110803', 'BrainScanner20200130_110803', 'BrainScanner20200130_105254', 'BrainScanner20200310_141211', 'BrainScanner20200310_141211', 'BrainScanner20200310_142022', 'BrainScanner20200310_142022'       ]
@@ -27,7 +30,7 @@ for idn, neuron in zip(idns, neurons):
     vel = neuron_data[idn]['velocity']
 
     z_activity = np.append(z_activity, stats.zscore(activity[neuron]))
-    z_activity_deriv = np.append(z_activity, stats.zscore(activity[neuron]))
+    z_activity_deriv = np.append(z_activity_deriv, stats.zscore(activity_deriv[neuron]))
     vel_bucket = np.append(vel_bucket, vel)
 
 print("plotting aggregate figure")
@@ -56,15 +59,16 @@ flierprops = dict(linewidth=.2, markersize=1, marker='+')
 medianprops = dict(linewidth=2, color='k')#'#67eb34')
 labels = [''] * len(activity_bin)
 
-for i, bins in enumerate(activity_bin, deriv_bin):
+for i, bins in enumerate((activity_bin, deriv_bin)):
     ax[i].boxplot(bins, positions=bin_edges[:-1] + binwidth / 2, widths=binwidth * .9, boxprops=boxprops,
                medianprops=medianprops, labels=labels, manage_xticks=False,
                capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops, zorder=20)
     ax[i].locator_params(nbins=5)
     ax[i].axhline(color='k', linewidth=.5)
-    ax[i].xlim([-.2, 0.3])
-    ax[i].xlabel('velocity (mm^-1 s)')
-    ax[i].ylabel('AVA activity (z-score(' + type + '))')
+    ax[i].set_xlim([-.2, 0.3])
+    ax[i].set_xlabel('velocity (mm/s)')
+    ax[i].set_ylabel('AVA activity (z-score(' + ('F' if i == 0 else 'dF/dt') + '))')
     ax[i].legend()
 
-fig.savefig('%s/figures/output/aggregate_AVA.pdf' % user_tracker.codePath())
+fig.tight_layout()
+fig.savefig('%s/aggregate_AVA.pdf' % outputFolder)

@@ -3,6 +3,8 @@ import matplotlib.gridspec as gridspec
 import matplotlib.backends.backend_pdf
 
 import os
+import pickle
+
 import numpy as np
 import numpy.ma as ma
 import numpy.matlib
@@ -65,17 +67,15 @@ for neuron in (AVAR, AVAL):
 
     ax = [ax1, ax2, ax3, ax4, ax5, ax6]
 
-    fig.suptitle(key + ' ' + idn + ' Neuron: #' + str(neuron))
+    fig.suptitle(key + ' Neuron: #' + str(neuron))
 
-    if PLOT_AVAL_PLUS_AVAR:
-        ax[2].plot(time, activity[AVAL, :]+activity[AVAR, :], linewidth=1.5, label=r'$F_{mc}$')
-    else:
-        ax[2].plot(time, activity[neuron, :], linewidth=1.5, label=r'$F_{mc}$')
+    # ax[2].plot(time, activity[AVAL, :]+activity[AVAR, :], linewidth=1.5, label=r'$F_{mc}$')
+    ax[2].plot(time, activity[neuron, :], linewidth=1.5, label=r'$F_{mc}$')
     ax[2].set_ylabel('Activity')
     ax[2].set_xlabel('Time (s)')
 
 
-    ax[3].plot(time, velocity, 'k', linewidth=1.5)
+    ax[3].plot(time, vel, 'k', linewidth=1.5)
     ax[3].set_ylabel('Velocity')
     ax[3].set_xlabel('Time (s)')
     ax[3].set_xticks(np.arange(0, time[-1], 60))
@@ -94,10 +94,15 @@ for neuron in (AVAR, AVAL):
     ax[5].set_xlabel('Time (s)')
 
 print("Saving tuning curve plots to PDF...")
-filename = os.path.join(user_tracker.codePath(), 'figures/output/' + key + "_tuning.pdf")
-pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
+
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
+
+filename = key + "_tuning.pdf"
+pdf = matplotlib.backends.backend_pdf.PdfPages(outputFolder + '/' + filename)
 numFigs = plt.gcf().number + 1
-for fig in xrange(1, numFigs): ## will open an empty extra figure :(
+for fig in range(1, numFigs): ## will open an empty extra figure :(
     print("Saving Figure %d of %d" % (fig, numFigs))
     pdf.savefig(fig)
     plt.close(fig)
