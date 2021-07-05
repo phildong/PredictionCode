@@ -15,8 +15,8 @@ import os
 import numpy as np
 import numpy.matlib
 
-from prediction import user_tracker
-import prediction.data_handler as dh
+from utility import user_tracker
+from utility import data_handler as dh
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -26,6 +26,7 @@ from scipy import stats
 
 import pandas as pd
 
+import matplotlib.pyplot as plt
 import matplotlib.backends.backend_pdf
 from matplotlib import ticker
 
@@ -37,12 +38,14 @@ params = {'legend.fontsize': 'x-large',
             'ytick.labelsize': 'x-large'}
 pylab.rcParams.update(params)
 
-codePath = userTracker.codePath()
+codePath = user_tracker.codePath()
 outputFolder = os.path.join(codePath,'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
 data = {}
 for typ_cond in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
-        path = userTracker.dataPath()
+        path = user_tracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path, '{0}/{0}_datasets.txt'.format(typ_cond))
         dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)

@@ -74,8 +74,7 @@ def phaseScrambleTS(ts):
     tsrp = ifft(fsrp)
     if not np.allclose(tsrp.imag, np.zeros(tsrp.shape)):
         max_imag = (np.abs(tsrp.imag)).max()
-        imag_str = '\nNOTE: a non-negligible imaginary component was discarded.\n\tMax: {}'
-        print imag_str.format(max_imag)
+        print('\nNOTE: a non-negligible imaginary component was discarded.\n\tMax: {}' % max_imag)
     return tsrp.real
 
 def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase=False):
@@ -118,7 +117,7 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
     return rhos, cum_prob
 
 
-def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavior = 'velocity'):
+def main(strain='AKS297.51_moving', recording='BrainScanner20200130_110803', behavior = 'velocity'):
     gtype = 'gfp' if '18' in strain else 'gcamp'
 
     with open('%s/%s_linear_models.dat' % (user_tracker.codePath(), gtype), 'rb') as f:
@@ -126,13 +125,16 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
     with open('%s/%s_recordings.dat' % (user_tracker.codePath(), gtype), 'rb') as f:
         neuron_data = pickle.load(f)
 
-    numShuffles = 5000
+    numShuffles = 500
 
     outfilename = recording + '_highweight_tuning_' + behavior + '.pdf'
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(user_tracker.codePath(),'figures/output', outfilename))
+    outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+    if not os.path.exists(outputFolder):
+        os.makedirs(outputFolder)
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, outfilename))
 
     # Sort neurons by abs value weight
-    w = data[key][behavior][False]['weights']
+    w = data[recording][behavior][False]['weights']
     slm_weights_raw = w[:w.size / 2]
     slm_weights_raw_deriv = w[w.size / 2:]
     highly_weighted_neurons = np.flipud(np.argsort(np.abs(slm_weights_raw)))
@@ -140,8 +142,8 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
     num_neurons=len(highly_weighted_neurons)
 
     # Calculate distribution of corrcoeff's on shuffled data for getting p-values
-    activity_all = np.concatenate((neuron_data[key], deriv_neuron_data[key]), axis=0)
-    rhos, cum_prob = shuffled_cdf_rho(activity_all, beh_data[key], pdf,nShuffles=numShuffles)
+    activity_all = np.concatenate((neuron_data[recording]['neurons'], neuron_data[recording]['neuron_derivatives']), axis=0)
+    rhos, cum_prob = shuffled_cdf_rho(activity_all, neuron_data[recording][behavior], pdf,nShuffles=numShuffles)
 
     # Make plot to populate with cumulative distribution function of rho
     fig_cdf = plt.figure()
@@ -159,14 +161,14 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
                 relevant_weighted_neurons = highly_weighted_neurons
                 neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw[neuron]
-                activity = neuron_data[key][neuron]
+                activity = neuron_data[recording]['neurons'][neuron]
                 color = u'#1f77b4'
 
             else:
                 relevant_weighted_neurons = highly_weighted_neurons_deriv
                 neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw_deriv[neuron]
-                activity = deriv_neuron_data[key][neuron]
+                activity = neuron_data[recording]['neuron_derivatives'][neuron]
                 color = u'#ff7f0e'
 
 
@@ -176,25 +178,25 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
             # Calculate bins for box plot and split data up into subarrays based on bin
             nbins = 11
             plus_epsilon = 1.00001
-            bin_edges = np.linspace(np.nanmin(beh_data[key]) * plus_epsilon, np.nanmax(beh_data[key]) * plus_epsilon, nbins)
+            bin_edges = np.linspace(np.nanmin(neuron_data[recording][behavior]) * plus_epsilon, np.nanmax(neuron_data[recording][behavior]) * plus_epsilon, nbins)
             binwidth = np.diff(bin_edges)
-            assigned_bin = np.digitize(beh_data[key], bin_edges)
+            assigned_bin = np.digitize(neuron_data[recording][behavior], bin_edges)
             activity_bin = [None] * (len(bin_edges) - 1)  # note the activity has to be lists, and there should be 1 less because the bins are edges
             for k, each in enumerate(np.unique(assigned_bin)):
                 activity_bin[k] = activity[np.argwhere(assigned_bin == each)[:, 0]]
 
-            rho[rank] = nancorrcoef(beh_data[key], activity)[0,1]
+            rho[rank] = nancorrcoef(neuron_data[recording][behavior], activity)[0,1]
             pval[rank] = get_pval_from_cdf(rho[rank], rhos, cum_prob)
             fig1 = plt.figure(constrained_layout=True, figsize=[10, 5.3])
             gs = gridspec.GridSpec(ncols=4, nrows=2, figure=fig1)
             plt.rc('xtick', labelsize=17)
             plt.rc('ytick', labelsize=17)
 
-            ax_blank=fig1.add_subplot(gs[1,0], title=key + '  ' + type + '\n Neuron: %d,\n Weight Rank: %d, Weight = %.4f\n rho= %.2f, p=%.2E' % (neuron, rank, weight, rho[rank], pval[rank]))
+            ax_blank=fig1.add_subplot(gs[1,0], title=recording + '  ' + ntype + '\n Neuron: %d,\n Weight Rank: %d, Weight = %.4f\n rho= %.2f, p=%.2E' % (neuron, rank, weight, rho[rank], pval[rank]))
 
             # Generate scatter plot and then box plot
-            f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + type + ')')
-            f1_ax1.plot(beh_data[key], activity, 'o', alpha=.05, color=color)
+            f1_ax1 = fig1.add_subplot(gs[0, 0], xlabel=behavior, ylabel='Activity (' + ntype + ')')
+            f1_ax1.plot(neuron_data[recording][behavior], activity, 'o', alpha=.05, color=color)
             boxprops = dict(linewidth=.5)
             capprops = dict(linewidth=.5)
             whiskerprops = dict(linewidth=.5)
@@ -213,14 +215,13 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
             f1_ax1.tick_params(axis="y", labelsize=8)
 
             f1_ax2 = fig1.add_subplot(gs[0,1:], xlabel='time (s)', ylabel='Activity')
-            f1_ax2.plot(time_data[key], activity, color=color)
+            f1_ax2.plot(neuron_data[recording]['time'], activity, color=color)
             f1_ax2.set_xlim(left=0)
 
             f1_ax3 = fig1.add_subplot(gs[1,1:], xlabel='time (s)', ylabel=behavior)
-            f1_ax3.plot(time_data[key], beh_data[key], color='black')
+            f1_ax3.plot(neuron_data[recording]['time'], neuron_data[recording][behavior], color='black')
             f1_ax3.axhline(color='black')
             f1_ax3.set_xlim(left=0)
-            prov.stamp(f1_ax3, .55, .35, __file__ + '\n' + pickled_data)
             pdf.savefig(fig1)
 
         # Plot summary of rho vs pvalue
@@ -233,7 +234,7 @@ def main(strain='AML32_moving', recording='BrainScanner20170424_105620', behavio
         fig_sum = plt.figure(constrained_layout=True, figsize=[14, 5])
         ax = fig_sum.add_subplot(111)
         ax.plot(rho,pval,'o', color=color)
-        ax.set_title(type + ' sig_neg=%d, sig_pos=%d\n also above thresh neg=%d, pos=%d' % (sig_neg, sig_pos, sig_neg_minthresh, sig_pos_minthresh) )
+        ax.set_title(ntype + ' sig_neg=%d, sig_pos=%d\n also above thresh neg=%d, pos=%d' % (sig_neg, sig_pos, sig_neg_minthresh, sig_pos_minthresh) )
         ax.set_ylabel('p value')
         ax.set_xlabel(r'$\rho$')
         ax.set_yscale('log')

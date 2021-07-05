@@ -76,6 +76,8 @@ def compare_pdf(a, b, low_lim=-3, high_lim=3, nbins=24, alabel="", blabel="", PD
     return MSE
 
 outputFolder = os.path.join(user_tracker.codePath(), 'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
 with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
     data = pickle.load(handle)
@@ -86,31 +88,31 @@ for behavior in ['velocity', 'curvature']:
     keys = sorted(list(data.keys()))
 
     outfilename = behavior + '_weights.pdf'
-    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(user_tracker.codePath(), outfilename))
+    pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, outfilename))
 
     Frac_dFdt = np.zeros(len(keys))
-    R2ms = np.zeros((len(figtypes), len(keys)))
+    R2ms = np.zeros((2, len(keys)))
 
     for i, key in enumerate(keys):
-        fig = plt.figure(constrained_layout=True, figsize=(10*(len(figtypes)+2), 10*len(figtypes)))
-        gs = gridspec.GridSpec(len(figtypes), len(figtypes)+2, figure=fig, width_ratios=[1]*(len(figtypes)+2))
+        fig = plt.figure(constrained_layout=True, figsize=(10*(2), 10*2))
+        gs = gridspec.GridSpec(2, 2, figure=fig, width_ratios=[1]*(2))
 
         for bsn in [True, False]:
-            rho2_adj1[row, i] = calc_rho2_adj(data, key, behavior, figtype)
-            res = data[key][behavior][type_helper(figtype)]
+            res = data[key][behavior][bsn]
+            R2ms[1-bsn, i] = res['R2ms_test']
 
-            ts = fig.add_subplot(gs[row, 0])
+            ts = fig.add_subplot(gs[1-bsn, 0])
             ts.plot(res['time'], res['signal'], 'k', lw=1)
             ts.plot(res['time'], res['output'], 'b', lw=1)
             ts.set_xlabel('Time (s)')
             ts.set_ylabel(behavior.capitalize())
             ts.fill_between([res['time'][np.min(res['test_idx'])], res['time'][np.max(res['test_idx'])]], np.min(res['signal']), np.max(res['signal']), facecolor='gray', alpha = 0.5)
 
-            sc = fig.add_subplot(gs[row, 1], xlabel='Measured %s' % behavior.capitalize(), ylabel='Predicted %s' % behavior.capitalize())
+            sc = fig.add_subplot(gs[1-bsn, 1], xlabel='Measured %s' % behavior.capitalize(), ylabel='Predicted %s' % behavior.capitalize())
             sc.plot(res['signal'][res['train_idx']], res['output'][res['train_idx']], 'go', label = 'Train', rasterized = True)
             sc.plot(res['signal'][res['test_idx']], res['output'][res['test_idx']], 'bo', label = 'Test', rasterized = True)
             sc.plot([min(res['signal']), max(res['signal'])], [min(res['signal']), max(res['signal'])], 'k-.')
-            sc.set_title(figtype +r' $\rho^2_{\mathrm{adj},2}(\mathrm{velocity})$ = %0.3f' % rho2_adj1[row, i])
+            sc.set_title(('BSN' if bsn else 'Population') +r' $R^2_{\mathrm{ms},\mathrm{test}}(\mathrm{%s})$ = %0.3f' % (behavior, R2ms[1-bsn, i]))
             sc.legend()
 
         fig2 = plt.figure(figsize=[7,7])
@@ -139,7 +141,7 @@ for behavior in ['velocity', 'curvature']:
         weights = np.concatenate((np.array(slm_weights_raw), np.array(slm_weights_raw_deriv)), axis=None)
         coefs = np.polyfit(rho, weights, 1)
         x_new = np.linspace(np.min(rho), np.max(rho), num=3)
-        ffit = poly.polyval(x_new, coefs)
+        ffit = np.polyval(coefs, x_new)
         plt.plot(x_new, ffit,'r--')
 
         ax2.axvline(0, color="black")
@@ -177,7 +179,7 @@ for behavior in ['velocity', 'curvature']:
     axs = figsummary.add_subplot(1, 1, 1, xlabel='Decoder Performance (rho2_adj1)',
                                 ylabel='Percentage of magnitude of weights allocated to F',
                                 title='Balance of weights allocated to F vs dF/dt for population decoder')
-    axs.scatter(rho2_adj1[1, :], 1 - Frac_dFdt)
+    axs.scatter(R2ms[1, :], 1 - Frac_dFdt)
     axs.axhline(0.5)
     axs.set_ylim(0, 1)
     pdf.savefig(figsummary)

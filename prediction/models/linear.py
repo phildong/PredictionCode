@@ -211,8 +211,8 @@ def optimize(time, Xfullunn, Yfullunn, options_override = None):
         new_options = deepcopy(options)
         new_options['decision_tree'] = False
         new_options['test_fraction'] = 0
-        res1 = optimize_lm(time, X1, Y1, new_options)
-        res2 = optimize_lm(time, X2, Y2, new_options)
+        res1 = optimize(time, X1, Y1, new_options)
+        res2 = optimize(time, X2, Y2, new_options)
 
         # Assemble predictions together
         prediction_train = np.zeros(Y.size)

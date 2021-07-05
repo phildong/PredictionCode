@@ -1,11 +1,8 @@
 *.pyc
 build/
 .vscode/
-figures/movies/crawling_frames/
-*.html
+figures/output
 *.pdf
 *.png
 *.dat
 *.pkl
-*.mat
-*.nb
