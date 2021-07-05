@@ -82,7 +82,6 @@ for behavior in ['velocity', 'curvature']:
     G_R_mean_ratio_percentile_neuron = []
     G_R_mean_ratio_percentile2_neuron = []
     mean_vel = []
-    mean_psspeed = []
     vel_std = []
     std_test_train_ratio = []
     std_vel_test = []
@@ -117,7 +116,6 @@ for behavior in ['velocity', 'curvature']:
             bsnres = data[key][behavior][True]
             beh = res['signal'][res['train_idx']]
             beh_test = res['signal'][res['test_idx']]
-            ps_vel = dataSets[key]['Behavior']['PhaseShiftVelocity']
 
 
 
@@ -130,7 +128,6 @@ for behavior in ['velocity', 'curvature']:
                     R = R[:,idxs]
                     G = G[:,idxs]
                     vel = vel[idxs]
-                    ps_vel = ps_vel[idxs]
 
             rho2_adj.append(res['R2ms_test']
             bsn_rho2_adj.append(bsnres['R2ms_test'])
@@ -152,7 +149,6 @@ for behavior in ['velocity', 'curvature']:
             G_R_mean_ratio_percentile_neuron.append(np.nanmean(np.true_divide(np.nanpercentile(G, 90, axis=1), np.nanpercentile(R, 90, axis=1))))
             G_R_mean_ratio_percentile2_neuron.append(np.nanmean(np.true_divide(np.nanpercentile(G, 95, axis=1), np.nanpercentile(R, 95, axis=1))))
 
-            mean_psspeed.append(np.nanmean(np.abs(ps_vel)))
             mean_vel.append(np.nanmean(vel))
             vel_std.append(np.nanstd(vel))
             std_test_train_ratio.append(np.nanstd(beh_test) / np.nanstd(beh))
@@ -201,7 +197,6 @@ plot_candidate(R_mean_fano_factor, 'R mean fano factor', labels=label, PDF=pdf)
 plot_candidate(G_mean_fano_factor, 'G mean fano factor', labels=label, PDF=pdf)
 plot_candidate(G_mean, 'G mean ', labels=label, PDF=pdf)
 plot_candidate(mean_vel, 'Mean Velocity', labels=label, PDF=pdf)
-plot_candidate(mean_psspeed, 'Mean Phase Shift Speed', labels=label, PDF=pdf)
 plot_candidate(vel_std, 'std(vel)', labels=label, PDF=pdf)
 plot_candidate(std_test_train_ratio, 'std(vel_test) / std(vel_train)', labels=label, PDF=pdf)
 plot_candidate(std_vel_test, 'std(vel_test)', labels=label, PDF=pdf)

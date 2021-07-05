@@ -24,9 +24,10 @@ for gtype in ['gcamp', 'gfp']:
         results[key]['velocity'] = {}
         results[key]['curvature'] = {}
         for bsn in [True, False]:
-            results[key]['velocity'][bsn] = linear.optimize_lm(time, neurons_and_derivs, velocity, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
-            results[key]['curvature'][bsn] = linear.optimize_lm(time, neurons_and_derivs, curvature, options = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
-            print(results[key]['velocity'][bsn]['scorespredicted'][1], results[key]['curvature'][bsn]['scorespredicted'][1])
+            results[key]['velocity'][bsn] = linear.optimize(time, neurons_and_derivs, velocity, options_override = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
+            results[key]['curvature'][bsn] = linear.optimize(time, neurons_and_derivs, curvature, options_override = {"l1_ratios": [0], "parallelize": False, "best_neuron": bsn})
+            print("\tVelocity %s  R^2_ms = %0.2f" % ('(BSN):       ' if bsn else '(Population):', results[key]['velocity'][bsn]['R2ms_test']))
+            print("\tCurvature %s R^2_ms = %0.2f" % ('(BSN):       ' if bsn else '(Population):', results[key]['curvature'][bsn]['R2ms_test']))
         
     with open('%s_linear_models.dat' % gtype, 'wb') as f:
         pickle.dump(results, f)
