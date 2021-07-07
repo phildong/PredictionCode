@@ -4,24 +4,29 @@ import numpy as np
 from scipy.stats import wilcoxon, ttest_ind
 
 import pickle
+import os
 
 from utility import user_tracker
 
-for behavior in ['velocity', 'curvature']:
-    outfile = '%s/figures/output/performance_comparison_%s.pdf' % (user_tracker.codePath(), behavior)
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
-    with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as handle:
+for behavior in ['velocity', 'curvature']:
+    outfile = '%s/performance_comparison_%s.pdf' % (outputFolder, behavior)
+
+    with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
         data = pickle.load(handle)
 
-    with open('%s/gfp_recordings.dat' % user_tracker.codePath(), 'rb') as handle:
+    with open('%s/gfp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
         dataGFP = pickle.load(handle)
 
-    fig, ax = plt.subplots(1, 1, figsize = (6, 10))
+    fig, ax = plt.subplots(1, 1, figsize = (15, 15))
     delta = .15
     offset = .7
     ax.set_xticks([0-delta, 1+delta, offset+2-delta, offset+3+delta])
     ax.set_xticklabels(['BSN', 'Population', 'BSN (GFP control)', 'Population (GFP control)'])
-    ax.set_ylabel(r'$\rho^2_{\mathrm{adj},\mathrm{test}}$', fontsize=20)
+    ax.set_ylabel(r'$R^2_{\mathrm{ms}, \mathrm{test}}$', fontsize=20)
     ax.set_ylim(-0.75, 1)
     ax.set_yticks([ -.5,  0,  .5,  1])
     ax.tick_params(axis='both', which='major', labelsize=19)

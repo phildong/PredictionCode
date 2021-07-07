@@ -4,29 +4,31 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 from utility import user_tracker
+from prediction.models import linear
 
 import pickle
+import os
 
-outfolder = 'figures/subpanels_revision/generatedFigs/'
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
-pickled_data = datafolder+'new_comparison.dat'
-with open(pickled_data, 'rb') as handle:
-    data = pickle.load(handle)#, encoding = 'bytes')
+with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
+    data = pickle.load(handle)
 
-with open(datafolder+'neuron_data_bothmc_nb.dat', 'rb') as f:
-    neuron_data = pickle.load(f)#, encoding = 'bytes')
+with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as f:
+    neuron_data = pickle.load(f)
 
-nKeys=11
 fig, ax = plt.subplots(3, 4, figsize = (25, 15))
 keys = sorted(data.keys(), key = lambda x: -data[x]['velocity'][False]['R2ms_test'])
-rho2_adj_vel = np.array([data[keys[x]]['velocity'][False]['R2ms_test'] for x in np.arange(nKeys)])
-rho2_adj_curv = np.array([data[keys[x]]['curvature'][False]['R2ms_test'] for x in np.arange(nKeys)])
+rho2_adj_vel = np.array([data[keys[x]]['velocity'][False]['R2ms_test'] for x in np.arange(len(keys))])
+rho2_adj_curv = np.array([data[keys[x]]['curvature'][False]['R2ms_test'] for x in np.arange(len(keys))])
 
 #preallocate arrays for plotting later
-n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(nKeys), np.zeros(nKeys), np.zeros(nKeys)
+n_impact_vel, n_impact_curv,  n_impact_overlap= np.zeros(len(keys)), np.zeros(len(keys)), np.zeros(len(keys))
 
-nnn=np.zeros(nKeys)
-for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
+nnn=np.zeros(len(keys))
+for ii, dataset in enumerate(keys):
     print(dataset)
     nnn[ii] = neuron_data[dataset]['neurons'].shape[0]
     row = ii // 4
@@ -35,9 +37,7 @@ for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
     vel_res = data[dataset]['velocity'][False]
     curv_res = data[dataset]['curvature'][False]
 
-    neurons_unn = neuron_data[dataset][b'neurons']
-    _, _, nderiv = rectified_derivative(neurons_unn)
-    neurons_and_derivs = np.vstack((neurons_unn, nderiv))
+    neurons_and_derivs = np.vstack((neuron_data[dataset]['neurons'], neuron_data[dataset]['neuron_derivatives']))
 
     mean = np.mean(neurons_and_derivs, axis = 1)[:, np.newaxis]
     std = np.std(neurons_and_derivs, axis = 1)[:, np.newaxis]
@@ -52,7 +52,7 @@ for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
 
     for i in range(vel_order.size):
         idxs = vel_order[:i]
-        output = vel_res[b'intercepts'] + np.dot(vel_res[b'weights'][idxs], neurons[idxs,:]) + np.dot(vel_res[b'weights'][idxs+nn], neurons[idxs+nn,:])
+        output = vel_res[b'intercept'] + np.dot(vel_res[b'weights'][idxs], neurons[idxs,:]) + np.dot(vel_res[b'weights'][idxs+nn], neurons[idxs+nn,:])
 
         coef = np.polyfit(output[vel_res[b'train_idx']],vel_res[b'signal'][vel_res[b'train_idx']],1)
         poly1d_fn = np.poly1d(coef) 
@@ -61,15 +61,15 @@ for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
 
     for i in range(curv_order.size):
         idxs = curv_order[:i]
-        output = curv_res[b'intercepts'] + np.dot(curv_res[b'weights'][idxs], neurons[idxs,:]) + np.dot(curv_res[b'weights'][idxs+nn], neurons[idxs+nn,:])
+        output = curv_res[b'intercept'] + np.dot(curv_res[b'weights'][idxs], neurons[idxs,:]) + np.dot(curv_res[b'weights'][idxs+nn], neurons[idxs+nn,:])
 
         coef = np.polyfit(output[curv_res[b'train_idx']],curv_res[b'signal'][curv_res[b'train_idx']],1)
         poly1d_fn = np.poly1d(coef) 
 
         curv_lines[i,:] = poly1d_fn(output)
 
-    vel_rhos = np.array([rho_adj(vel_res[b'signal'], vel_lines[i,:]) for i in range(vel_order.size)])
-    curv_rhos = np.array([rho_adj(curv_res[b'signal'], curv_lines[i,:]) for i in range(curv_order.size)])
+    vel_rhos = np.array([linear.R2ms(vel_res[b'signal'], vel_lines[i,:]) for i in range(vel_order.size)])
+    curv_rhos = np.array([linear.R2ms(curv_res[b'signal'], curv_lines[i,:]) for i in range(curv_order.size)])
 
     ax[row][col].set_title(dataset[12:] + ' N=%d' %nn)
     ax[row][col].set_xlim((0, 1))
@@ -82,8 +82,6 @@ for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
     vel_counts = np.array([np.argmax(vel_rhos > t*vel_rhos[-1]) for t in thresh_vals])
     curv_counts = np.array([np.argmax(curv_rhos > t*curv_rhos[-1]) for t in thresh_vals])
     overlap_counts = np.array([np.intersect1d(vel_order[:vel_counts[i]],curv_order[:curv_counts[i]]).size for i in range(vel_counts.size)])
-
-    print(np.intersect1d(vel_order[:vel_counts[90]],curv_order[:curv_counts[90]]))
 
     impact_thresh = 0.9
     n_impact_vel[ii] = np.interp(impact_thresh, thresh_vals, vel_counts)
@@ -112,8 +110,7 @@ for ii, dataset in enumerate(filter(lambda x: '110803' in x, keys[:nKeys])):
 
 
 fig.tight_layout(pad=3, w_pad=4, h_pad=4)
-outpath = os.path.join(user_tracker.codePath(), outfolder)
-fig.savefig(os.path.join(outpath,'highly_weighted.pdf'))
+fig.savefig(os.path.join(outputFolder,'highly_weighted.pdf'))
 
 fig3=plt.figure(figsize=[4,4])
 plt.plot(rho2_adj_vel, n_impact_vel, '^', markersize=10, color='blue', fillstyle='none', label='Velocity')
@@ -126,7 +123,7 @@ plt.yticks(fontsize=16)
 
 plt.xlim(0,1)
 plt.legend()
-fig3.savefig(os.path.join(outpath,'nneurons_rho.pdf'))
+fig3.savefig(os.path.join(outputFolder,'nneurons_rho.pdf'))
 
 
 #Plot the Number of Neurons
@@ -138,7 +135,7 @@ axnew = sns.boxplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap])
 axnew = sns.swarmplot(data=[n_impact_vel,n_impact_curv, n_impact_overlap], color=".2")
 plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
-fig2.savefig(os.path.join(outpath,'number_of_neurons.pdf'), metadata=prov.pdf_metadata(__file__))
+fig2.savefig(os.path.join(outputFolder,'number_of_neurons.pdf'))
 
 
 print(np.median(n_impact_vel), np.median(n_impact_curv), np.median(n_impact_overlap))

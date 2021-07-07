@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
+import os
 import pickle
 
 from utility import user_tracker
+from prediction.models import linear
 
 def label_diff(ax, i,js,text,X,Y):
     sjs = sorted(js, key = lambda x: abs(i-x))
@@ -36,8 +39,7 @@ for k in data.keys():
     vel_idx = np.argmax(np.abs(data[k]['velocity'][True]['weights']))
     curv_idx = np.argmax(np.abs(data[k]['curvature'][True]['weights']))
 
-    _, _, nderiv = rectified_derivative(neuron_data[k]['neurons'])
-    neurons_and_derivs = np.vstack((neuron_data[k]['neurons'], nderiv))
+    neurons_and_derivs = np.vstack((neuron_data[k]['neurons'], neuron_data[k]['neuron_derivatives']))
 
     bsns[k] = {'velocity':  {'neuron': neurons_and_derivs[vel_idx,:],  'signal': data[k]['velocity'][True]['signal'],  'time': neuron_data[k]['time'], 'population_fit': data[k]['velocity'][False]['output']},
                'curvature': {'neuron': neurons_and_derivs[curv_idx,:], 'signal': data[k]['curvature'][True]['signal'], 'time': neuron_data[k]['time'], 'population_fit': data[k]['curvature'][False]['output']}}
@@ -49,7 +51,7 @@ fig, ax = plt.subplots(1, 1, figsize = (12, 6))
 ax.set_xticks(range(5))
 ax.set_xticklabels(['Linear BSN', 'Quadratic BSN', 'Cubic BSN', 'Quartic BSN', 'Population'], fontsize = 16)
 ax.set_ylabel(r'$R^2_{\mathrm{MS}}$', fontsize = 20)
-ax.set_ylim(0, .75)
+ax.set_ylim(0, 1)
 
 cols = np.zeros((5, len(bsns.keys())))
 for i, k in enumerate(bsns.keys()):
@@ -59,10 +61,10 @@ for i, k in enumerate(bsns.keys()):
     scores = []
     for order in range(4):
         fit = np.poly1d(np.polyfit(neuron, signal, order + 1))
-        scores.append(r2ms(fit(neuron), signal))
+        scores.append(linear.R2ms(signal, fit(neuron)))
         cols[order][i] = scores[-1]
     
-    scores.append(r2ms(bsns[k][beh]['population_fit'], signal))
+    scores.append(linear.R2ms(signal, bsns[k][beh]['population_fit']))
     cols[4][i] = scores[-1]
 
     ax.plot(scores)
@@ -72,4 +74,7 @@ for i in range(5):
 
 label_diff(ax, 4, [0, 1, 2, 3], "*", range(5), np.max(cols, axis = 1))
 
-fig.savefig('%s/figures/output/bsn_nonlinear.pdf' % user_tracker.codePath())
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
+fig.savefig('%s/bsn_nonlinear.pdf' % outputFolder)

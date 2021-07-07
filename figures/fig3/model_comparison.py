@@ -34,4 +34,9 @@ for i, p in enumerate(plots):
     ax.fill_between([m['time'][np.min(m['test_idx'])], m['time'][np.max(m['test_idx'])]], min(np.min(m['output']), np.min(m['signal'])), max(np.max(m['output']), np.max(m['signal'])), facecolor='gray', alpha = 0.5)
 
 fig.tight_layout()
-fig.savefig('%s/figures/output/model_comparison.pdf' % user_tracker.codePath())
+
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
+
+fig.savefig('%s/model_comparison.pdf' % outputFolder)

@@ -8,16 +8,20 @@ from scipy.signal import find_peaks, peak_widths
 from utility import user_tracker
 
 import pickle
+import os
 
-with open('new_comparison.dat', 'rb') as handle:
+with open('%s/gcamp_linear_models.dat' % user_tracker.codePath(), 'rb') as handle:
     data = pickle.load(handle)
 
-with open('neuron_data_bothmc_nb.dat', 'rb') as f:
+with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as f:
     neuron_data = pickle.load(f)
 
-pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(user_tracker.codePath(), 'figures/output/decoded_features.pdf'))
+outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
+pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, 'decoded_features.pdf'))
 
-for k in data.keys()
+for k in data.keys():
     fig, ax = plt.subplots(6, 2, figsize = (20, 15), sharex = True)
 
     neurons_unn = neuron_data[k]['neurons']
