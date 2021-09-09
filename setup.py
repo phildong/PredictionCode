@@ -7,5 +7,5 @@ setup(name = 'WormAnalysis',
       description = 'Analysis and plotting functions for \'Decoding locomotion from population neural activity in moving C. elegans\'',
       author = 'Monika Scholz',
       author_email = 'monika.k.scholz@gmail.com',
-      packages=['prediction', 'utility'],
+      packages=['prediction', 'prediction.models', 'utility'],
       )

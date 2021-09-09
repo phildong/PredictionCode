@@ -17,8 +17,8 @@ from prediction import userTracker
 import prediction.dataHandler as dh
 from seaborn import clustermap
 
-AVA_neuron1 = 17 #for dataset 144610
-AVA_neuron2 = 81 #for dataset 144610
+AVA_neuron1 = 72 #for dataset 144610
+AVA_neuron2 = 22 #for dataset 144610
 
 
 def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, time, time_contig, velocity):
@@ -185,7 +185,7 @@ for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
             }
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
     keyList = np.sort(dataSets.keys())
-    for key in filter(lambda x: '144610' in x, keyList):
+    for key in filter(lambda x: '193044' in x, keyList):
         print("Running "+key)
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         time_contig = dataSets[key]['Neurons']['I_Time']
@@ -197,9 +197,11 @@ for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
         # For immobile- how is NaN neurons that are not hand tracked dealt with by the smooth_interp...
         # Still do the correlation with all (the interpolated ones too, but then replace with 0s)?
 
+    transition = im_start = 950
+    im_end = 2885
 
 
-    moving_data, moving_withNaN, moving_zscore, neuron_number, moving_velocity, moving_time = get_data(0, 1429, neurons, neurons_withNaN, neurons_ZScore, time, time_contig,velocity)
+    moving_data, moving_withNaN, moving_zscore, neuron_number, moving_velocity, moving_time = get_data(0, transition, neurons, neurons_withNaN, neurons_ZScore, time, time_contig,velocity)
     moving_corr, moving_r_square = do_correlation_all(moving_data)
     AVA_corr_noNan1, AVA_r_square_noNan1 = do_correlation_AVA(moving_corr,moving_r_square, AVA_neuron1)
     AVA_corr_noNan2, AVA_r_square_noNan2 = do_correlation_AVA(moving_corr,moving_r_square, AVA_neuron2)
@@ -207,7 +209,7 @@ for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
 
     # cgIdx = do_clustering(moving_corr_NaN) cluster based on immobile
 
-    immobile_data, data_withNaN, immobile_zscore, neuron_number_im, imm_velocity, imm_time = get_data(1539, 2904, neurons, neurons_withNaN, neurons_ZScore, time, time_contig, velocity)
+    immobile_data, data_withNaN, immobile_zscore, neuron_number_im, imm_velocity, imm_time = get_data(transition, im_end, neurons, neurons_withNaN, neurons_ZScore, time, time_contig, velocity)
     immobile_corr, immobile_r_square = do_correlation_all(immobile_data)
     AVA_corr_im1, AVA_r_square_im1 = do_correlation_AVA(immobile_corr, immobile_r_square, AVA_neuron1)
     AVA_corr_im2, AVA_r_square_im2 = do_correlation_AVA(immobile_corr, immobile_r_square, AVA_neuron2)

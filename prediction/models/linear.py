@@ -1,6 +1,4 @@
 import numpy as np
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.preprocessing import StandardScaler
 from sklearn import tree
 from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
@@ -40,7 +38,7 @@ def split_test(X, test_fraction):
 
     return (X_train, X_test)
 
-def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
+def optimize(time, Xfullunn, Yfullunn, options_override = None):
     """Find optimal weights for a linear model of type specified by options"""
 
     options = {
@@ -52,7 +50,7 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
     'max_depth':           1,                           # maximum depth of classification tree (ignored if decision_tree = False)
     'lambdas':             np.logspace(-2.5, 0.5, 7),   # list of regularization strengths to test in cross-validation
     'l1_ratios':           [.001, .003, .01, 0.03, .1], # list of L1 penalty ratios to test in cross-validation
-    'sigma':               14,                          # width of Gaussian kernel for computing neuron time derivative
+    'sigma':               14,                          # width of Gaussian kernel for computing feature time derivatives
     'derivative_weight':   10,                          # weight of derivative penalty (see derivative_penalty option)
     'cv_fraction':         0.4,                         # fraction of training set to use for cross-validation
     'test_fraction':       0.4                          # fraction of data set to use for testing
@@ -86,7 +84,7 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
     error = lambda P, X, Y, alpha, l1_ratio, X_deriv = None, Y_deriv = None: \
         (1./(4*Y.size*np.var(Y)))                                  *sqdiff(Y, f(X, P)) \
       + alpha                                                      *reg(P, l1_ratio) \
-      + options['derivative_weight']*(1/(4*Y.size*np.var(Y_deriv)))*sqdiff(Y_deriv, f(X_deriv, P)) if options['derivative_penalty'] and X_deriv and Y_deriv else 0
+      + (options['derivative_weight']*(1/(4*Y.size*np.var(Y_deriv)))*sqdiff(Y_deriv, f(X_deriv, P)) if options['derivative_penalty'] and X_deriv and Y_deriv else 0)
 
     # Split non-test data into training set and cross-validation set
     X_train, X_cv = split_test(X, options['cv_fraction'])
@@ -101,11 +99,11 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
     # Define cross-validation functions, with signatures that pathos.multiprocessing can work with
     def crossval(alpha, l1_ratio):
         result = minimize(error, np.zeros(X.shape[0]+1), args=(X_train, Y_train, alpha, l1_ratio, X_train_deriv, Y_train_deriv))
-        r2 = R2(result.x, f, X_cv, Y_cv) 
+        r2 = R2(Y_cv, f(X_cv, result.x))
         return (r2, alpha, l1_ratio)
 
     # Define hyperparameter space for cross-validation
-    cv_params = [(alpha, l1_ratio) for alpha in options['alphas'] for l1_ratio in options['l1_ratios']]
+    cv_params = [(alpha, l1_ratio) for alpha in options['lambdas'] for l1_ratio in options['l1_ratios']]
 
     def crossval_unpack(args):
         return crossval(*args)
@@ -127,21 +125,28 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
             # Use best-performing hyperparameters to train on full training set
             result = minimize(error, np.zeros(X.shape[0]+1), args=(X, Y, best_alpha, best_l1_ratio, X_deriv, Y_deriv))
             P = result.x
+
+            # Compute predicted behavior
+            prediction_train = f(X, P)
+            prediction_test = f(Xtest, P)
+            prediction_full = f(Xfull, P)
             
             return {'weights'        : P[1:],
-                    'intercept'     : P[0],
+                    'intercept'      : P[0],
                     'params'         : P,
                     'error'          : result.fun,
                     'alpha'          : best_alpha,
                     'l1_ratio'       : best_l1_ratio,
-                    'R2ms_train'     : R2ms(Y, f(X, P)),
-                    'R2ms_test'      : R2ms(Ytest, f(Xtest, P)),
-                    'R2_train'       : R2(P, f, X, Y),
-                    'R2_test'        : R2(P, f, Xtest, Ytest),
-                    'rho2_train'     : rho2(P, f, X, Y),
-                    'rho2_test'      : rho2(P, f, Xtest, Ytest),
+                    'R2ms_train'     : R2ms(Y, prediction_train),
+                    'R2ms_test'      : R2ms(Ytest, prediction_test),
+                    'R2_train'       : R2(Y, prediction_train),
+                    'R2_test'        : R2(Ytest, prediction_test),
+                    'rho2_train'     : rho2(Y, prediction_train),
+                    'rho2_test'      : rho2(Ytest, prediction_test),
                     'signal'         : Yfull,
-                    'output'         : f(Xfull, P),
+                    'signal_mean'    : np.mean(Yfull),
+                    'signal_std'     : np.std(Yfull),
+                    'output'         : prediction_full,
                     'time'           : time,
                     'train_idx'      : train_idx,
                     'test_idx'       : test_idx,
@@ -151,7 +156,7 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
         else:
             # Try each neuron
             results = [minimize(error, np.zeros(2), args = (X[i,:], Y, 0, 0, X_deriv[i,:], Y_deriv)) for i in np.arange(X.shape[0])]
-            r2s = [(R2(result.x, f, X[i,:], Y), i, result.x, result.fun) for i, result in enumerate(results)]
+            r2s = [(R2(Y, f(X[i,:], result.x)), i, result.x, result.fun) for i, result in enumerate(results)]
 
             # Find best neuron
             r2s.sort(key = lambda x: -x[0])
@@ -164,20 +169,27 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
             P[0] = params[0]
             P[1:] = weights
 
+            # Compute predicted behavior
+            prediction_train = f(X[idx,:], params)
+            prediction_test = f(Xtest[idx,:], params)
+            prediction_full = f(Xfull[idx,:], params)
+
             return {'weights'        : weights,
                     'intercept'      : P[0],
                     'params'         : P,
                     'error'          : error,
                     'alpha'          : 0,
                     'l1_ratio'       : 0,
-                    'R2ms_train'     : R2ms(Y, f(X, P)),
-                    'R2ms_test'      : R2ms(Ytest, f(Xtest, P)),
-                    'R2_train'       : R2(P, f, X, Y),
-                    'R2_test'        : R2(P, f, Xtest, Ytest),
-                    'rho2_train'     : rho2(P, f, X, Y),
-                    'rho2_test'      : rho2(P, f, Xtest, Ytest),
+                    'R2ms_train'     : R2ms(Y, prediction_train),
+                    'R2ms_test'      : R2ms(Ytest, prediction_test),
+                    'R2_train'       : R2(Y, prediction_train),
+                    'R2_test'        : R2(Ytest, prediction_test),
+                    'rho2_train'     : rho2(Y, prediction_train),
+                    'rho2_test'      : rho2(Ytest, prediction_test),
                     'signal'         : Yfull,
-                    'output'         : f(Xfull[idx,:], params),
+                    'signal_mean'    : np.mean(Yfull),
+                    'signal_std'     : np.std(Yfull),
+                    'output'         : prediction_full,
                     'time'           : time,
                     'train_idx'      : train_idx,
                     'test_idx'       : test_idx,
@@ -199,8 +211,8 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
         new_options = deepcopy(options)
         new_options['decision_tree'] = False
         new_options['test_fraction'] = 0
-        res1 = optimize_lm(time, X1, Y1, new_options)
-        res2 = optimize_lm(time, X2, Y2, new_options)
+        res1 = optimize(time, X1, Y1, new_options)
+        res2 = optimize(time, X2, Y2, new_options)
 
         # Assemble predictions together
         prediction_train = np.zeros(Y.size)
@@ -240,6 +252,8 @@ def optimize_lm(time, Xfullunn, Yfullunn, options_override = None):
                 'rho2_train'     : rho2(Y, prediction_train),
                 'rho2_test'      : rho2(Ytest, prediction_test),
                 'signal'         : Yfull,
+                'signal_mean'    : np.mean(Yfull),
+                'signal_std'     : np.std(Yfull),
                 'output'         : prediction_full,
                 'res_pos'        : res1,
                 'res_neg'        : res2,

@@ -1,6 +1,6 @@
 # PredictionCode
 
-This repository contains code and visualizations needed to reproduce the results presented in ["Decoding locomotion from population neural activity in moving *C. elegans*"](https://doi.org/10.1101/445643).
+This repository contains code and visualizations needed to reproduce the results presented in ["Decoding locomotion from population neural activity in moving *C. elegans*"](https://doi.org/10.1101/445643). All scripts are written for Python 2.7.
 
 The associated data can be found [here](https://osf.io/dpr3h).
 
@@ -15,5 +15,13 @@ Within each dataset folder, there are five files:
 * positionDataMS.mat
 These are the output of the neuron registration pipeline described [here](https://doi.org/10.1371/journal.pcbi.1005517).
 
-Next, edit `utility/userTracker.py` to add your hostname to the `dataPaths` and `codePaths` dictionaries. To find your hostname, run `hostname` in a terminal.
+Next, edit `utility/user_tracker.py` to add your hostname to the `dataPaths` and `codePaths` dictionaries. To find your hostname, run `hostname` in a terminal.
 
+The figure code is contained in `figures/fig1`, `figures/fig2`, and so on. Many of these scripts rely on precomputed data files, so you should start by running the following scripts:
+
+```bash
+> python utility/get_all_recordings.py
+> python prediction/train_linear_models.py
+```
+
+After these scripts run, you should be able to run any of the scripts in `figures` (except for `figures/fig3/model_comparison.py`, for which you should first run `prediction/train_all_models.py`).

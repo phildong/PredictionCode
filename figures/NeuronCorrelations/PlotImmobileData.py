@@ -9,7 +9,7 @@ from seaborn import clustermap
 # For data set 110803 (moving only)- frames 1-1465, AVA 33 and 16
 
 
-def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, time, time_contig, velocity):
+def get_data(start_frame, end_frame, neurons, neurons_withNaN, time, time_contig, velocity):
     # take the loaded in data and pull out the neuron data for moving or immobile.
     # look up time of start frame/end frame in the time_contig
     # see what index in time (noncontig) is closest to time_contig value
@@ -21,10 +21,9 @@ def get_data(start_frame, end_frame, neurons, neurons_withNaN, neurons_Zscore, t
     velocity = velocity[start_frame:end_frame]
 
     neuron_NaN_data = neurons_withNaN[:, start_index:end_index]
-    zscore_neuron = neurons_Zscore[:, start_index:end_index]
     [row, column] = neurons.shape
     neuron_num = list(range(0, row, 1))
-    return neuron_data, neuron_NaN_data, zscore_neuron, neuron_num, velocity
+    return neuron_data, neuron_NaN_data, neuron_num, velocity
 
 
 def do_correlation_all(neuron_data):
@@ -104,13 +103,12 @@ for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
         neurons_withNaN = dataSets[key]['Neurons']['I_smooth'] # use this to find the untracked neurons after transition
-        neurons_ZScore = dataSets[key]['Neurons']['ActivityFull'] # Z scored neurons to use to look at calcium traces
-        velocity = dataSets[key]['Behavior_crop_noncontig']['AngleVelocity']
+        velocity = dataSets[key]['Behavior_crop_noncontig']['CMSVelocity']
         # curvature = dataSets[key]['Behavior_crop_noncontig']['Eigenworm3']
         # For immobile- how is NaN neurons that are not hand tracked dealt with by the smooth_interp...
         # Still do the correlation with all (the interpolated ones too, but then replace with 0s)?
 
-    data, immobile_withNaN, immobile_zscore, neuron_number, velocity_moving = get_data(1305, 2205, neurons, neurons_withNaN, neurons_ZScore, time, time_contig, velocity) #1305-2205 is the green immobile part of the data
+    data, immobile_withNaN, neuron_number, velocity_moving = get_data(1305, 2205, neurons, neurons_withNaN, time, time_contig, velocity) #1305-2205 is the green immobile part of the data
     immobile_corr, immobile_r_square = do_correlation_all(data)
     #index = find_NaN_neurons(immobile_withNaN, neuron_number)
 
