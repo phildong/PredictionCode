@@ -1,6 +1,6 @@
 # PredictionCode
 
-This repository contains code and visualizations needed to reproduce the results presented in ["Decoding locomotion from population neural activity in moving *C. elegans*"](https://doi.org/10.1101/445643). All scripts are written for Python 2.7.
+This repository contains code and visualizations needed to reproduce the results presented in ["Decoding locomotion from population neural activity in moving *C. elegans*"](https://doi.org/10.7554/eLife.66135). All scripts are written for Python 2.7.
 
 The associated data can be found [here](https://osf.io/dpr3h).
 
