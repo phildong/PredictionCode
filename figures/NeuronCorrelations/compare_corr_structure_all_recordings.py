@@ -33,7 +33,7 @@ def main():
     outputFolder = os.path.join(codePath,'figures/subpanels_revision/generatedFigs')
 
     data = {}
-    for typ in ['AKS297.51', 'AML32', 'AML18']:
+    for typ in ['AML310', 'AML32', 'AML18']:
         for condition in ['moving', 'chip', 'immobilized']:  # ['moving', 'immobilized', 'chip']:
             path = userTracker.dataPath()
             folder = os.path.join(path, '{}_{}/'.format(typ, condition))
@@ -77,7 +77,7 @@ def main():
 
 
     dissim={}
-    for key in ['AKS297.51_moving', 'AML32_moving']:#,  'AML18_moving']:
+    for key in ['AML310_moving', 'AML32_moving']:#,  'AML18_moving']:
         dissim[key]=[]
         dset = data[key]['input']
         # For each recording
@@ -93,7 +93,7 @@ def main():
     #And also for BrainScanner20200915_144610 from TransitionAnalysis2020_second.py
     transition = np.array([0.0056080890227034885, 0.004666316998854658, 0.005891564672126974])# 0.005336660925126822])
 
-    moving_gcamp = np.concatenate((np.array(dissim['AKS297.51_moving']), np.array(dissim['AML32_moving'])))
+    moving_gcamp = np.concatenate((np.array(dissim['AML310_moving']), np.array(dissim['AML32_moving'])))
     #moving_gfp = np.array(dissim['AML18_moving'])  # type: ndarray
     combined_data = [moving_gcamp,  transition]
     from scipy import stats

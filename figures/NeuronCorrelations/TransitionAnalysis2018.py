@@ -73,7 +73,7 @@ def plot_trajectories(pc_traj, drug_app_index, imm_start_index, end_index, title
     return
 
 
-for typ_cond in ['AML32_chip']: #, 'AKS297.51_moving']:
+for typ_cond in ['AML32_chip']: #, 'AML310_moving']:
     path = userTracker.dataPath()
     folder = os.path.join(path, '%s/' % typ_cond)
     dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))

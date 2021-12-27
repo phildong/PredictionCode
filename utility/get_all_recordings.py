@@ -31,7 +31,7 @@ excludeInterval = {'BrainScanner20200309_145927': [[50, 60], [215, 225]],
 
 for gtype in ['gcamp', 'gfp']:
     data = {}
-    for typ_cond in (['AKS297.51_moving', 'AML32_moving'] if gtype == 'gcamp' else ['AML18_moving']):
+    for typ_cond in (['AML310_moving', 'AML32_moving'] if gtype == 'gcamp' else ['AML18_moving']):
         path = user_tracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))

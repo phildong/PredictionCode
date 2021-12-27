@@ -44,7 +44,7 @@ if not os.path.exists(outputFolder):
     os.makedirs(outputFolder)
 
 data = {}
-for typ_cond in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
+for typ_cond in ['AML310_moving', 'AML32_moving', 'AML18_moving']:
         path = user_tracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path, '{0}/{0}_datasets.txt'.format(typ_cond))
@@ -56,7 +56,7 @@ for typ_cond in ['AKS297.51_moving', 'AML32_moving', 'AML18_moving']:
         data[typ_cond]['input'] = dataSets
 
 
-for key in ['AKS297.51_moving', 'AML32_moving',  'AML18_moving']:
+for key in ['AML310_moving', 'AML32_moving',  'AML18_moving']:
     dset = data[key]['input']
     # For each recording
     for idn in dset.keys():

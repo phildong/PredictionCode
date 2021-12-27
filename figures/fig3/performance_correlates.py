@@ -132,7 +132,7 @@ for behavior in ['velocity', 'curvature']:
                    'BrainScanner20200130_105254': [[65, 75]],
                    'BrainScanner20200310_141211': [[200, 210], [240, 250]]}
 
-    for typ_cond in ['AKS297.51_moving', 'AML32_moving']:
+    for typ_cond in ['AML310_moving', 'AML32_moving']:
         path = user_tracker.dataPath()
         folder = os.path.join(path, '%s/' % typ_cond)
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))

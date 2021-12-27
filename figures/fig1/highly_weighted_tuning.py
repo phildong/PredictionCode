@@ -117,7 +117,7 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
     return rhos, cum_prob
 
 
-def main(strain='AKS297.51_moving', recording='BrainScanner20200130_110803', behavior = 'velocity'):
+def main(strain='AML310_moving', recording='BrainScanner20200130_110803', behavior = 'velocity'):
     gtype = 'gfp' if '18' in strain else 'gcamp'
 
     with open('%s/%s_linear_models.dat' % (user_tracker.codePath(), gtype), 'rb') as f:
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     #     tuning_of_highly_weighted_neurons.main(strain=strain, recording='BrainScanner'+recording, behavior='velocity')
     #     tuning_of_highly_weighted_neurons.main(strain=strain, recording='BrainScanner'+recording, behavior='curvature')
 
-    # strain = 'AKS297.51_moving'
+    # strain = 'AML310_moving'
     # find_high_weighted_neurons(strain, '20200130_110803') #AML_310_A
     # find_high_weighted_neurons(strain, '20200130_105254') #AML_310_B
     # find_high_weighted_neurons(strain, '20200310_142022') #AML_310_C
