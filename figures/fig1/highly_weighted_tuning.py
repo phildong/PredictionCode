@@ -74,7 +74,7 @@ def phaseScrambleTS(ts):
     tsrp = ifft(fsrp)
     if not np.allclose(tsrp.imag, np.zeros(tsrp.shape)):
         max_imag = (np.abs(tsrp.imag)).max()
-        print('\nNOTE: a non-negligible imaginary component was discarded.\n\tMax: {}' % max_imag)
+        print(('\nNOTE: a non-negligible imaginary component was discarded.\n\tMax: {}' % max_imag))
     return tsrp.real
 
 def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase=False):
@@ -85,7 +85,7 @@ def shuffled_cdf_rho(activity, behavior, pdf=None, nShuffles=5000, shuffle_phase
     '''
     assert(activity.shape[1] > 360), "The recording is less than 1 minute long, or the array is not in the expected format"
     import numpy.matlib
-    print("Shuffling:", nShuffles * activity.shape[0])
+    print(("Shuffling:", nShuffles * activity.shape[0]))
     print("Time reversing and duplicating data...")
     shuff_activity = np.matlib.repmat(np.fliplr(activity), nShuffles, 1)
     assert (np.all(shuff_activity[4, :] == shuff_activity[4 + activity.shape[0], :])), "Somehow repmat failed"
@@ -162,14 +162,14 @@ def main(strain='AML310_moving', recording='BrainScanner20200130_110803', behavi
                 neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw[neuron]
                 activity = neuron_data[recording]['neurons'][neuron]
-                color = u'#1f77b4'
+                color = '#1f77b4'
 
             else:
                 relevant_weighted_neurons = highly_weighted_neurons_deriv
                 neuron = relevant_weighted_neurons[rank]
                 weight = slm_weights_raw_deriv[neuron]
                 activity = neuron_data[recording]['neuron_derivatives'][neuron]
-                color = u'#ff7f0e'
+                color = '#ff7f0e'
 
 
 
@@ -255,7 +255,7 @@ def main(strain='AML310_moving', recording='BrainScanner20200130_110803', behavi
 
     pdf.savefig(fig_cdf)
     pdf.close()
-    print("wrote " + outfilename)
+    print(("wrote " + outfilename))
 
 if __name__ == '__main__':
     main(behavior = 'velocity')

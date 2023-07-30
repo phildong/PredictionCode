@@ -26,7 +26,7 @@ if not os.path.exists(outputFolder):
 
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, outfilename))
 
-for key in data.keys():
+for key in list(data.keys()):
 
     slm_weights_raw = [None] * 2
     slm_weights_raw_deriv = [None] * 2
@@ -73,5 +73,5 @@ for key in data.keys():
     pdf.savefig(fig2)
 
 pdf.close()
-print("wrote " + outfilename)
+print(("wrote " + outfilename))
 

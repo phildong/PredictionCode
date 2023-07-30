@@ -49,8 +49,8 @@ for k, each in enumerate(np.unique(assigned_bin)):
     deriv_bin[k] = z_activity_deriv[idx]
 
 fig, ax = plt.subplots(2, 1, figsize=(4, 8))
-ax[0].plot(vel_bucket, z_activity, '.', color=u'#1f77b4', alpha=.05, zorder=10)
-ax[1].plot(vel_bucket, z_activity_deriv, '.', color=u'#ff7f0e', alpha=.05, zorder=10)
+ax[0].plot(vel_bucket, z_activity, '.', color='#1f77b4', alpha=.05, zorder=10)
+ax[1].plot(vel_bucket, z_activity_deriv, '.', color='#ff7f0e', alpha=.05, zorder=10)
 
 boxprops = dict(linewidth=.5)
 capprops = dict(linewidth=.5)

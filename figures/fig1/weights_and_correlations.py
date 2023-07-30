@@ -185,4 +185,4 @@ for behavior in ['velocity', 'curvature']:
     pdf.savefig(figsummary)
 
     pdf.close()
-    print("wrote "+ outfilename)
+    print(("wrote "+ outfilename))

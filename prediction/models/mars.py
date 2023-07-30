@@ -1,7 +1,7 @@
 import numpy as np
 from pyearth import Earth
 
-from linear import split_test
+from .linear import split_test
 
 def scores(y, yhat):
 

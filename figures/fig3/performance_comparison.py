@@ -36,8 +36,8 @@ for behavior in ['velocity', 'curvature']:
     whiskerprops = dict(linewidth=2)
     medianprops = dict(linewidth=6, color='k')
 
-    bsn_rho=np.zeros(len(data.keys()))
-    slm_rho=np.zeros(len(data.keys()))
+    bsn_rho=np.zeros(len(list(data.keys())))
+    slm_rho=np.zeros(len(list(data.keys())))
     for k, key in enumerate(data.keys()): # Comparison line plot
         bsn_rho[k] = data[key][behavior][True]['R2ms_test']
         slm_rho[k] = data[key][behavior][False]['R2ms_test']
@@ -48,25 +48,25 @@ for behavior in ['velocity', 'curvature']:
             manage_xticks=False, medianprops=medianprops,
             boxprops=boxprops, capprops=capprops, whiskerprops=whiskerprops)
 
-    print("Total GCAMP datasets: %d" % len(data.keys()))
+    print(("Total GCAMP datasets: %d" % len(list(data.keys()))))
 
-    bsn_rho_g = np.zeros(len(dataGFP.keys()))
-    slm_rho_g = np.zeros(len(dataGFP.keys()))
+    bsn_rho_g = np.zeros(len(list(dataGFP.keys())))
+    slm_rho_g = np.zeros(len(list(dataGFP.keys())))
     cmap = plt.cm.get_cmap('gist_earth')
     for k, key in enumerate(dataGFP.keys()):
         bsn_rho_g[k] = dataGFP[key][behavior][True]['R2ms_test']
         slm_rho_g[k] = dataGFP[key][behavior][False]['R2ms_test']
-        thiscolor = cmap(.1+.8*np.true_divide(k,len(dataGFP.keys())))
+        thiscolor = cmap(.1+.8*np.true_divide(k,len(list(dataGFP.keys()))))
         ax.plot(offset+np.array([2, 3]), [bsn_rho_g[k], slm_rho_g[k]], markersize=5, linewidth=2.5, color=thiscolor)
     
     ax.boxplot([bsn_rho_g, slm_rho_g], positions=offset+np.array([2-delta, 3+delta]),
             manage_xticks=False, medianprops=medianprops,
             boxprops=boxprops, capprops=capprops, whiskerprops=whiskerprops)
-    print("Total GCAMP datasets: %d" % len(dataGFP.keys()))
+    print(("Total GCAMP datasets: %d" % len(list(dataGFP.keys()))))
 
     ax.set_title(behavior.capitalize())
     fig.savefig(outfile, backend='pdf', format='pdf')
-    print("Saved: %s" % outfile)
+    print(("Saved: %s" % outfile))
 
     d = slm_rho - bsn_rho
     w, p = wilcoxon(d)
@@ -84,5 +84,5 @@ for behavior in ['velocity', 'curvature']:
     print('Welchs unequal variance t-test from population GCAMP to population GFP:')
     print(p)
 
-    print('mean pop GCAMP:', np.mean(slm_rho), 'mean pop GFP:', np.mean(slm_rho_g))
-    print('median pop GCAMP:', np.median(slm_rho), 'median pop GFP:', np.median(slm_rho_g))
+    print(('mean pop GCAMP:', np.mean(slm_rho), 'mean pop GFP:', np.mean(slm_rho_g)))
+    print(('median pop GCAMP:', np.median(slm_rho), 'median pop GFP:', np.median(slm_rho_g)))

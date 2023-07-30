@@ -67,7 +67,7 @@ def find_NaN_neurons(neuron_NaN_data, neuron_num):
 def remove_nan(matrix):
     # remove the matrix rows/columns that are the Nan values
     # remove the nan_rows
-    index_list = filter(lambda x:np.nonzero(matrix[x,:])[0].size ==0,range(matrix.shape[0]))
+    index_list = [x for x in range(matrix.shape[0]) if np.nonzero(matrix[x,:])[0].size ==0]
     matrix_no_row_nan = np.delete(matrix, index_list,0)
     # remove the nan_columns
     matrix_no_nan = np.delete(matrix_no_row_nan, index_list, 1)
@@ -77,7 +77,7 @@ def remove_nan(matrix):
 def replace_NaN_neurons(r, neuron_num):
     # for the moving-immobile transition, use index list to see where non tracked neurons are. Replace those
     # rows/columns with 0s in the r/r_square
-    index_list = filter(lambda x:np.all(np.isnan(r[x,:])),range(r.shape[0]))
+    index_list = [x for x in range(r.shape[0]) if np.all(np.isnan(r[x,:]))]
     for i in index_list:
         # each index in the list is a row of NaNs. replace the correlation with 0s if neuron isn't tracked
         r[i, :] = np.zeros(len(neuron_num))
@@ -98,9 +98,9 @@ for typ_cond in ['AML310_moving']: #, 'AML310_moving']:
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
-    keyList = np.sort(dataSets.keys())
-    for key in filter(lambda x: '110803' in x, keyList):
-        print("Running "+key)
+    keyList = np.sort(list(dataSets.keys()))
+    for key in [x for x in keyList if '110803' in x]:
+        print(("Running "+key))
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
@@ -122,7 +122,7 @@ for typ_cond in ['AML310_moving']: #, 'AML310_moving']:
 
     cluster_neuron = cluster_calcium(data, cgIdx_immobile)
     cluster_neuron_zscore = (cluster_neuron-np.mean(cluster_neuron, axis = 1)[:,np.newaxis])/np.std(cluster_neuron, axis =1)[:,np.newaxis]
-    index_list = filter(lambda x:np.all(np.isnan(cluster_neuron_zscore[x,:])),range(cluster_neuron_zscore.shape[0]))
+    index_list = [x for x in range(cluster_neuron_zscore.shape[0]) if np.all(np.isnan(cluster_neuron_zscore[x,:]))]
     cluster_neuron_zscore_nonan = np.delete(cluster_neuron_zscore, index_list,0)
 
     cluster_imm_corr_noNan = remove_nan(clustered_immobile_corr)

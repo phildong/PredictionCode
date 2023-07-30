@@ -6,3 +6,7 @@ figures/output
 *.png
 *.dat
 *.pkl
+data
+*.py.bak
+__pycache__
+*.pyc

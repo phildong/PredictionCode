@@ -81,15 +81,15 @@ for typ_cond in ['AML310_immobile']: #, 'AML310_moving']:
 
 
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
-    keyList = np.sort(dataSets.keys())
+    keyList = np.sort(list(dataSets.keys()))
     theDataset = '125716'
     drug_application = None
     transition = im_start = 11
     im_end = 5765
 
 
-    for key in filter(lambda x: theDataset in x, keyList):
-        print("Running "+key)
+    for key in [x for x in keyList if theDataset in x]:
+        print(("Running "+key))
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']
@@ -241,10 +241,10 @@ for typ_cond in ['AML310_immobile']: #, 'AML310_moving']:
     def print_AVAs_weights_in_pcs(AVAL_ci, AVAR_ci, pca, label=''):
         from sklearn.decomposition import PCA
         print(label)
-        print("AVAL weights:", pca.components_[:, AVAL_ci])
-        print("AVAR weights:", pca.components_[:, AVAR_ci])
-        print("AVAL ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAL_ci))
-        print("AVAR ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAR_ci))
+        print(("AVAL weights:", pca.components_[:, AVAL_ci]))
+        print(("AVAR weights:", pca.components_[:, AVAR_ci]))
+        print(("AVAL ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAL_ci)))
+        print(("AVAR ranks:", np.where(np.argsort(np.abs(pca.components_)) == AVAR_ci)))
         return
 
     def project_into_immobile_pcs(recording, imm_start_index, end_index, AVAL_ci=None, AVAR_ci=None, label=''):

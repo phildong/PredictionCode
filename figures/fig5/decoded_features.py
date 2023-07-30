@@ -21,7 +21,7 @@ if not os.path.exists(outputFolder):
     os.makedirs(outputFolder)
 pdf = matplotlib.backends.backend_pdf.PdfPages(os.path.join(outputFolder, 'decoded_features.pdf'))
 
-for k in data.keys():
+for k in list(data.keys()):
     fig, ax = plt.subplots(6, 2, figsize = (20, 15), sharex = True)
 
     neurons_unn = neuron_data[k]['neurons']

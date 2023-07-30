@@ -184,9 +184,9 @@ for typ_cond in ['AML310_transition']: #, 'AML310_moving']:
             'volumeAcquisitionRate': 6.,  # rate at which volumes are acquired
             }
     dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate = folder, dataPars = dataPars)
-    keyList = np.sort(dataSets.keys())
-    for key in filter(lambda x: '193044' in x, keyList):
-        print("Running "+key)
+    keyList = np.sort(list(dataSets.keys()))
+    for key in [x for x in keyList if '193044' in x]:
+        print(("Running "+key))
         time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
         time_contig = dataSets[key]['Neurons']['I_Time']
         neurons = dataSets[key]['Neurons']['I_smooth_interp_crop_noncontig']

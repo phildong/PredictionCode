@@ -34,7 +34,7 @@ for i, p in enumerate(plots):
     el, mtype, title = p
     m = elasticmodels[mtype] if el else models[mtype]
 
-    med = np.mean([(elasticdata if el else data)[k][mtype]['scorespredicted'][1] for k in data.keys()])
+    med = np.mean([(elasticdata if el else data)[k][mtype]['scorespredicted'][1] for k in list(data.keys())])
 
     ax.plot(m['time'], m['signal'], 'k', lw = 1)
     ax.plot(m['time'], m['output'], 'b', lw = 1)

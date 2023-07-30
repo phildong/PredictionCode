@@ -44,7 +44,7 @@ def main():
             try:
                 # load multiple datasets
                 dataSets = dh.loadDictFromHDF(outLocData)
-                keyList = np.sort(dataSets.keys())
+                keyList = np.sort(list(dataSets.keys()))
                 results = dh.loadDictFromHDF(outLoc)
                 # store in dictionary by typ and condition
                 key = '{}_{}'.format(typ, condition)
@@ -53,10 +53,10 @@ def main():
                 data[key]['input'] = dataSets
                 data[key]['analysis'] = results
             except IOError:
-                print typ, condition, 'not found.'
+                print(typ, condition, 'not found.')
                 pass
 
-    print 'Done reading data.'
+    print('Done reading data.')
 
 
 
@@ -81,7 +81,7 @@ def main():
         dissim[key]=[]
         dset = data[key]['input']
         # For each recording
-        for idn in dset.keys():
+        for idn in list(dset.keys()):
             activity = dset[idn]['Neurons']['I_smooth_interp_crop_noncontig']
             rec_length = activity.shape[1]
             halfway = np.floor_divide(rec_length, 2)

@@ -138,7 +138,7 @@ for behavior in ['velocity', 'curvature']:
         dataLog = os.path.join(path,'{0}/{0}_datasets.txt'.format(typ_cond))
 
         dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
-        keyList = np.sort(dataSets.keys())
+        keyList = np.sort(list(dataSets.keys()))
 
         for key in keyList:
             time = dataSets[key]['Neurons']['I_Time_crop_noncontig']
@@ -154,7 +154,7 @@ for behavior in ['velocity', 'curvature']:
 
 
 
-            if key in excludeInterval.keys():
+            if key in list(excludeInterval.keys()):
                 for interval in excludeInterval[key]:
                     idxs = np.where(np.logical_or(time < interval[0], time > interval[1]))[0]
                     time = time[idxs]
@@ -222,4 +222,4 @@ for behavior in ['velocity', 'curvature']:
     #plot_candidate(vel_pdf_kl, 'KL divergence of Train vs Test Velocity PDF', labels=label, PDF=pdf)
 
     pdf.close()
-    print("Finished: " + filename)
+    print(("Finished: " + filename))

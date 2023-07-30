@@ -52,7 +52,7 @@ AVAL = 15
 
 #Loop through each neuron
 for neuron in (AVAR, AVAL):
-    print("Generating plot for neuron %d" % neuron)
+    print(("Generating plot for neuron %d" % neuron))
 
     fig = plt.figure(constrained_layout=True, figsize=[6, 8])
     gs = gridspec.GridSpec(ncols=4, nrows=5, figure=fig)
@@ -103,11 +103,11 @@ filename = key + "_tuning.pdf"
 pdf = matplotlib.backends.backend_pdf.PdfPages(outputFolder + '/' + filename)
 numFigs = plt.gcf().number + 1
 for fig in range(1, numFigs): ## will open an empty extra figure :(
-    print("Saving Figure %d of %d" % (fig, numFigs))
+    print(("Saving Figure %d of %d" % (fig, numFigs)))
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
-print("Saved: %s" % filename)
+print(("Saved: %s" % filename))
 
 
 

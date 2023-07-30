@@ -35,7 +35,7 @@ with open('%s/gcamp_recordings.dat' % user_tracker.codePath(), 'rb') as f:
     neuron_data = pickle.load(f)
 
 bsns = {}
-for k in data.keys():
+for k in list(data.keys()):
     vel_idx = np.argmax(np.abs(data[k]['velocity'][True]['weights']))
     curv_idx = np.argmax(np.abs(data[k]['curvature'][True]['weights']))
 
@@ -48,12 +48,12 @@ beh = 'velocity'
 
 fig, ax = plt.subplots(1, 1, figsize = (12, 6))
 
-ax.set_xticks(range(5))
+ax.set_xticks(list(range(5)))
 ax.set_xticklabels(['Linear BSN', 'Quadratic BSN', 'Cubic BSN', 'Quartic BSN', 'Population'], fontsize = 16)
 ax.set_ylabel(r'$R^2_{\mathrm{MS}}$', fontsize = 20)
 ax.set_ylim(0, 1)
 
-cols = np.zeros((5, len(bsns.keys())))
+cols = np.zeros((5, len(list(bsns.keys()))))
 for i, k in enumerate(bsns.keys()):
     neuron = bsns[k][beh]['neuron']
     signal = bsns[k][beh]['signal']
@@ -72,7 +72,7 @@ for i, k in enumerate(bsns.keys()):
 for i in range(5):
     boxplot(ax, i, cols[i,:])
 
-label_diff(ax, 4, [0, 1, 2, 3], "*", range(5), np.max(cols, axis = 1))
+label_diff(ax, 4, [0, 1, 2, 3], "*", list(range(5)), np.max(cols, axis = 1))
 
 outputFolder = os.path.join(user_tracker.codePath(),'figures/output')
 if not os.path.exists(outputFolder):

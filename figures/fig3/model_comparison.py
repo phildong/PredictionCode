@@ -21,7 +21,7 @@ for i, p in enumerate(plots):
     title = p
     m = models[p]
 
-    med = np.mean([data[k]['velocity'][p]['R2ms_test'] for k in data.keys()])
+    med = np.mean([data[k]['velocity'][p]['R2ms_test'] for k in list(data.keys())])
 
     ax.plot(m['time'], m['signal'], 'k', lw = 1)
     ax.plot(m['time'], m['output'], 'b', lw = 1)

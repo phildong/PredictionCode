@@ -50,7 +50,7 @@ for typ_cond in ['AML310_moving', 'AML32_moving', 'AML18_moving']:
         dataLog = os.path.join(path, '{0}/{0}_datasets.txt'.format(typ_cond))
         dataSets = dh.loadMultipleDatasets(dataLog, pathTemplate=folder)
 
-        keyList = np.sort(dataSets.keys())
+        keyList = np.sort(list(dataSets.keys()))
         data[typ_cond] = {}
         data[typ_cond]['dsets'] = keyList
         data[typ_cond]['input'] = dataSets
@@ -59,7 +59,7 @@ for typ_cond in ['AML310_moving', 'AML32_moving', 'AML18_moving']:
 for key in ['AML310_moving', 'AML32_moving',  'AML18_moving']:
     dset = data[key]['input']
     # For each recording
-    for idn in dset.keys():
+    for idn in list(dset.keys()):
         dset = data[key]['input'][idn]
 
         #Get the relevant heatmaps
@@ -88,7 +88,7 @@ for key in ['AML310_moving', 'AML32_moving',  'AML18_moving']:
         csv_out = os.path.join(outputFolder,  idn + 'indices.csv')
         df = pd.DataFrame(idx_clust)
         df.to_csv(csv_out, index=True, header='clustered index')
-        print('generated', csv_out)
+        print(('generated', csv_out))
 
         prcntile = 99
         fig = plt.figure(figsize=(18,12), constrained_layout=False)
@@ -162,8 +162,8 @@ print("Beginning to save heat maps")
 
 filename = os.path.join(outputFolder, "heatmaps_clustered.pdf")
 pdf = matplotlib.backends.backend_pdf.PdfPages(filename)
-for fig in xrange(1, plt.gcf().number + 1): ## will open an empty extra figure :(
+for fig in range(1, plt.gcf().number + 1): ## will open an empty extra figure :(
     pdf.savefig(fig)
     plt.close(fig)
 pdf.close()
-print("Saved heatmaps to: %s" % filename)
+print(("Saved heatmaps to: %s" % filename))
