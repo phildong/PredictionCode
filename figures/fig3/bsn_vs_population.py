@@ -9,7 +9,9 @@ from matplotlib import gridspec
 from utility import user_tracker
 
 behavior = "velocity"
-with open("%s/gcamp_linear_models.dat" % user_tracker.codePath(), "rb") as handle:
+with open(
+    "%s/intermediate/gcamp_linear_models.dat" % user_tracker.codePath(), "rb"
+) as handle:
     data = pickle.load(handle)
 
 keys = list(data.keys())

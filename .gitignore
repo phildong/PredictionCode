@@ -10,3 +10,4 @@ data
 *.py.bak
 __pycache__
 *.pyc
+intermediate

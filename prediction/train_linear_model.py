@@ -6,7 +6,7 @@ from scipy.ndimage import gaussian_filter1d
 from .models import linear
 
 for gtype in ["gcamp", "gfp"]:
-    with open("%s_recordings.dat" % gtype, "rb") as f:
+    with open("intermediate/%s_recordings.dat" % gtype, "rb") as f:
         data = pickle.load(f)
 
     results = {}
@@ -64,5 +64,5 @@ for gtype in ["gcamp", "gfp"]:
                 )
             )
 
-    with open("%s_linear_models.dat" % gtype, "wb") as f:
+    with open("intermediate/%s_linear_models.dat" % gtype, "wb") as f:
         pickle.dump(results, f)

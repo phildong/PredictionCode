@@ -71,5 +71,7 @@ for gtype in ["gcamp", "gfp"]:
                 "curvature": curvature,
             }
 
-    with open("%s/%s_recordings.dat" % (codePath(), gtype), "wb") as handle:
+    with open(
+        "%s/intermediate/%s_recordings.dat" % (codePath(), gtype), "wb"
+    ) as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
