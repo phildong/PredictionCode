@@ -10,4 +10,6 @@ dependencies:
   - pathos=0.2.6
   - jupyter
   - scikit-image
+  - seaborn
+  - pandas
   # - GitPython=2.1.14
