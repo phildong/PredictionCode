@@ -24,20 +24,24 @@ for gtype in ["gcamp", "gfp"]:
         results[key]["velocity"] = {}
         results[key]["curvature"] = {}
         # generate inputs
-        pca = PCA()
+        pca = PCA(whiten=True)
         neuron_pca = pca.fit_transform(neurons.T).T
+        neuron_pca_first = neuron_pca[:3, :]
         neuron_pca_rd = neuron_pca[3:, :]
+        pca = PCA(whiten=True)
         nderiv_pca = pca.fit_transform(nderiv.T).T
+        nderiv_pca_first = nderiv_pca[:3, :]
         nderiv_pca_rd = nderiv_pca[3:, :]
         nnd_pca = np.vstack((neuron_pca, nderiv_pca))
+        nnd_pca_first = np.vstack((neuron_pca_first, nderiv_pca_first))
         nnd_pca_rd = np.vstack((neuron_pca_rd, nderiv_pca_rd))
         neurons_and_derivs = np.vstack((neurons, nderiv))
         # run pcr
-        for pcr in ["full", "reduced"]:
-            if pcr == "full":
-                Xin = nnd_pca
-            else:
-                Xin = nnd_pca_rd
+        for pcr, Xin in {
+            "full": nnd_pca,
+            "first": nnd_pca_first,
+            "reduced": nnd_pca_rd,
+        }.items():
             results[key]["velocity"][pcr] = linear.optimize(
                 time,
                 Xin,
