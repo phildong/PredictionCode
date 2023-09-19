@@ -49,3 +49,6 @@ for yvar in ["R2ms_train", "R2ms_test"]:
     g.map_dataframe(sns.lineplot, x="model", y=yvar, hue="dat_key")
     g.fig.tight_layout()
     g.fig.savefig(os.path.join(FIG_PATH, "{}.svg".format(yvar)), bbox_inches="tight")
+    g.fig.savefig(
+        os.path.join(FIG_PATH, "{}.png".format(yvar)), dpi=500, bbox_inches="tight"
+    )
